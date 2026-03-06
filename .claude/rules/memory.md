@@ -15,6 +15,22 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-06, session 40)
+
+### Winback: Externa rabattkoder för event utanför TheHUB
+- **Ny funktion:** Winback-kampanjer kan nu generera "externa rabattkoder" — koder som delas ut till deltagare efter enkätsvar, men som används på extern anmälningsplattform (t.ex. EQ Timing för Swecup).
+- **Max 10 koder per kampanj:** Varje kod representerar en deltagarkategori baserad på erfarenhet (antal starter) och ålder. Alla inom samma kategori får samma kod → möjliggör spårning av vilken deltagartyp som konverterar.
+- **Kategorier:** Veteran (6+), Erfaren (3-5), Nybörjare (2), Engångare (1) × Ung (<30), Medel (30-44), Senior (45+). Tomma kategorier hoppas över.
+- **Kodformat:** `{PREFIX}-A` till `{PREFIX}-J` (admin anger prefix, suffix genereras automatiskt).
+- **Admin-UI:** Checkbox "Externa rabattkoder" i kampanjformuläret (create + edit). Prefix-fält + externt eventnamn. Kodtabell i kampanjkortet med inline-redigering av användningsantal. Regenerera-knapp.
+- **Enkätsvar:** Vid survey-submit med external_codes_enabled: beräknar deltagarens kategori → slår upp matchande extern kod → sparar i response → skickar e-post med koden.
+- **Publik vy:** Winback-sidan visar extern kod med eventnamn och instruktion om extern plattform.
+- **Kvalificeringslogik fixad:** winback-survey.php stödjer nu alla audience_type (churned, active, one_timer) — inte bara churned.
+- **Migration 081:** `winback_external_codes` tabell + `external_codes_enabled`/`external_code_prefix`/`external_event_name` på winback_campaigns + `external_code_id` på winback_responses.
+- **Filer:** `admin/winback-campaigns.php`, `pages/profile/winback-survey.php`, `pages/profile/winback.php`, `Tools/migrations/081_winback_external_codes.sql`, `admin/migrations.php`
+
+---
+
 ## SENASTE FIXAR (2026-03-06, session 39)
 
 ### Anmälda-tabell: Mobilfix + klasssortering

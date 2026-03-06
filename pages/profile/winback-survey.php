@@ -115,8 +115,18 @@ try {
             $targetYearCount = (int)$stmt2->fetchColumn();
         }
 
-        // User qualifies if they competed historically but NOT in target year
-        if ($historicalCount > 0 && $targetYearCount == 0) {
+        // Check qualification based on audience type
+        $audienceType = $c['audience_type'] ?? 'churned';
+        $qualifies = false;
+        if ($audienceType === 'churned') {
+            $qualifies = ($historicalCount > 0 && $targetYearCount == 0);
+        } elseif ($audienceType === 'active') {
+            $qualifies = ($targetYearCount > 0);
+        } elseif ($audienceType === 'one_timer') {
+            $qualifies = ($targetYearCount == 1);
+        }
+
+        if ($qualifies) {
             $campaign = $c;
 
             // Check if already responded
@@ -185,31 +195,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
         try {
             $pdo->beginTransaction();
 
-            // Generate unique discount code
-            $discountCode = 'WB' . strtoupper(substr(md5($currentUser['id'] . $campaign['id'] . time()), 0, 8));
+            $discountCode = null;
+            $discountCodeId = null;
+            $externalCodeId = null;
 
-            // Create discount code in discount_codes table
-            $discountStmt = $pdo->prepare("
-                INSERT INTO discount_codes (code, description, discount_type, discount_value, max_uses, max_uses_per_user, valid_until, applicable_to, is_active, created_by)
-                VALUES (?, ?, ?, ?, 1, 1, ?, ?, 1, NULL)
-            ");
-            $discountStmt->execute([
-                $discountCode,
-                'Win-back: ' . $campaign['name'] . ' - ' . $currentUser['firstname'] . ' ' . $currentUser['lastname'],
-                $campaign['discount_type'],
-                $campaign['discount_value'],
-                $campaign['discount_valid_until'],
-                $campaign['discount_applicable_to']
-            ]);
-            $discountCodeId = $pdo->lastInsertId();
+            if (!empty($campaign['external_codes_enabled'])) {
+                // External codes: categorize rider by experience + age
+                $brandIds = json_decode($campaign['brand_ids'] ?? '[]', true) ?: [];
+                $brandFilter = '';
+                $brandParams = [];
+                if (!empty($brandIds)) {
+                    $placeholders = implode(',', array_fill(0, count($brandIds), '?'));
+                    $brandFilter = "AND s.brand_id IN ($placeholders)";
+                    $brandParams = $brandIds;
+                }
+
+                // Get rider stats
+                $statsSql = "
+                    SELECT COUNT(DISTINCT res.event_id) as total_starts
+                    FROM results res
+                    INNER JOIN events e ON res.event_id = e.id
+                    INNER JOIN series s ON e.series_id = s.id
+                    WHERE res.cyclist_id = ? $brandFilter
+                ";
+                $statsStmt = $pdo->prepare($statsSql);
+                $statsStmt->execute(array_merge([$currentUser['id']], $brandParams));
+                $totalStarts = (int)$statsStmt->fetchColumn();
+
+                $riderAge = !empty($currentUser['birth_year']) ? ((int)date('Y') - (int)$currentUser['birth_year']) : null;
+
+                // Find matching external code by experience + age
+                $extCodesStmt = $pdo->prepare("SELECT * FROM winback_external_codes WHERE campaign_id = ? ORDER BY id");
+                $extCodesStmt->execute([$campaign['id']]);
+                $extCodes = $extCodesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($extCodes as $ec) {
+                    $expMatch = ($totalStarts >= (int)$ec['experience_min']) &&
+                                ($ec['experience_max'] === null || $totalStarts <= (int)$ec['experience_max']);
+                    if (!$expMatch) continue;
+
+                    $ageMatch = true;
+                    if ($riderAge !== null) {
+                        if ($ec['age_min'] !== null && $riderAge < (int)$ec['age_min']) $ageMatch = false;
+                        if ($ec['age_max'] !== null && $riderAge > (int)$ec['age_max']) $ageMatch = false;
+                    }
+
+                    if ($ageMatch) {
+                        $discountCode = $ec['code'];
+                        $externalCodeId = $ec['id'];
+                        break;
+                    }
+                }
+
+                // Fallback: give last code if no category matched
+                if (!$discountCode && !empty($extCodes)) {
+                    $lastCode = end($extCodes);
+                    $discountCode = $lastCode['code'];
+                    $externalCodeId = $lastCode['id'];
+                }
+            } else {
+                // Regular: generate unique discount code
+                $discountCode = 'WB' . strtoupper(substr(md5($currentUser['id'] . $campaign['id'] . time()), 0, 8));
+
+                $discountStmt = $pdo->prepare("
+                    INSERT INTO discount_codes (code, description, discount_type, discount_value, max_uses, max_uses_per_user, valid_until, applicable_to, is_active, created_by)
+                    VALUES (?, ?, ?, ?, 1, 1, ?, ?, 1, NULL)
+                ");
+                $discountStmt->execute([
+                    $discountCode,
+                    'Win-back: ' . $campaign['name'] . ' - ' . $currentUser['firstname'] . ' ' . $currentUser['lastname'],
+                    $campaign['discount_type'],
+                    $campaign['discount_value'],
+                    $campaign['discount_valid_until'],
+                    $campaign['discount_applicable_to']
+                ]);
+                $discountCodeId = $pdo->lastInsertId();
+            }
 
             // Create response
-            $respStmt = $pdo->prepare("
-                INSERT INTO winback_responses (campaign_id, rider_id, discount_code_id, discount_code, ip_hash)
-                VALUES (?, ?, ?, ?, ?)
-            ");
-            $ipHash = hash('sha256', $_SERVER['REMOTE_ADDR'] ?? '');
-            $respStmt->execute([$campaign['id'], $currentUser['id'], $discountCodeId, $discountCode, $ipHash]);
+            $respSql = "INSERT INTO winback_responses (campaign_id, rider_id, discount_code_id, discount_code, ip_hash";
+            $respParams = [$campaign['id'], $currentUser['id'], $discountCodeId, $discountCode, hash('sha256', $_SERVER['REMOTE_ADDR'] ?? '')];
+            if ($externalCodeId !== null) {
+                $respSql .= ", external_code_id) VALUES (?, ?, ?, ?, ?, ?)";
+                $respParams[] = $externalCodeId;
+            } else {
+                $respSql .= ") VALUES (?, ?, ?, ?, ?)";
+            }
+            $respStmt = $pdo->prepare($respSql);
+            $respStmt->execute($respParams);
             $responseId = $pdo->lastInsertId();
 
             // Save answers
@@ -233,6 +306,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
 
             $pdo->commit();
 
+            // Send email with code if external codes and rider has email
+            if (!empty($campaign['external_codes_enabled']) && $discountCode && !empty($currentUser['email'])) {
+                try {
+                    require_once HUB_ROOT . '/includes/mail.php';
+                    $eventName = $campaign['external_event_name'] ?? 'det externa eventet';
+                    $subject = 'Din rabattkod för ' . $eventName . ' - TheHUB';
+                    $body = '<h2>Tack för din feedback!</h2>'
+                        . '<p>Hej ' . htmlspecialchars($currentUser['firstname']) . ',</p>'
+                        . '<p>Som tack för att du svarat på vår enkät får du en rabattkod som du kan använda vid anmälan till <strong>' . htmlspecialchars($eventName) . '</strong>.</p>'
+                        . '<div style="text-align:center;margin:24px 0;padding:24px;background:#f0f9ff;border-radius:12px;">'
+                        . '<p style="margin:0 0 8px;font-size:14px;color:#666;">Din rabattkod</p>'
+                        . '<p style="margin:0;font-size:28px;font-weight:700;letter-spacing:2px;color:#37d4d6;font-family:monospace;">' . htmlspecialchars($discountCode) . '</p>'
+                        . '</div>'
+                        . '<p>Ange koden vid anmälan på den externa plattformen.</p>';
+                    hub_send_email($currentUser['email'], $subject, $body);
+                } catch (Exception $mailEx) {
+                    error_log('Winback external code email failed: ' . $mailEx->getMessage());
+                }
+            }
+
             // Reload response
             $respStmt = $pdo->prepare("SELECT * FROM winback_responses WHERE id = ?");
             $respStmt->execute([$responseId]);
@@ -242,7 +335,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
 
         } catch (Exception $e) {
             $pdo->rollBack();
-            $error = 'Kunde inte spara enkaten. Forsok igen.';
+            $error = 'Kunde inte spara enkäten. Försök igen.';
         }
     }
 }
@@ -284,25 +377,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
 
         <div class="wb-discount-box">
             <div class="wb-discount-label">Din rabattkod</div>
-            <div class="wb-discount-code" onclick="copyCode(this)"><?= htmlspecialchars($existingResponse['discount_code']) ?></div>
-            <div class="wb-discount-value">
-                <?php if ($campaign['discount_type'] === 'percentage'): ?>
-                    <?= intval($campaign['discount_value']) ?>% rabatt
-                <?php else: ?>
-                    <?= number_format($campaign['discount_value'], 0) ?> kr rabatt
-                <?php endif; ?>
-            </div>
-            <?php if ($campaign['discount_valid_until']): ?>
-                <div class="wb-discount-expires">
-                    Giltig t.o.m. <?= date('j M Y', strtotime($campaign['discount_valid_until'])) ?>
+            <div class="wb-discount-code" onclick="copyCode(this)"><?= htmlspecialchars($existingResponse['discount_code'] ?? '') ?></div>
+            <?php if (!empty($campaign['external_codes_enabled'])): ?>
+                <?php if (!empty($campaign['external_event_name'])): ?>
+                <div class="wb-discount-value" style="color:var(--color-text-secondary);">
+                    Gäller för: <strong><?= htmlspecialchars($campaign['external_event_name']) ?></strong>
                 </div>
+                <?php endif; ?>
+                <div style="margin-top:var(--space-sm);font-size:0.9rem;color:var(--color-text-muted);">
+                    Ange koden vid anmälan på den externa plattformen.
+                </div>
+            <?php else: ?>
+                <div class="wb-discount-value">
+                    <?php if ($campaign['discount_type'] === 'percentage'): ?>
+                        <?= intval($campaign['discount_value']) ?>% rabatt
+                    <?php else: ?>
+                        <?= number_format($campaign['discount_value'], 0) ?> kr rabatt
+                    <?php endif; ?>
+                </div>
+                <?php if (!empty($campaign['discount_valid_until'])): ?>
+                    <div class="wb-discount-expires">
+                        Giltig t.o.m. <?= date('j M Y', strtotime($campaign['discount_valid_until'])) ?>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
 
-        <p class="wb-help">Klicka pa koden for att kopiera. Anvand vid anmalan.</p>
+        <p class="wb-help">Klicka på koden för att kopiera. Använd vid anmälan.</p>
 
         <a href="/calendar" class="btn btn-primary btn-lg" style="margin-top: var(--space-lg);">
-            <i data-lucide="calendar"></i> Se kommande tavlingar
+            <i data-lucide="calendar"></i> Se kommande tävlingar
         </a>
     </div>
 </div>
@@ -319,16 +423,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
     <div class="card-body">
         <div class="wb-intro">
             <p>
-                Vi har sett att du inte tavlade <?= $campaign['target_year'] ?> och vill garna hora vad vi kan gora battre.
+                Vi har sett att du inte tävlade <?= $campaign['target_year'] ?> och vill gärna höra vad vi kan göra bättre.
                 Svara på några korta frågor så får du en <strong>rabattkod</strong> som tack!
             </p>
             <div class="wb-reward-preview">
                 <i data-lucide="gift"></i>
                 <span>
-                    <?php if ($campaign['discount_type'] === 'percentage'): ?>
-                        <?= intval($campaign['discount_value']) ?>% rabatt pa din nasta anmalan
+                    <?php if (!empty($campaign['external_codes_enabled'])): ?>
+                        Rabattkod för <?= htmlspecialchars($campaign['external_event_name'] ?: 'externt event') ?>
+                    <?php elseif ($campaign['discount_type'] === 'percentage'): ?>
+                        <?= intval($campaign['discount_value']) ?>% rabatt på din nästa anmälan
                     <?php else: ?>
-                        <?= number_format($campaign['discount_value'], 0) ?> kr rabatt pa din nasta anmalan
+                        <?= number_format($campaign['discount_value'], 0) ?> kr rabatt på din nästa anmälan
                     <?php endif; ?>
                 </span>
             </div>

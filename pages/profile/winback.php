@@ -298,7 +298,15 @@ if ($tablesExist) {
                     <span class="campaign-badge pending">Ny!</span>
                 </div>
 
-                <?php if (!empty($c['discount_code'])): ?>
+                <?php if (!empty($c['external_codes_enabled'])): ?>
+                    <div class="reward-box">
+                        <h4>Din belöning</h4>
+                        <div class="reward-value">Rabattkod</div>
+                        <?php if (!empty($c['external_event_name'])): ?>
+                            <div class="reward-target">Gäller för: <?= htmlspecialchars($c['external_event_name']) ?></div>
+                        <?php endif; ?>
+                    </div>
+                <?php elseif (!empty($c['discount_code'])): ?>
                     <div class="reward-box">
                         <h4>Din belöning</h4>
                         <div class="reward-value">
@@ -350,7 +358,14 @@ if ($tablesExist) {
                     <div class="reward-box">
                         <h4>Din rabattkod</h4>
                         <div class="reward-code"><?= htmlspecialchars($c['response']['discount_code_given']) ?></div>
-                        <?php if ($c['discount_type'] === 'percentage'): ?>
+                        <?php if (!empty($c['external_codes_enabled'])): ?>
+                            <?php if (!empty($c['external_event_name'])): ?>
+                                <div class="reward-target">Gäller för: <?= htmlspecialchars($c['external_event_name']) ?></div>
+                            <?php endif; ?>
+                            <div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:var(--space-xs);">
+                                Ange koden vid anmälan på den externa plattformen.
+                            </div>
+                        <?php elseif ($c['discount_type'] === 'percentage'): ?>
                             <div class="reward-value"><?= intval($c['discount_value']) ?>% rabatt</div>
                         <?php else: ?>
                             <div class="reward-value"><?= number_format($c['discount_value'], 0) ?> kr rabatt</div>

@@ -115,6 +115,26 @@
 
 # CHANGELOG
 
+### 2026-03-06 (Winback: Externa rabattkoder)
+- **Branch:** claude/winback-discount-codes-L20R9
+
+- **Ny funktion: Externa rabattkoder for winback-kampanjer**
+  - Stod for rabattkoder som anvands pa extern anmalningsplattform (t.ex. EQ Timing for Swecup)
+  - Max 10 unika koder per kampanj, automatiskt kategoriserade efter erfarenhet och alder
+  - Admin anger prefix (t.ex. SWECUP), system genererar suffix (A-J)
+  - Kodtabell i kampanjkortet med inline-redigering av anvandningsantal
+  - E-post med kod skickas automatiskt efter enkatssvar
+  - Kvalificeringslogik fixad: stodjer nu alla audience_type (churned, active, one_timer)
+
+- **Nya filer:**
+  - `Tools/migrations/081_winback_external_codes.sql` - Migration for externa koder
+
+- **Andrade filer:**
+  - `admin/winback-campaigns.php` - External codes toggle, prefix-falt, kodtabell, regenerera
+  - `pages/profile/winback-survey.php` - Kategorisera rider, tilldela extern kod, skicka e-post
+  - `pages/profile/winback.php` - Visa extern kod + eventnamn
+  - `admin/migrations.php` - Registrerat migration 081
+
 ### 2026-03-05 (TheHUB Promotion + Klubb/Destination-admin)
 - **Branch:** claude/add-bug-report-feature-dNafh
 
@@ -1169,12 +1189,14 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 - [x] Email-inbjudningar
 - [x] Promotor access control
 - [x] Win-Back Analytics
+- [x] Externa rabattkoder for event utanfor TheHUB (max 10 koder per kampanj, erfarenhet+alder)
 
 ### Huvudfiler
 
 - `admin/winback-campaigns.php` - Kampanjhantering
 - `admin/winback-analytics.php` - Dataanalys
 - `pages/profile/winback-survey.php` - Enkat
+- `Tools/migrations/081_winback_external_codes.sql` - Externa koder migration
 
 ---
 

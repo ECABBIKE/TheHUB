@@ -275,6 +275,10 @@ $migrationChecks = [
         'tables' => ['bug_report_messages'],
         'columns' => ['bug_reports.view_token']
     ],
+    '081_winback_external_codes.sql' => [
+        'tables' => ['winback_external_codes'],
+        'columns' => ['winback_campaigns.external_codes_enabled', 'winback_campaigns.external_code_prefix', 'winback_campaigns.external_event_name', 'winback_responses.external_code_id']
+    ],
 ];
 
 // ============================================================================
