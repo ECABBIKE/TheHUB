@@ -86,6 +86,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $endYear = (int)($_POST['end_year'] ?? ((int)date('Y') - 1));
         $targetYear = (int)($_POST['target_year'] ?? (int)date('Y'));
 
+        // External codes
+        $externalCodesEnabled = isset($_POST['external_codes_enabled']) ? 1 : 0;
+        $externalCodePrefix = strtoupper(trim($_POST['external_code_prefix'] ?? ''));
+        $externalEventName = trim($_POST['external_event_name'] ?? '');
+
         // Validate audience type
         if (!in_array($audienceType, ['churned', 'active', 'one_timer'])) {
             $audienceType = 'churned';
@@ -100,8 +105,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             $error = 'Kampanjnamn krävs';
         } elseif (empty($brandIds)) {
             $error = 'Välj minst ett varumärke';
-        } elseif (empty($discountCodeId)) {
+        } elseif (!$externalCodesEnabled && empty($discountCodeId)) {
             $error = 'Välj en rabattkod';
+        } elseif ($externalCodesEnabled && empty($externalCodePrefix)) {
+            $error = 'Ange ett kodprefix för externa koder';
         } else {
             // Check if new columns exist (migration 031)
             $hasDiscountCodeId = false;
@@ -112,11 +119,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
 
             if ($hasDiscountCodeId) {
                 $stmt = $pdo->prepare("
-                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_code_id, email_subject, email_body, owner_user_id, allow_promotor_access, is_active)
-                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_code_id, email_subject, email_body, owner_user_id, allow_promotor_access, external_codes_enabled, external_code_prefix, external_event_name, is_active)
+                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                 ");
-                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountCodeId, $emailSubject, $emailBody, $ownerId, $allowPromotorAccess]);
-                $message = 'Kampanj skapad!';
+                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $externalCodesEnabled ? null : $discountCodeId, $emailSubject, $emailBody, $ownerId, $allowPromotorAccess, $externalCodesEnabled, $externalCodesEnabled ? $externalCodePrefix : null, $externalCodesEnabled ? $externalEventName : null]);
+                $newCampaignId = $pdo->lastInsertId();
+
+                if ($externalCodesEnabled && $newCampaignId) {
+                    $genResult = generateExternalCodes($pdo, $newCampaignId, $externalCodePrefix, json_decode(json_encode(array_map('intval', $brandIds)), true), $startYear, $endYear, $targetYear, $audienceType);
+                    $message = 'Kampanj skapad med ' . $genResult['count'] . ' externa koder!';
+                } else {
+                    $message = 'Kampanj skapad!';
+                }
             } else {
                 $error = 'Kör migration 031 först (admin/migrations.php)';
             }
@@ -157,6 +171,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             $targetYear = (int)($_POST['target_year'] ?? (int)date('Y'));
             $brandIds = $_POST['brand_ids'] ?? [];
 
+            // External codes
+            $externalCodesEnabled = isset($_POST['external_codes_enabled']) ? 1 : 0;
+            $externalCodePrefix = strtoupper(trim($_POST['external_code_prefix'] ?? ''));
+            $externalEventName = trim($_POST['external_event_name'] ?? '');
+
             // Validate audience type
             if (!in_array($audienceType, ['churned', 'active', 'one_timer'])) {
                 $audienceType = 'churned';
@@ -171,8 +190,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                 $error = 'Kampanjnamn krävs';
             } elseif (empty($brandIds)) {
                 $error = 'Välj minst ett varumärke';
-            } elseif (empty($discountCodeId)) {
+            } elseif (!$externalCodesEnabled && empty($discountCodeId)) {
                 $error = 'Välj en rabattkod';
+            } elseif ($externalCodesEnabled && empty($externalCodePrefix)) {
+                $error = 'Ange ett kodprefix för externa koder';
             } else {
                 $brandIdsJson = json_encode(array_map('intval', $brandIds));
 
@@ -185,24 +206,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                         UPDATE winback_campaigns
                         SET name = ?, discount_code_id = ?, email_subject = ?, email_body = ?,
                             audience_type = ?, start_year = ?, end_year = ?, target_year = ?, brand_ids = ?,
-                            owner_user_id = ?, allow_promotor_access = ?
+                            owner_user_id = ?, allow_promotor_access = ?,
+                            external_codes_enabled = ?, external_code_prefix = ?, external_event_name = ?
                         WHERE id = ?
                     ");
-                    $stmt->execute([$name, $discountCodeId, $emailSubject, $emailBody,
+                    $stmt->execute([$name, $externalCodesEnabled ? null : $discountCodeId, $emailSubject, $emailBody,
                                     $audienceType, $startYear, $endYear, $targetYear, $brandIdsJson,
-                                    $ownerId, $allowPromotorAccess, $id]);
+                                    $ownerId, $allowPromotorAccess,
+                                    $externalCodesEnabled, $externalCodesEnabled ? $externalCodePrefix : null, $externalCodesEnabled ? $externalEventName : null,
+                                    $id]);
                 } else {
                     // Non-admin (promotor) can only update basic settings
                     $stmt = $pdo->prepare("
                         UPDATE winback_campaigns
                         SET name = ?, discount_code_id = ?, email_subject = ?, email_body = ?,
-                            audience_type = ?, start_year = ?, end_year = ?, target_year = ?, brand_ids = ?
+                            audience_type = ?, start_year = ?, end_year = ?, target_year = ?, brand_ids = ?,
+                            external_codes_enabled = ?, external_code_prefix = ?, external_event_name = ?
                         WHERE id = ?
                     ");
-                    $stmt->execute([$name, $discountCodeId, $emailSubject, $emailBody,
-                                    $audienceType, $startYear, $endYear, $targetYear, $brandIdsJson, $id]);
+                    $stmt->execute([$name, $externalCodesEnabled ? null : $discountCodeId, $emailSubject, $emailBody,
+                                    $audienceType, $startYear, $endYear, $targetYear, $brandIdsJson,
+                                    $externalCodesEnabled, $externalCodesEnabled ? $externalCodePrefix : null, $externalCodesEnabled ? $externalEventName : null,
+                                    $id]);
                 }
-                $message = 'Kampanj uppdaterad';
+
+                // Regenerate external codes if enabled and prefix changed
+                if ($externalCodesEnabled) {
+                    $pdo->prepare("DELETE FROM winback_external_codes WHERE campaign_id = ?")->execute([$id]);
+                    $genResult = generateExternalCodes($pdo, $id, $externalCodePrefix, array_map('intval', $brandIds), $startYear, $endYear, $targetYear, $audienceType);
+                    $message = 'Kampanj uppdaterad med ' . $genResult['count'] . ' externa koder!';
+                } else {
+                    $message = 'Kampanj uppdaterad';
+                }
             }
         }
     } elseif ($action === 'create_question') {
@@ -343,6 +378,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                 }
             }
         }
+    } elseif ($action === 'update_external_usage') {
+        $codeId = (int)$_POST['code_id'];
+        $usageCount = max(0, (int)$_POST['usage_count']);
+        $pdo->prepare("UPDATE winback_external_codes SET usage_count = ? WHERE id = ?")->execute([$usageCount, $codeId]);
+        $message = 'Användningsantal uppdaterat';
+
+    } elseif ($action === 'regenerate_external_codes') {
+        $campaignId = (int)$_POST['campaign_id'];
+        $stmt = $pdo->prepare("SELECT * FROM winback_campaigns WHERE id = ?");
+        $stmt->execute([$campaignId]);
+        $camp = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($camp && !empty($camp['external_codes_enabled']) && canEditCampaign($camp)) {
+            $pdo->prepare("DELETE FROM winback_external_codes WHERE campaign_id = ?")->execute([$campaignId]);
+            $brandIds = json_decode($camp['brand_ids'] ?? '[]', true) ?: [];
+            $genResult = generateExternalCodes($pdo, $campaignId, $camp['external_code_prefix'], $brandIds, $camp['start_year'], $camp['end_year'], $camp['target_year'], $camp['audience_type'] ?? 'churned');
+            $message = 'Genererade ' . $genResult['count'] . ' externa koder';
+        } else {
+            $error = 'Kampanj hittades inte eller saknar externa koder';
+        }
+
     } elseif ($action === 'send_invitations') {
         // Send invitations to selected riders
         $campaignId = (int)$_POST['campaign_id'];
@@ -519,6 +574,145 @@ if (!function_exists('hub_email_template_winback')) {
     ];
 }
 
+/**
+ * Generate up to 10 category-based external discount codes for a campaign.
+ * Categories are based on experience (total starts) and age.
+ */
+function generateExternalCodes($pdo, $campaignId, $prefix, $brandIds, $startYear, $endYear, $targetYear, $audienceType) {
+    $currentYear = (int)date('Y');
+
+    // Build brand filter
+    $brandFilter = '';
+    $brandParams = [];
+    if (!empty($brandIds)) {
+        $placeholders = implode(',', array_fill(0, count($brandIds), '?'));
+        $brandFilter = "AND s.brand_id IN ($placeholders)";
+        $brandParams = $brandIds;
+    }
+
+    // Get all qualifying riders with their stats
+    if ($audienceType === 'churned') {
+        // Riders who competed in start_year..end_year but NOT in target_year
+        $sql = "
+            SELECT r.id, r.birth_year,
+                   COUNT(DISTINCT res.event_id) as total_starts,
+                   MAX(YEAR(e.date)) as last_race_year
+            FROM riders r
+            INNER JOIN results res ON res.cyclist_id = r.id
+            INNER JOIN events e ON res.event_id = e.id
+            INNER JOIN series s ON e.series_id = s.id
+            WHERE YEAR(e.date) BETWEEN ? AND ?
+              $brandFilter
+              AND r.id NOT IN (
+                  SELECT DISTINCT res2.cyclist_id FROM results res2
+                  INNER JOIN events e2 ON res2.event_id = e2.id
+                  INNER JOIN series s2 ON e2.series_id = s2.id
+                  WHERE YEAR(e2.date) = ? $brandFilter
+              )
+            GROUP BY r.id, r.birth_year
+        ";
+        $params = array_merge([$startYear, $endYear], $brandParams, [$targetYear], $brandParams);
+    } elseif ($audienceType === 'active') {
+        $sql = "
+            SELECT r.id, r.birth_year,
+                   COUNT(DISTINCT res.event_id) as total_starts,
+                   MAX(YEAR(e.date)) as last_race_year
+            FROM riders r
+            INNER JOIN results res ON res.cyclist_id = r.id
+            INNER JOIN events e ON res.event_id = e.id
+            INNER JOIN series s ON e.series_id = s.id
+            WHERE YEAR(e.date) = ?
+              $brandFilter
+            GROUP BY r.id, r.birth_year
+        ";
+        $params = array_merge([$targetYear], $brandParams);
+    } else {
+        // one_timer - competed exactly once in target year
+        $sql = "
+            SELECT r.id, r.birth_year,
+                   COUNT(DISTINCT res.event_id) as total_starts,
+                   MAX(YEAR(e.date)) as last_race_year
+            FROM riders r
+            INNER JOIN results res ON res.cyclist_id = r.id
+            INNER JOIN events e ON res.event_id = e.id
+            INNER JOIN series s ON e.series_id = s.id
+            WHERE YEAR(e.date) = ?
+              $brandFilter
+            GROUP BY r.id, r.birth_year
+            HAVING total_starts = 1
+        ";
+        $params = array_merge([$targetYear], $brandParams);
+    }
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Define 10 categories: experience (4 levels) × age (2-3 levels), capped at 10
+    $categories = [
+        ['key' => 'vet_young',  'label' => 'Veteran (6+) · Under 30',    'exp_min' => 6, 'exp_max' => null, 'age_min' => null, 'age_max' => 29],
+        ['key' => 'vet_mid',    'label' => 'Veteran (6+) · 30-44',       'exp_min' => 6, 'exp_max' => null, 'age_min' => 30,   'age_max' => 44],
+        ['key' => 'vet_senior', 'label' => 'Veteran (6+) · 45+',         'exp_min' => 6, 'exp_max' => null, 'age_min' => 45,   'age_max' => null],
+        ['key' => 'exp_young',  'label' => 'Erfaren (3-5) · Under 30',   'exp_min' => 3, 'exp_max' => 5,    'age_min' => null, 'age_max' => 29],
+        ['key' => 'exp_mid',    'label' => 'Erfaren (3-5) · 30-44',      'exp_min' => 3, 'exp_max' => 5,    'age_min' => 30,   'age_max' => 44],
+        ['key' => 'exp_senior', 'label' => 'Erfaren (3-5) · 45+',        'exp_min' => 3, 'exp_max' => 5,    'age_min' => 45,   'age_max' => null],
+        ['key' => 'reg_young',  'label' => 'Nybörjare (2) · Under 30',   'exp_min' => 2, 'exp_max' => 2,    'age_min' => null, 'age_max' => 29],
+        ['key' => 'reg_older',  'label' => 'Nybörjare (2) · 30+',        'exp_min' => 2, 'exp_max' => 2,    'age_min' => 30,   'age_max' => null],
+        ['key' => 'once_young', 'label' => 'Engångare (1) · Under 30',   'exp_min' => 1, 'exp_max' => 1,    'age_min' => null, 'age_max' => 29],
+        ['key' => 'once_older', 'label' => 'Engångare (1) · 30+',        'exp_min' => 1, 'exp_max' => 1,    'age_min' => 30,   'age_max' => null],
+    ];
+
+    // Count riders per category
+    $categoryCounts = array_fill_keys(array_column($categories, 'key'), 0);
+    foreach ($riders as $r) {
+        $starts = (int)$r['total_starts'];
+        $age = $r['birth_year'] > 0 ? ($currentYear - (int)$r['birth_year']) : null;
+
+        foreach ($categories as $cat) {
+            $expMatch = ($starts >= $cat['exp_min']) && ($cat['exp_max'] === null || $starts <= $cat['exp_max']);
+            if (!$expMatch) continue;
+
+            $ageMatch = true;
+            if ($age === null) {
+                $ageMatch = true; // Unknown age → put in first matching exp category
+            } else {
+                if ($cat['age_min'] !== null && $age < $cat['age_min']) $ageMatch = false;
+                if ($cat['age_max'] !== null && $age > $cat['age_max']) $ageMatch = false;
+            }
+
+            if ($ageMatch) {
+                $categoryCounts[$cat['key']]++;
+                break;
+            }
+        }
+    }
+
+    // Insert codes for categories with riders (suffix A-J)
+    $suffix = 'A';
+    $inserted = 0;
+    $insertStmt = $pdo->prepare("
+        INSERT INTO winback_external_codes (campaign_id, code, category_key, category_label, experience_min, experience_max, age_min, age_max, rider_count)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+
+    foreach ($categories as $cat) {
+        $count = $categoryCounts[$cat['key']];
+        if ($count === 0) continue;
+
+        $code = $prefix . '-' . $suffix;
+        $insertStmt->execute([
+            $campaignId, $code, $cat['key'], $cat['label'],
+            $cat['exp_min'], $cat['exp_max'], $cat['age_min'], $cat['age_max'],
+            $count
+        ]);
+        $inserted++;
+        $suffix++;
+        if ($inserted >= 10) break;
+    }
+
+    return ['count' => $inserted, 'total_riders' => count($riders)];
+}
+
 // Get data
 $campaigns = [];
 $responses = [];
@@ -637,6 +831,15 @@ if ($tablesExist) {
             }
         }
         unset($c);
+
+        // Load external codes per campaign
+        $externalCodesMap = [];
+        try {
+            $extCodes = $pdo->query("SELECT * FROM winback_external_codes ORDER BY campaign_id, id")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($extCodes as $ec) {
+                $externalCodesMap[$ec['campaign_id']][] = $ec;
+            }
+        } catch (Exception $e) {} // Table might not exist yet
 
         // Overall stats
         $stats['total_responses'] = (int)$pdo->query("SELECT COUNT(*) FROM winback_responses")->fetchColumn();
@@ -2110,14 +2313,43 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                 </div>
             </div>
 
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);">
-                <div class="form-group">
-                    <label class="form-label">Kampanjnamn *</label>
-                    <input type="text" name="name" class="form-input" required placeholder="T.ex. Back To Gravity 2026">
+            <div class="form-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Kampanjnamn *</label>
+                <input type="text" name="name" class="form-input" required placeholder="T.ex. Back To Gravity 2026">
+            </div>
+
+            <!-- External codes toggle -->
+            <div style="margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border:2px solid var(--color-border);border-radius:var(--radius-md);">
+                <label style="display:flex;align-items:center;gap:var(--space-sm);cursor:pointer;font-weight:600;">
+                    <input type="checkbox" name="external_codes_enabled" value="1" id="extCodesToggle" onchange="toggleExternalCodes()">
+                    Externa rabattkoder (för anmälan utanför TheHUB)
+                </label>
+                <p style="margin:var(--space-xs) 0 0;font-size:0.8rem;color:var(--color-text-muted);">
+                    Genererar max 10 koder baserat på deltagarnas erfarenhet och ålder. Koderna delas ut efter enkätsvar.
+                </p>
+            </div>
+
+            <!-- External codes settings (hidden by default) -->
+            <div id="extCodesSection" style="display:none;margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-accent-light);border-radius:var(--radius-md);">
+                <div style="display:grid;grid-template-columns:1fr 2fr;gap:var(--space-md);">
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label">Kodprefix *</label>
+                        <input type="text" name="external_code_prefix" class="form-input" placeholder="T.ex. SWECUP" maxlength="20" style="text-transform:uppercase;">
+                        <small style="color:var(--color-text-muted);">Koder blir PREFIX-A, PREFIX-B osv.</small>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label">Externt eventnamn</label>
+                        <input type="text" name="external_event_name" class="form-input" placeholder="T.ex. Swecup DH 2026">
+                        <small style="color:var(--color-text-muted);">Visas för deltagaren när de får sin kod.</small>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Regular discount code (hidden when external codes enabled) -->
+            <div id="regularCodeSection" style="margin-bottom:var(--space-md);">
                 <div class="form-group">
                     <label class="form-label">Rabattkod *</label>
-                    <select name="discount_code_id" class="form-select" required>
+                    <select name="discount_code_id" class="form-select" id="discountCodeSelect">
                         <option value="">Välj rabattkod...</option>
                         <?php foreach ($discountCodes ?? [] as $dc):
                             $discountLabel = $dc['discount_type'] === 'percentage'
@@ -2312,7 +2544,12 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
                 ?>
                 <span class="campaign-meta-item">
                     <i data-lucide="ticket"></i>
-                    <?php if ($linkedCode): ?>
+                    <?php if (!empty($c['external_codes_enabled'])): ?>
+                        Externa koder: <strong><?= htmlspecialchars($c['external_code_prefix'] ?? '') ?>-*</strong>
+                        <?php if (!empty($c['external_event_name'])): ?>
+                            (<?= htmlspecialchars($c['external_event_name']) ?>)
+                        <?php endif; ?>
+                    <?php elseif ($linkedCode): ?>
                         Kod: <strong><?= htmlspecialchars($linkedCode['code']) ?></strong>
                         (<?= $linkedCode['discount_type'] === 'percentage' ? intval($linkedCode['discount_value']) . '%' : number_format($linkedCode['discount_value'], 0) . ' kr' ?>)
                     <?php else: ?>
@@ -2336,13 +2573,80 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
                     <div class="campaign-stat-label">Svarsfrekvens</div>
                 </div>
                 <?php endif; ?>
-                <?php if ($linkedCode): ?>
+                <?php if ($linkedCode && empty($c['external_codes_enabled'])): ?>
                 <div class="campaign-stat">
                     <div class="campaign-stat-value"><?= (int)$linkedCode['current_uses'] ?></div>
-                    <div class="campaign-stat-label">Kod anvand</div>
+                    <div class="campaign-stat-label">Kod använd</div>
                 </div>
                 <?php endif; ?>
             </div>
+
+            <?php
+            // Show external codes table
+            $campExtCodes = $externalCodesMap[$c['id']] ?? [];
+            if (!empty($campExtCodes)):
+            ?>
+            <div style="margin-top:var(--space-md);padding-top:var(--space-md);border-top:1px solid var(--color-border);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-sm);">
+                    <h4 style="margin:0;font-size:0.9rem;color:var(--color-text-secondary);">
+                        <i data-lucide="key" style="width:14px;height:14px;vertical-align:middle;"></i>
+                        Externa koder (<?= count($campExtCodes) ?>)
+                    </h4>
+                    <?php if ($canEdit): ?>
+                    <form method="POST" style="display:inline;">
+                        <input type="hidden" name="action" value="regenerate_external_codes">
+                        <input type="hidden" name="campaign_id" value="<?= $c['id'] ?>">
+                        <button type="submit" class="btn-admin btn-admin-ghost btn-sm" onclick="return confirm('Regenerera alla koder? Befintliga koder raderas.');">
+                            <i data-lucide="refresh-cw"></i> Regenerera
+                        </button>
+                    </form>
+                    <?php endif; ?>
+                </div>
+                <div class="admin-table-container" style="overflow-x:auto;">
+                    <table class="admin-table" style="font-size:0.85rem;">
+                        <thead>
+                            <tr>
+                                <th>Kod</th>
+                                <th>Kategori</th>
+                                <th style="text-align:right;">Riders</th>
+                                <th style="text-align:right;">Använda</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($campExtCodes as $ec): ?>
+                            <tr>
+                                <td><code style="font-size:0.9rem;font-weight:600;color:var(--color-accent);"><?= htmlspecialchars($ec['code']) ?></code></td>
+                                <td><?= htmlspecialchars($ec['category_label']) ?></td>
+                                <td style="text-align:right;"><?= number_format($ec['rider_count']) ?></td>
+                                <td style="text-align:right;">
+                                    <?php if ($canEdit): ?>
+                                    <form method="POST" style="display:inline-flex;align-items:center;gap:4px;">
+                                        <input type="hidden" name="action" value="update_external_usage">
+                                        <input type="hidden" name="code_id" value="<?= $ec['id'] ?>">
+                                        <input type="number" name="usage_count" value="<?= (int)$ec['usage_count'] ?>" min="0"
+                                               style="width:60px;padding:2px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-surface);color:var(--color-text-primary);font-size:0.85rem;text-align:right;">
+                                        <button type="submit" class="btn-admin btn-admin-ghost btn-sm" style="padding:2px 6px;" title="Spara">
+                                            <i data-lucide="check" style="width:12px;height:12px;"></i>
+                                        </button>
+                                    </form>
+                                    <?php else: ?>
+                                        <?= (int)$ec['usage_count'] ?>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                        <tfoot>
+                            <tr style="font-weight:600;">
+                                <td colspan="2">Totalt</td>
+                                <td style="text-align:right;"><?= number_format(array_sum(array_column($campExtCodes, 'rider_count'))) ?></td>
+                                <td style="text-align:right;"><?= number_format(array_sum(array_column($campExtCodes, 'usage_count'))) ?></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
     <?php endforeach; ?>
 <?php endif; ?>
@@ -2407,15 +2711,39 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
                 </div>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);margin-bottom:var(--space-md);">
-                <div class="form-group">
-                    <label class="form-label">Kampanjnamn *</label>
-                    <input type="text" name="name" id="edit-campaign-name" class="form-input" required>
+            <div class="form-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Kampanjnamn *</label>
+                <input type="text" name="name" id="edit-campaign-name" class="form-input" required>
+            </div>
+
+            <!-- External codes toggle -->
+            <div style="margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border:2px solid var(--color-border);border-radius:var(--radius-md);">
+                <label style="display:flex;align-items:center;gap:var(--space-sm);cursor:pointer;font-weight:600;">
+                    <input type="checkbox" name="external_codes_enabled" value="1" id="edit-ext-codes-toggle" onchange="toggleExternalCodes('edit')">
+                    Externa rabattkoder (för anmälan utanför TheHUB)
+                </label>
+            </div>
+
+            <!-- External codes settings (edit modal) -->
+            <div id="editExtCodesSection" style="display:none;margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-accent-light);border-radius:var(--radius-md);">
+                <div style="display:grid;grid-template-columns:1fr 2fr;gap:var(--space-md);">
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label">Kodprefix *</label>
+                        <input type="text" name="external_code_prefix" id="edit-ext-prefix" class="form-input" placeholder="T.ex. SWECUP" maxlength="20" style="text-transform:uppercase;">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label">Externt eventnamn</label>
+                        <input type="text" name="external_event_name" id="edit-ext-event-name" class="form-input" placeholder="T.ex. Swecup DH 2026">
+                    </div>
                 </div>
+            </div>
+
+            <!-- Regular discount code (edit modal) -->
+            <div id="editRegularCodeSection" style="margin-bottom:var(--space-md);">
                 <div class="form-group">
                     <label class="form-label">Rabattkod *</label>
-                    <select name="discount_code_id" id="edit-discount-code-id" class="form-select" required>
-                        <option value="">Valj rabattkod...</option>
+                    <select name="discount_code_id" id="edit-discount-code-id" class="form-select">
+                        <option value="">Välj rabattkod...</option>
                         <?php foreach ($discountCodes ?? [] as $dc):
                             $discountLabel = $dc['discount_type'] === 'percentage'
                                 ? intval($dc['discount_value']) . '%'
@@ -2495,12 +2823,33 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
 </div>
 
 <script>
+// Toggle external codes visibility (works for both create and edit forms)
+function toggleExternalCodes(prefix) {
+    if (prefix === 'edit') {
+        const checked = document.getElementById('edit-ext-codes-toggle').checked;
+        document.getElementById('editExtCodesSection').style.display = checked ? 'block' : 'none';
+        document.getElementById('editRegularCodeSection').style.display = checked ? 'none' : 'block';
+    } else {
+        const checked = document.getElementById('extCodesToggle').checked;
+        document.getElementById('extCodesSection').style.display = checked ? 'block' : 'none';
+        document.getElementById('regularCodeSection').style.display = checked ? 'none' : 'block';
+    }
+}
+
 function editCampaign(campaign) {
     document.getElementById('edit-campaign-id').value = campaign.id;
     document.getElementById('edit-campaign-name').value = campaign.name;
     document.getElementById('edit-discount-code-id').value = campaign.discount_code_id || '';
     document.getElementById('edit-email-subject').value = campaign.email_subject || 'Vi saknar dig!';
     document.getElementById('edit-email-body').value = campaign.email_body || '';
+
+    // Set external codes fields
+    const extEnabled = campaign.external_codes_enabled == 1;
+    document.getElementById('edit-ext-codes-toggle').checked = extEnabled;
+    document.getElementById('edit-ext-prefix').value = campaign.external_code_prefix || '';
+    document.getElementById('edit-ext-event-name').value = campaign.external_event_name || '';
+    document.getElementById('editExtCodesSection').style.display = extEnabled ? 'block' : 'none';
+    document.getElementById('editRegularCodeSection').style.display = extEnabled ? 'none' : 'block';
 
     // Set audience type
     const audienceType = campaign.audience_type || 'churned';
