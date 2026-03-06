@@ -1,6 +1,6 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-03-05
+> Senast uppdaterad: 2026-03-06
 
 ---
 
@@ -12,6 +12,20 @@
 - Flytta INTE saker mellan menygrupper utan godkännande
 - Skapa INTE nya menygrupper i admin-tabs-config.php utan godkännande
 - Om en ny sida behöver nås: lägg den under befintlig grupp i `pages`-arrayen, och länka från relevant dashboard/grid
+
+---
+
+## SENASTE FIXAR (2026-03-06, session 39)
+
+### Anmälda-tabell: Mobilfix + klasssortering
+- **Problem 1:** Namn i anmälda-listan klipptes av på mobil (portrait OCH landscape). Tabellen sträckte sig utanför vänsterkanten.
+- **Orsak:** `table-layout: fixed` + `white-space: nowrap` + `<colgroup>` med procentuella bredder tvingade kolumnerna till fasta proportioner som inte räckte för namn/klubb.
+- **Fix:** Borttagen `table-layout: fixed` och `white-space: nowrap` på desktop. På mobil: `table-layout: auto`, `white-space: normal`, `word-break: break-word`. Borttagna `<colgroup>`-element, ersatta med enkla `<th style="width: 60px;">` för Startnr och Född. `.reg-class-group` edge-to-edge på mobil istället för scroll-wrapper.
+- **Problem 2:** Klasser sorterades inte enligt klassmatrixen (sort_order).
+- **Orsak:** SQL JOIN matchade bara `cl_epr.name = reg.category`, men `reg.category` lagrar `display_name ?: name`. Om en klass har `name="M19+"` och `display_name="Herrar 19+"` matchade JOINen aldrig → sort_order defaultade till 9999.
+- **Fix:** JOIN matchar nu BÅDE `cl_epr.name = reg.category OR cl_epr.display_name = reg.category`. Fallback via correlated subquery `(SELECT MIN(cl3.sort_order) FROM classes cl3 WHERE cl3.name = reg.category OR cl3.display_name = reg.category)`.
+- **Borttagen `cl_min` subquery:** Ersatt med correlated subquery i COALESCE - enklare och inga duplikatrader.
+- **Filer:** `assets/css/pages/event.css`, `pages/event.php`
 
 ---
 
