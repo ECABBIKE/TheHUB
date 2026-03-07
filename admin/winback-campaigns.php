@@ -537,8 +537,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                 ], $emailBody);
 
                 $body = '
+                    <div class="campaign-banner">
+                        <img src="https://thehub.gravityseries.se/uploads/media/branding/697f64b56775d_1769956533.png" alt="Back to Gravity" style="max-width:280px;height:auto;margin:0 auto 8px;display:block;">
+                        <div class="campaign-banner-sub">En kampanj från GravitySeries</div>
+                    </div>
                     <div class="header">
-                        <div class="logo">TheHUB</div>
+                        <div class="logo">GravitySeries<span class="logo-sub"> - TheHUB</span></div>
                     </div>
                     <div style="white-space: pre-wrap;">' . nl2br(htmlspecialchars_decode($emailBody)) . '</div>
                     <p class="text-center" style="margin-top: 24px;">
@@ -555,6 +559,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                     $error = "Kunde inte skicka testmail till $testEmail";
                 }
             }
+        }
+
+    } elseif ($action === 'reset_invitations') {
+        // Reset all invitations for a campaign so they can be resent
+        $campaignId = (int)$_POST['campaign_id'];
+        $stmt = $pdo->prepare("SELECT * FROM winback_campaigns WHERE id = ?");
+        $stmt->execute([$campaignId]);
+        $camp = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($camp && canEditCampaign($camp)) {
+            try {
+                $stmt = $pdo->prepare("DELETE FROM winback_invitations WHERE campaign_id = ?");
+                $stmt->execute([$campaignId]);
+                $deleted = $stmt->rowCount();
+                $message = "Nollställt $deleted inbjudningar — du kan nu skicka om till alla.";
+            } catch (Exception $e) {
+                $error = 'Kunde inte nollställa inbjudningar: ' . $e->getMessage();
+            }
+        } else {
+            $error = 'Kampanj hittades inte eller saknar behörighet';
         }
 
     } elseif ($action === 'send_invitations') {
@@ -688,10 +711,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                             $surveyUrl
                         ], $emailBody);
 
-                        // Wrap in HTML template
+                        // Wrap in HTML template with Back to Gravity banner
                         $body = '
+                            <div class="campaign-banner">
+                                <div class="campaign-banner-title">Back to Gravity</div>
+                                <div class="campaign-banner-sub">En kampanj från GravitySeries</div>
+                            </div>
                             <div class="header">
-                                <div class="logo">TheHUB</div>
+                                <div class="logo">GravitySeries<span class="logo-sub"> - TheHUB</span></div>
                             </div>
                             <div style="white-space: pre-wrap;">' . nl2br($emailBody) . '</div>
                             <p class="text-center" style="margin-top: 24px;">
@@ -1860,6 +1887,18 @@ $audienceLabel = match($audienceTypeView) {
                 <input type="hidden" name="campaign_id" value="<?= $selectedCampaign ?>">
 
                 <?php if ($canEditThisCampaign): ?>
+                <!-- Progress bar (hidden by default) -->
+                <div id="send-progress" style="display:none;margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-md);">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-xs);">
+                        <span id="progress-text">Skickar...</span>
+                        <span id="progress-count">0 / 0</span>
+                    </div>
+                    <div style="width:100%;height:8px;background:var(--color-bg-hover);border-radius:4px;overflow:hidden;">
+                        <div id="progress-bar" style="width:0%;height:100%;background:var(--color-accent);transition:width 0.3s;border-radius:4px;"></div>
+                    </div>
+                    <div id="progress-details" style="margin-top:var(--space-xs);font-size:0.8rem;color:var(--color-text-muted);"></div>
+                </div>
+
                 <div class="audience-actions">
                     <div class="audience-select-all">
                         <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
@@ -1869,10 +1908,13 @@ $audienceLabel = match($audienceTypeView) {
                     </div>
                     <div class="audience-buttons" style="display:flex;align-items:center;gap:var(--space-sm);flex-wrap:wrap;">
                         <span id="selected-count">0 valda</span>
+                        <button type="button" class="btn-admin btn-admin-ghost" onclick="resetInvitations(<?= $selectedCampaign ?>)" title="Nollställ alla inbjudningar så du kan skicka om">
+                            <i data-lucide="rotate-ccw"></i> Nollställ
+                        </button>
                         <button type="button" class="btn-admin btn-admin-ghost" onclick="sendTestEmail(<?= $selectedCampaign ?>)" title="Skicka testmail till dig">
                             <i data-lucide="mail-check"></i> Testmail
                         </button>
-                        <button type="submit" class="btn-admin btn-admin-primary" id="send-btn" disabled>
+                        <button type="button" class="btn-admin btn-admin-primary" id="send-btn" disabled onclick="startBatchSend(<?= $selectedCampaign ?>)">
                             <i data-lucide="send"></i> Skicka inbjudningar
                         </button>
                     </div>
@@ -2010,14 +2052,6 @@ function updateSelectedCount() {
     document.getElementById('send-btn').disabled = count === 0;
 }
 
-// Confirm before sending
-document.getElementById('invitation-form')?.addEventListener('submit', function(e) {
-    const count = document.querySelectorAll('.rider-checkbox:checked').length;
-    if (!confirm('Skicka inbjudningar till ' + count + ' deltagare?')) {
-        e.preventDefault();
-    }
-});
-
 function sendTestEmail(campaignId) {
     const email = prompt('Skicka testmail till vilken e-postadress?', '<?= htmlspecialchars($_SESSION['admin_email'] ?? $_SESSION['hub_user_email'] ?? '') ?>');
     if (!email) return;
@@ -2029,6 +2063,108 @@ function sendTestEmail(campaignId) {
         + '<input type="hidden" name="test_email" value="' + email.replace(/"/g, '&quot;') + '">';
     document.body.appendChild(form);
     form.submit();
+}
+
+function resetInvitations(campaignId) {
+    if (!confirm('Nollställ alla inbjudningar för denna kampanj?\n\nDetta gör att du kan skicka om till alla deltagare.')) return;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.innerHTML = '<input type="hidden" name="action" value="reset_invitations">'
+        + '<input type="hidden" name="campaign_id" value="' + campaignId + '">';
+    document.body.appendChild(form);
+    form.submit();
+}
+
+let batchAborted = false;
+
+async function startBatchSend(campaignId) {
+    const checked = document.querySelectorAll('.rider-checkbox:checked');
+    const riderIds = Array.from(checked).map(cb => cb.value);
+
+    if (riderIds.length === 0) return;
+
+    const resend = confirm(
+        'Skicka till ' + riderIds.length + ' deltagare?\n\n' +
+        'Klicka OK för att skicka.\n' +
+        'OBS: Redan inbjudna hoppas automatiskt över.\n' +
+        'Vill du skicka om till ALLA (inklusive redan inbjudna)?\n' +
+        '→ Nollställ inbjudningarna först med Nollställ-knappen.'
+    );
+    if (!resend) return;
+
+    // Show progress, disable buttons
+    batchAborted = false;
+    const progressDiv = document.getElementById('send-progress');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const progressCount = document.getElementById('progress-count');
+    const progressDetails = document.getElementById('progress-details');
+    const sendBtn = document.getElementById('send-btn');
+
+    progressDiv.style.display = 'block';
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<i data-lucide="loader"></i> Skickar...';
+
+    let sent = 0, skipped = 0, failed = 0;
+    const total = riderIds.length;
+    const startTime = Date.now();
+
+    for (let i = 0; i < total; i++) {
+        if (batchAborted) break;
+
+        const riderId = riderIds[i];
+        const pct = Math.round(((i + 1) / total) * 100);
+        progressBar.style.width = pct + '%';
+        progressCount.textContent = (i + 1) + ' / ' + total;
+
+        try {
+            const formData = new FormData();
+            formData.append('campaign_id', campaignId);
+            formData.append('rider_id', riderId);
+
+            const resp = await fetch('/api/winback-send.php', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await resp.json();
+
+            if (data.status === 'sent') {
+                sent++;
+                progressText.textContent = 'Skickat till ' + (data.name || '');
+            } else if (data.status === 'skipped') {
+                skipped++;
+                progressText.textContent = 'Hoppade över: ' + (data.reason || data.name || '');
+            } else {
+                failed++;
+                progressText.textContent = 'Misslyckades: ' + (data.name || data.error || '');
+            }
+        } catch (err) {
+            failed++;
+            progressText.textContent = 'Nätverksfel vid rider ' + riderId;
+        }
+
+        // Rate limiting: 150ms between sends
+        if (i < total - 1) {
+            await new Promise(r => setTimeout(r, 150));
+        }
+
+        // Update details
+        const elapsed = (Date.now() - startTime) / 1000;
+        const perEmail = elapsed / (i + 1);
+        const remaining = Math.round(perEmail * (total - i - 1));
+        progressDetails.textContent = 'Skickade: ' + sent + ' | Hoppade över: ' + skipped + ' | Misslyckade: ' + failed + ' | ~' + remaining + 's kvar';
+    }
+
+    // Done
+    progressBar.style.width = '100%';
+    progressBar.style.background = 'var(--color-success)';
+    progressText.textContent = 'Klart!';
+    progressDetails.textContent = 'Skickade: ' + sent + ' | Hoppade över: ' + skipped + ' | Misslyckade: ' + failed;
+    sendBtn.innerHTML = '<i data-lucide="check"></i> Klart (' + sent + ' skickade)';
+
+    // Refresh Lucide icons
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 </script>
 
