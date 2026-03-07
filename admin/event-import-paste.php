@@ -4,6 +4,9 @@
  * Quick import tool for pasting tab-separated results class by class
  * Supports both standard format and timing system format (enduro/DH)
  */
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/club-matching.php';
@@ -527,6 +530,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hasDetectedClasses = !empty($parsed['detected_classes']);
 
         if ($action === 'preview') {
+          try {
             $preview = $parsed;
             $preview['class_id'] = $classId;
             $preview['complement_mode'] = $complementMode;
@@ -629,6 +633,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
             unset($row);
+          } catch (Exception $e) {
+            $message = 'Fel vid förhandsgranskning: ' . $e->getMessage();
+            $messageType = 'error';
+            $preview = null;
+          } catch (Error $e) {
+            $message = 'Allvarligt fel: ' . $e->getMessage() . ' på rad ' . $e->getLine();
+            $messageType = 'error';
+            $preview = null;
+          }
 
         } else {
             // ===== DO IMPORT =====
