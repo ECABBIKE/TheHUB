@@ -470,97 +470,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             $error = 'Kampanj hittades inte eller saknar externa koder';
         }
 
-    } elseif ($action === 'send_test_email') {
-        // Send a test email to the admin
-        $campaignId = (int)$_POST['campaign_id'];
-        $testEmail = trim($_POST['test_email'] ?? '');
-
-        if (empty($testEmail) || !filter_var($testEmail, FILTER_VALIDATE_EMAIL)) {
-            $error = 'Ange en giltig e-postadress';
-        } else {
-            require_once __DIR__ . '/../includes/mail.php';
-
-            $stmt = $pdo->prepare("SELECT * FROM winback_campaigns WHERE id = ?");
-            $stmt->execute([$campaignId]);
-            $campaign = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$campaign) {
-                $error = 'Kampanj hittades inte';
-            } elseif (!canEditCampaign($campaign)) {
-                $error = 'Du har inte behörighet';
-            } else {
-                $isExternalCodes = !empty($campaign['external_codes_enabled']);
-
-                // Build discount info
-                $discountCode = null;
-                $discountText = '';
-                if (!$isExternalCodes && !empty($campaign['discount_code_id'])) {
-                    $stmt = $pdo->prepare("SELECT * FROM discount_codes WHERE id = ?");
-                    $stmt->execute([$campaign['discount_code_id']]);
-                    $discountCode = $stmt->fetch(PDO::FETCH_ASSOC);
-                    if ($discountCode) {
-                        $discountText = $discountCode['discount_type'] === 'percentage'
-                            ? intval($discountCode['discount_value']) . '% rabatt'
-                            : number_format($discountCode['discount_value'], 0) . ' kr rabatt';
-                    }
-                }
-
-                $surveyUrl = 'https://thehub.gravityseries.se/profile/winback-survey?t=TEST_TOKEN_EXAMPLE';
-
-                $subject = !empty($campaign['email_subject'])
-                    ? $campaign['email_subject'] . ' - TheHUB'
-                    : 'Vi saknar dig! - TheHUB';
-
-                $emailBody = !empty($campaign['email_body'])
-                    ? $campaign['email_body']
-                    : "Hej {{name}},\n\nVi har märkt att du inte tävlat på ett tag.\n\nSvara på en kort enkät så får du rabattkoden {{discount_code}} ({{discount_text}}) på din nästa anmälan!";
-
-                $codeText = $isExternalCodes
-                    ? ($campaign['external_code_prefix'] ?? 'KOD') . '123'
-                    : htmlspecialchars($discountCode['code'] ?? 'TESTKOD');
-                $discountLabel = $isExternalCodes
-                    ? 'rabattkod (delas ut efter enkätsvar)'
-                    : ($discountText ?: 'testrabatt');
-
-                $emailBody = str_replace([
-                    '{{name}}',
-                    '{{discount_code}}',
-                    '{{discount_text}}',
-                    '{{hub_link}}',
-                    '{{survey_link}}'
-                ], [
-                    'Testperson',
-                    $codeText,
-                    $discountLabel,
-                    SITE_URL ?? 'https://thehub.gravityseries.se',
-                    $surveyUrl
-                ], $emailBody);
-
-                $body = '
-                    <div class="campaign-banner">
-                        <img src="https://thehub.gravityseries.se/uploads/media/branding/697f64b56775d_1769956533.png" alt="Back to Gravity" style="max-width:280px;height:auto;margin:0 auto 8px;display:block;">
-                        <div class="campaign-banner-sub">En kampanj från GravitySeries</div>
-                    </div>
-                    <div class="header">
-                        <div class="logo">GravitySeries<span class="logo-sub"> - TheHUB</span></div>
-                    </div>
-                    <div style="white-space: pre-wrap;">' . nl2br(htmlspecialchars_decode($emailBody)) . '</div>
-                    <p class="text-center" style="margin-top: 24px;">
-                        <a href="' . $surveyUrl . '" class="btn">Svara på enkäten</a>
-                    </p>
-                ';
-
-                $fullBody = hub_email_template('custom', ['content' => $body]);
-                $sent = hub_send_email($testEmail, '[TEST] ' . $subject, $fullBody);
-
-                if ($sent) {
-                    $message = "Testmail skickat till $testEmail";
-                } else {
-                    $error = "Kunde inte skicka testmail till $testEmail";
-                }
-            }
-        }
-
     } elseif ($action === 'reset_invitations') {
         // Reset all invitations for a campaign so they can be resent
         $campaignId = (int)$_POST['campaign_id'];
@@ -2052,17 +1961,26 @@ function updateSelectedCount() {
     document.getElementById('send-btn').disabled = count === 0;
 }
 
-function sendTestEmail(campaignId) {
+async function sendTestEmail(campaignId) {
     const email = prompt('Skicka testmail till vilken e-postadress?', '<?= htmlspecialchars($_SESSION['admin_email'] ?? $_SESSION['hub_user_email'] ?? '') ?>');
     if (!email) return;
 
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.innerHTML = '<input type="hidden" name="action" value="send_test_email">'
-        + '<input type="hidden" name="campaign_id" value="' + campaignId + '">'
-        + '<input type="hidden" name="test_email" value="' + email.replace(/"/g, '&quot;') + '">';
-    document.body.appendChild(form);
-    form.submit();
+    try {
+        const formData = new FormData();
+        formData.append('campaign_id', campaignId);
+        formData.append('test_email', email);
+
+        const resp = await fetch('/api/winback-send.php', { method: 'POST', body: formData });
+        const data = await resp.json();
+
+        if (data.status === 'sent') {
+            alert('Testmail skickat till ' + email);
+        } else {
+            alert('Misslyckades: ' + (data.error || data.reason || 'okänt fel'));
+        }
+    } catch (err) {
+        alert('Nätverksfel: ' + err.message);
+    }
 }
 
 function resetInvitations(campaignId) {

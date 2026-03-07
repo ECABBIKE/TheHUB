@@ -8,7 +8,7 @@
  *   rider_id    - Single rider ID to send to
  *   resend      - If '1', skip the already-invited check
  */
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
 
 header('Content-Type: application/json');
@@ -33,10 +33,17 @@ global $pdo;
 $campaignId = (int)($_POST['campaign_id'] ?? 0);
 $riderId = (int)($_POST['rider_id'] ?? 0);
 $isResend = ($_POST['resend'] ?? '') === '1';
+$testEmail = trim($_POST['test_email'] ?? '');
+$isTest = !empty($testEmail) && filter_var($testEmail, FILTER_VALIDATE_EMAIL);
 
-if (!$campaignId || !$riderId) {
-    echo json_encode(['error' => 'Saknar campaign_id eller rider_id']);
+if (!$campaignId) {
+    echo json_encode(['error' => 'Saknar campaign_id']);
     exit;
+}
+
+// For test mode, use a fake rider if no rider_id given
+if ($isTest && !$riderId) {
+    $riderId = 0; // Will use test data below
 }
 
 // Get campaign
@@ -58,15 +65,22 @@ if (!$isAdmin && !$isOwner && !$hasPromotorAccess) {
     exit;
 }
 
-// Get rider
-$stmt = $pdo->prepare("SELECT id, firstname, lastname, email FROM riders WHERE id = ?");
-$stmt->execute([$riderId]);
-$rider = $stmt->fetch(PDO::FETCH_ASSOC);
+// Get rider (or use test data)
+if ($isTest && !$riderId) {
+    $rider = ['id' => 0, 'firstname' => 'Testperson', 'lastname' => 'Testsson', 'email' => $testEmail];
+} else {
+    $stmt = $pdo->prepare("SELECT id, firstname, lastname, email FROM riders WHERE id = ?");
+    $stmt->execute([$riderId]);
+    $rider = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$rider || empty($rider['email'])) {
-    echo json_encode(['status' => 'skipped', 'reason' => 'Saknar e-post']);
-    exit;
+    if (!$rider || empty($rider['email'])) {
+        echo json_encode(['status' => 'skipped', 'reason' => 'Saknar e-post']);
+        exit;
+    }
 }
+
+// Override email for test mode
+$recipientEmail = $isTest ? $testEmail : $rider['email'];
 
 // Check if already invited (skip if resend mode)
 $invTableExists = false;
@@ -75,7 +89,7 @@ try {
     $invTableExists = $check->rowCount() > 0;
 } catch (Exception $e) {}
 
-if ($invTableExists && !$isResend) {
+if ($invTableExists && !$isResend && !$isTest) {
     $stmt = $pdo->prepare("SELECT id FROM winback_invitations WHERE campaign_id = ? AND rider_id = ?");
     $stmt->execute([$campaignId, $riderId]);
     if ($stmt->fetch()) {
@@ -152,11 +166,12 @@ $body = '
 
 $fullBody = hub_email_template('custom', ['content' => $body]);
 
-// Send
-$sent = hub_send_email($rider['email'], $subject, $fullBody);
+// Send (test mode: override recipient + prefix subject)
+$finalSubject = $isTest ? '[TEST] ' . $subject : $subject;
+$sent = hub_send_email($recipientEmail, $finalSubject, $fullBody);
 
-// Log invitation
-if ($invTableExists) {
+// Log invitation (skip for test mode)
+if ($invTableExists && !$isTest) {
     if ($isResend) {
         // Update existing invitation record
         $stmt = $pdo->prepare("
