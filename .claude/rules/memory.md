@@ -15,6 +15,16 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-07, session 42)
+
+### Winback: Kampanjer skapas som utkast (kräver aktivering)
+- **Ändring:** Nya winback-kampanjer skapas med `is_active = 0` (utkast). Admin/promotor måste manuellt aktivera kampanjen via play-knappen.
+- **Badge-status:** Tre tillstånd: "Utkast" (gul, ny kampanj utan svar), "Pausad" (gul, inaktiv med svar), "Aktiv" (grön).
+- **Feedback-meddelanden:** Tydligare meddelanden vid skapande ("Kampanjen är inaktiv — aktivera den när du är redo") och vid toggle ("Kampanj aktiverad — den är nu synlig för deltagare" / "Kampanj pausad").
+- **Filer:** `admin/winback-campaigns.php`
+
+---
+
 ## SENASTE FIXAR (2026-03-07, session 41)
 
 ### Winback: Routing-fix + kodformat + välkomstnotis

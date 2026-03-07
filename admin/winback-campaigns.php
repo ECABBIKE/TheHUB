@@ -71,8 +71,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
 
     if ($action === 'toggle_campaign') {
         $id = (int)$_POST['id'];
+        // Get current state to show correct message
+        $currentState = $pdo->prepare("SELECT is_active FROM winback_campaigns WHERE id = ?");
+        $currentState->execute([$id]);
+        $wasActive = (int)$currentState->fetchColumn();
         $pdo->prepare("UPDATE winback_campaigns SET is_active = NOT is_active WHERE id = ?")->execute([$id]);
-        $message = 'Kampanjstatus uppdaterad';
+        $message = $wasActive ? 'Kampanj pausad' : 'Kampanj aktiverad — den är nu synlig för deltagare';
     } elseif ($action === 'create_campaign') {
         $name = trim($_POST['name'] ?? '');
         $brandIds = $_POST['brand_ids'] ?? [];
@@ -120,16 +124,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             if ($hasDiscountCodeId) {
                 $stmt = $pdo->prepare("
                     INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_code_id, email_subject, email_body, owner_user_id, allow_promotor_access, external_codes_enabled, external_code_prefix, external_event_name, is_active)
-                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
                 ");
                 $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $externalCodesEnabled ? null : $discountCodeId, $emailSubject, $emailBody, $ownerId, $allowPromotorAccess, $externalCodesEnabled, $externalCodesEnabled ? $externalCodePrefix : null, $externalCodesEnabled ? $externalEventName : null]);
                 $newCampaignId = $pdo->lastInsertId();
 
                 if ($externalCodesEnabled && $newCampaignId) {
                     $genResult = generateExternalCodes($pdo, $newCampaignId, $externalCodePrefix, json_decode(json_encode(array_map('intval', $brandIds)), true), $startYear, $endYear, $targetYear, $audienceType);
-                    $message = 'Kampanj skapad med ' . $genResult['count'] . ' externa koder!';
+                    $message = 'Kampanj skapad med ' . $genResult['count'] . ' externa koder! Kampanjen är inaktiv — aktivera den när du är redo.';
                 } else {
-                    $message = 'Kampanj skapad!';
+                    $message = 'Kampanj skapad! Kampanjen är inaktiv — aktivera den när du är redo.';
                 }
             } else {
                 $error = 'Kör migration 031 först (admin/migrations.php)';
@@ -2465,8 +2469,14 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
                 <div>
                     <div class="campaign-name"><?= htmlspecialchars($c['name']) ?></div>
                     <div style="margin-top:var(--space-xs);display:flex;gap:var(--space-xs);flex-wrap:wrap;">
-                        <span class="badge <?= $c['is_active'] ? 'badge-success' : 'badge-secondary' ?>">
-                            <?= $c['is_active'] ? 'Aktiv' : 'Inaktiv' ?>
+                        <span class="badge <?= $c['is_active'] ? 'badge-success' : 'badge-warning' ?>">
+                            <?php if ($c['is_active']): ?>
+                                Aktiv
+                            <?php elseif ($c['response_count'] == 0): ?>
+                                Utkast
+                            <?php else: ?>
+                                Pausad
+                            <?php endif; ?>
                         </span>
                         <span class="badge <?= $campAudienceType === 'active' ? 'badge-primåry' : ($campAudienceType === 'one_timer' ? 'badge-info' : 'badge-warning') ?>" title="Målgrupp">
                             <?php
@@ -2502,7 +2512,7 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
                     <form method="POST" style="display:inline;">
                         <input type="hidden" name="action" value="toggle_campaign">
                         <input type="hidden" name="id" value="<?= $c['id'] ?>">
-                        <button type="submit" class="btn-admin btn-admin-ghost btn-sm" title="<?= $c['is_active'] ? 'Pausa' : 'Aktivera' ?>">
+                        <button type="submit" class="btn-admin btn-admin-ghost btn-sm" title="<?= $c['is_active'] ? 'Pausa kampanj' : 'Aktivera kampanj' ?>">
                             <i data-lucide="<?= $c['is_active'] ? 'pause' : 'play' ?>"></i>
                         </button>
                     </form>
