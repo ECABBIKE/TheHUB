@@ -26,7 +26,7 @@ if (!$tablesExist) {
     <div class="page-header">
         <h1 class="page-title">
             <i data-lucide="clipboard-list" class="page-icon"></i>
-            Feedback-enkat
+            Feedback-enkät
         </h1>
     </div>
     <div class="alert alert-info">
@@ -151,7 +151,7 @@ if (!$campaign) {
     <div class="page-header">
         <h1 class="page-title">
             <i data-lucide="clipboard-list" class="page-icon"></i>
-            Feedback-enkat
+            Feedback-enkät
         </h1>
     </div>
     <div class="card">
@@ -344,7 +344,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
 <div class="page-header">
     <h1 class="page-title">
         <i data-lucide="clipboard-list" class="page-icon"></i>
-        Feedback-enkat
+        Feedback-enkät
     </h1>
     <p class="page-subtitle">Hjälp oss förbättra - få en rabattkod som tack!</p>
 </div>
@@ -494,7 +494,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
                         <textarea name="q_<?= $q['id'] ?>"
                                   class="form-textarea"
                                   rows="3"
-                                  placeholder="Skriv har..."
+                                  placeholder="Skriv här..."
                                   <?= $q['is_required'] ? 'required' : '' ?>></textarea>
                     <?php endif; ?>
                 </div>
@@ -507,7 +507,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
                 </p>
                 <button type="submit" class="btn btn-primary btn-lg">
                     <i data-lucide="send"></i>
-                    Skicka och hamta rabattkod
+                    Skicka och hämta rabattkod
                 </button>
             </div>
         </form>
@@ -790,7 +790,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
 }
 
 /* Mobile */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
+    .wb-form-card,
+    .wb-success-card {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+    }
+
+    .wb-intro {
+        padding: var(--space-md);
+    }
+
+    .wb-reward-preview {
+        display: flex;
+        font-size: 0.9rem;
+    }
+
     .wb-scale-options {
         flex-wrap: wrap;
     }
@@ -800,12 +818,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
     }
 
     .wb-scale-number {
-        height: 40px;
-        font-size: 0.875rem;
+        height: 44px;
+        font-size: 0.9rem;
+    }
+
+    .wb-success-card .card-body {
+        padding: var(--space-lg);
+    }
+
+    .wb-success-icon {
+        width: 64px;
+        height: 64px;
+    }
+
+    .wb-success-icon i {
+        width: 32px;
+        height: 32px;
+    }
+
+    .wb-discount-box {
+        padding: var(--space-md);
     }
 
     .wb-discount-code {
         font-size: 1.5rem;
+        letter-spacing: 1px;
+    }
+
+    .wb-form-footer .btn {
+        width: 100%;
+        min-height: 48px;
+        justify-content: center;
     }
 }
 
@@ -815,8 +858,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
     }
 
     .wb-scale-number {
-        height: 36px;
-        font-size: 0.75rem;
+        height: 40px;
+        font-size: 0.8rem;
+    }
+
+    .wb-discount-code {
+        font-size: 1.25rem;
+        letter-spacing: 0;
+    }
+
+    .wb-discount-value {
+        font-size: 1rem;
     }
 }
 </style>

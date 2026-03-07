@@ -141,7 +141,9 @@ function hub_get_current_page(): array {
             'race-reports' => '/pages/profile/race-reports.php',
             'event-ratings' => '/pages/profile/event-ratings.php',
             'tickets' => '/pages/profile/tickets.php',
-            'login' => '/pages/profile/login.php'
+            'login' => '/pages/profile/login.php',
+            'winback' => '/pages/profile/winback.php',
+            'winback-survey' => '/pages/profile/winback-survey.php'
         ],
         'register' => [
             'index' => '/pages/register/index.php',

@@ -1,6 +1,6 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-03-06
+> Senast uppdaterad: 2026-03-07
 
 ---
 
@@ -15,13 +15,40 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-07, session 42)
+
+### Winback: Kampanjer skapas som utkast (kräver aktivering)
+- **Ändring:** Nya winback-kampanjer skapas med `is_active = 0` (utkast). Admin/promotor måste manuellt aktivera kampanjen via play-knappen.
+- **Badge-status:** Tre tillstånd: "Utkast" (gul, ny kampanj utan svar), "Pausad" (gul, inaktiv med svar), "Aktiv" (grön).
+- **Feedback-meddelanden:** Tydligare meddelanden vid skapande ("Kampanjen är inaktiv — aktivera den när du är redo") och vid toggle ("Kampanj aktiverad — den är nu synlig för deltagare" / "Kampanj pausad").
+
+### Winback: Mobilanpassning alla tre sidor
+- **winback-survey.php:** Edge-to-edge kort på mobil, skala-frågor 5 per rad, success-ikon 64px (från 80px), rabattkod 1.25rem på smal mobil, submit-knapp full bredd + 48px touch target.
+- **winback.php:** Edge-to-edge kampanjkort + hero, campaign-header stackar vertikalt, CTA-knapp full bredd + 48px höjd, reward-code 1.125rem, hero-bild max 200px på mobil.
+- **admin/winback-campaigns.php:** Campaign-header stackar vertikalt på mobil, action-knappar tar full bredd, kampanjnamn 1rem, stat-värden 1.25rem.
+- **Svenska tecken fixade:** "enkat"→"enkät", "hamta"→"hämta", "Skriv har"→"Skriv här", "deltägare"→"deltagare", "Malar"→"Målår", "for"→"för", "Forsta ar"→"Första år", "Galler"→"Gäller".
+- **CSS-typo fixad:** `primåry`→`primary` (CSS-klasser och variabelreferenser i admin).
+- **Filer:** `admin/winback-campaigns.php`, `pages/profile/winback-survey.php`, `pages/profile/winback.php`
+
+---
+
+## SENASTE FIXAR (2026-03-07, session 41)
+
+### Winback: Routing-fix + kodformat + välkomstnotis
+- **Routing-bugg fixad:** `winback` och `winback-survey` saknades i `router.php` profile-sektionen. Sidorna föll tillbaka till profile/index → trasig CSS/layout, inga frågor visades.
+- **Kodformat ändrat:** Bytt från `PREFIX-A` till `PREFIX-J` till `PREFIX` + 3-siffrig slumpkod (100-999). T.ex. `THEHUB472` istället för `THEHUB-A`.
+- **Välkomstnotis:** Inloggade användare med väntande winback-kampanjer ser nu en notis-banner på startsidan (`pages/welcome.php`) med länk till `/profile/winback`.
+- **Filer:** `router.php`, `pages/welcome.php`, `admin/winback-campaigns.php`
+
+---
+
 ## SENASTE FIXAR (2026-03-06, session 40)
 
 ### Winback: Externa rabattkoder för event utanför TheHUB
 - **Ny funktion:** Winback-kampanjer kan nu generera "externa rabattkoder" — koder som delas ut till deltagare efter enkätsvar, men som används på extern anmälningsplattform (t.ex. EQ Timing för Swecup).
 - **Max 10 koder per kampanj:** Varje kod representerar en deltagarkategori baserad på erfarenhet (antal starter) och ålder. Alla inom samma kategori får samma kod → möjliggör spårning av vilken deltagartyp som konverterar.
 - **Kategorier:** Veteran (6+), Erfaren (3-5), Nybörjare (2), Engångare (1) × Ung (<30), Medel (30-44), Senior (45+). Tomma kategorier hoppas över.
-- **Kodformat:** `{PREFIX}-A` till `{PREFIX}-J` (admin anger prefix, suffix genereras automatiskt).
+- **Kodformat:** `{PREFIX}` + 3-siffrig slumpkod (100-999), t.ex. `THEHUB472`.
 - **Admin-UI:** Checkbox "Externa rabattkoder" i kampanjformuläret (create + edit). Prefix-fält + externt eventnamn. Kodtabell i kampanjkortet med inline-redigering av användningsantal. Regenerera-knapp.
 - **Enkätsvar:** Vid survey-submit med external_codes_enabled: beräknar deltagarens kategori → slår upp matchande extern kod → sparar i response → skickar e-post med koden.
 - **Publik vy:** Winback-sidan visar extern kod med eventnamn och instruktion om extern plattform.

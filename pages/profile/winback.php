@@ -256,6 +256,53 @@ if ($tablesExist) {
     height: 48px;
     margin-bottom: var(--space-md);
 }
+
+/* Mobile */
+@media (max-width: 767px) {
+    .winback-hero {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0;
+        padding: var(--space-lg) var(--space-md);
+    }
+    .winback-hero img {
+        max-width: 200px;
+    }
+    .winback-hero h1 {
+        font-size: 1.5rem;
+    }
+    .campaign-card {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+    }
+    .campaign-header {
+        flex-direction: column;
+        gap: var(--space-xs);
+    }
+    .campaign-name {
+        font-size: 1.1rem;
+    }
+    .reward-code {
+        font-size: 1.125rem;
+        letter-spacing: 1px;
+    }
+    .prize-draw-box {
+        padding: var(--space-md);
+    }
+    .prize-draw-box h3 {
+        font-size: 1.1rem;
+    }
+    .cta-button {
+        display: flex;
+        width: 100%;
+        justify-content: center;
+        min-height: 48px;
+        padding: var(--space-md);
+    }
+}
 </style>
 
 <div class="page-header">
