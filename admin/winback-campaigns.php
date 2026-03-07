@@ -408,7 +408,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $riderIds = $_POST['rider_ids'] ?? [];
 
         if (empty($riderIds)) {
-            $error = 'Välj minst en deltägare att bjuda in';
+            $error = 'Välj minst en deltagare att bjuda in';
         } else {
             require_once __DIR__ . '/../includes/mail.php';
 
@@ -1041,7 +1041,7 @@ include __DIR__ . '/components/unified-layout.php';
 .campaign-name {
     font-size: 1.125rem;
     font-weight: 600;
-    color: var(--color-text-primåry);
+    color: var(--color-text-primary);
 }
 .campaign-meta {
     display: flex;
@@ -1087,7 +1087,7 @@ include __DIR__ . '/components/unified-layout.php';
     padding: var(--space-lg);
     text-align: center;
 }
-.stat-box.primåry { border-left: 3px solid var(--color-accent); }
+.stat-box.primary { border-left: 3px solid var(--color-accent); }
 .stat-value {
     font-size: 2rem;
     font-weight: 700;
@@ -1107,7 +1107,7 @@ include __DIR__ . '/components/unified-layout.php';
 .answer-stat-header {
     font-weight: 600;
     margin-bottom: var(--space-md);
-    color: var(--color-text-primåry);
+    color: var(--color-text-primary);
 }
 .option-bar {
     display: flex;
@@ -1162,7 +1162,7 @@ include __DIR__ . '/components/unified-layout.php';
     align-items: center;
     gap: var(--space-xs);
     margin-bottom: var(--space-md);
-    color: var(--color-text-primåry);
+    color: var(--color-text-primary);
     font-size: 1rem;
 }
 .demographic-bar {
@@ -1194,7 +1194,7 @@ include __DIR__ . '/components/unified-layout.php';
     text-align: right;
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--color-text-primåry);
+    color: var(--color-text-primary);
 }
 /* Audience type radio selection */
 .audience-option:hover {
@@ -1220,7 +1220,7 @@ include __DIR__ . '/components/unified-layout.php';
     margin-bottom: -2px;
     transition: all 0.15s;
 }
-.tab-link:hover { color: var(--color-text-primåry); }
+.tab-link:hover { color: var(--color-text-primary); }
 .tab-link.active {
     color: var(--color-accent);
     border-bottom-color: var(--color-accent);
@@ -1274,6 +1274,23 @@ include __DIR__ . '/components/unified-layout.php';
         border-radius: 0;
         border-left: none;
         border-right: none;
+        padding: var(--space-md);
+    }
+    .campaign-header {
+        flex-direction: column;
+        gap: var(--space-sm);
+    }
+    .campaign-header > div:last-child {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+    .campaign-header .btn-admin {
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+    }
+    .campaign-name {
+        font-size: 1rem;
     }
     .campaign-stats {
         flex-wrap: wrap;
@@ -1281,6 +1298,9 @@ include __DIR__ . '/components/unified-layout.php';
     }
     .campaign-stat {
         flex: 0 0 calc(50% - var(--space-md));
+    }
+    .campaign-stat-value {
+        font-size: 1.25rem;
     }
     .answer-stat {
         margin-left: -16px;
@@ -1352,7 +1372,7 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Stats -->
 <div class="stats-grid">
-    <div class="stat-box primåry">
+    <div class="stat-box primary">
         <div class="stat-value"><?= $stats['total_responses'] ?? 0 ?></div>
         <div class="stat-label">Totala svar</div>
     </div>
@@ -1609,7 +1629,7 @@ $audienceLabel = match($audienceTypeView) {
 
         <?php if (empty($audienceRiders)): ?>
             <p style="text-align:center;color:var(--color-text-muted);padding:var(--space-2xl);">
-                Ingen målgrupp hittades for denna kampanj.
+                Ingen målgrupp hittades för denna kampanj.
             </p>
         <?php else: ?>
             <!-- Invitation Form -->
@@ -1627,7 +1647,7 @@ $audienceLabel = match($audienceTypeView) {
                     </div>
                     <div class="audience-buttons">
                         <span id="selected-count">0 valda</span>
-                        <button type="submit" class="btn-admin btn-admin-primåry" id="send-btn" disabled>
+                        <button type="submit" class="btn-admin btn-admin-primary" id="send-btn" disabled>
                             <i data-lucide="send"></i> Skicka inbjudningar
                         </button>
                     </div>
@@ -1717,7 +1737,7 @@ $audienceLabel = match($audienceTypeView) {
 .audience-stat-value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--color-text-primåry);
+    color: var(--color-text-primary);
 }
 .audience-stat-label {
     font-size: 0.75rem;
@@ -1768,7 +1788,7 @@ function updateSelectedCount() {
 // Confirm before sending
 document.getElementById('invitation-form')?.addEventListener('submit', function(e) {
     const count = document.querySelectorAll('.rider-checkbox:checked').length;
-    if (!confirm('Skicka inbjudningar till ' + count + ' deltägare?')) {
+    if (!confirm('Skicka inbjudningar till ' + count + ' deltagare?')) {
         e.preventDefault();
     }
 });
@@ -1834,7 +1854,7 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
             <div class="form-group" id="options-group" style="margin-bottom:var(--space-md);">
                 <label class="form-label">Svarsalternativ (ett per rad)</label>
                 <textarea name="options" class="form-textarea" rows="5" placeholder="Alternativ 1&#10;Alternativ 2&#10;Alternativ 3"></textarea>
-                <small style="color:var(--color-text-muted);">Skriv ett alternativ per rad. Galler for flerval och enkelval.</small>
+                <small style="color:var(--color-text-muted);">Skriv ett alternativ per rad. Gäller för flerval och enkelval.</small>
             </div>
 
             <div style="display:flex;gap:var(--space-lg);margin-bottom:var(--space-md);">
@@ -1855,7 +1875,7 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
                 </div>
             </div>
 
-            <button type="submit" class="btn-admin btn-admin-primåry">
+            <button type="submit" class="btn-admin btn-admin-primary">
                 <i data-lucide="plus"></i> Lagg till fraga
             </button>
         </form>
@@ -2082,7 +2102,7 @@ document.getElementById('edit-question-modal').addEventListener('click', functio
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     background: var(--color-bg-page);
-    color: var(--color-text-primåry);
+    color: var(--color-text-primary);
     font-family: inherit;
     resize: vertical;
 }
@@ -2261,27 +2281,27 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                     <label class="audience-option" style="display:flex;align-items:flex-start;gap:var(--space-sm);padding:var(--space-md);background:var(--color-bg-page);border:2px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;transition:all 0.15s;">
                         <input type="radio" name="audience_type" value="churned" checked style="margin-top:3px;">
                         <div>
-                            <strong style="color:var(--color-text-primåry);">Churnade deltägare</strong>
+                            <strong style="color:var(--color-text-primary);">Churnade deltagare</strong>
                             <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
                                 Tävlade tidigare men INTE målåret.<br>
-                                <em>Syfte: Få tillbaka inaktiva deltägare</em>
+                                <em>Syfte: Få tillbaka inaktiva deltagare</em>
                             </p>
                         </div>
                     </label>
                     <label class="audience-option" style="display:flex;align-items:flex-start;gap:var(--space-sm);padding:var(--space-md);background:var(--color-bg-page);border:2px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;transition:all 0.15s;">
                         <input type="radio" name="audience_type" value="active" style="margin-top:3px;">
                         <div>
-                            <strong style="color:var(--color-text-primåry);">Aktiva deltägare</strong>
+                            <strong style="color:var(--color-text-primary);">Aktiva deltagare</strong>
                             <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
                                 Tävlade minst en gång målåret.<br>
-                                <em>Syfte: Feedback + rabatt for nästa ar</em>
+                                <em>Syfte: Feedback + rabatt för nästa år</em>
                             </p>
                         </div>
                     </label>
                     <label class="audience-option" style="display:flex;align-items:flex-start;gap:var(--space-sm);padding:var(--space-md);background:var(--color-bg-page);border:2px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;transition:all 0.15s;">
                         <input type="radio" name="audience_type" value="one_timer" style="margin-top:3px;">
                         <div>
-                            <strong style="color:var(--color-text-primåry);">Engångare</strong>
+                            <strong style="color:var(--color-text-primary);">Engångare</strong>
                             <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
                                 Tävlade bara EN gång målåret.<br>
                                 <em>Syfte: Fa dem att komma tillbaka fler ggr</em>
@@ -2300,7 +2320,7 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                         <option value="<?= $y ?>" <?= $y == 2016 ? 'selected' : '' ?>><?= $y ?></option>
                         <?php endfor; ?>
                     </select>
-                    <small style="color:var(--color-text-muted);">Forsta ar att inkludera</small>
+                    <small style="color:var(--color-text-muted);">Första år att inkludera</small>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Slutar</label>
@@ -2309,10 +2329,10 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                         <option value="<?= $y ?>" <?= $y == ((int)date('Y') - 1) ? 'selected' : '' ?>><?= $y ?></option>
                         <?php endfor; ?>
                     </select>
-                    <small style="color:var(--color-text-muted);">Sista ar att inkludera</small>
+                    <small style="color:var(--color-text-muted);">Sista år att inkludera</small>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Malar</label>
+                    <label class="form-label">Målår</label>
                     <select name="target_year" class="form-select">
                         <?php for ($y = 2020; $y <= (int)date('Y') + 1; $y++): ?>
                         <option value="<?= $y ?>" <?= $y == (int)date('Y') ? 'selected' : '' ?>><?= $y ?></option>
@@ -2437,7 +2457,7 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
             </div>
             <?php endif; ?>
 
-            <button type="submit" class="btn-admin btn-admin-primåry">
+            <button type="submit" class="btn-admin btn-admin-primary">
                 <i data-lucide="plus"></i> Skapa kampanj
             </button>
         </form>
@@ -2478,7 +2498,7 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
                                 Pausad
                             <?php endif; ?>
                         </span>
-                        <span class="badge <?= $campAudienceType === 'active' ? 'badge-primåry' : ($campAudienceType === 'one_timer' ? 'badge-info' : 'badge-warning') ?>" title="Målgrupp">
+                        <span class="badge <?= $campAudienceType === 'active' ? 'badge-primary' : ($campAudienceType === 'one_timer' ? 'badge-info' : 'badge-warning') ?>" title="Målgrupp">
                             <?php
                             if ($campAudienceType === 'active') echo 'Aktiva ' . $c['target_year'];
                             elseif ($campAudienceType === 'one_timer') echo 'Engångare ' . $c['target_year'];
@@ -2717,7 +2737,7 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Malar</label>
+                    <label class="form-label">Målår</label>
                     <select name="target_year" id="edit-target-year" class="form-select">
                         <?php for ($y = 2020; $y <= (int)date('Y') + 1; $y++): ?>
                         <option value="<?= $y ?>"><?= $y ?></option>
