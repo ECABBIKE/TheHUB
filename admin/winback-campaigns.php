@@ -524,9 +524,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                 }
 
                 if (empty($error)) {
+                    // Extend timeout for large sends
+                    set_time_limit(0);
+
                     $sentCount = 0;
                     $failedCount = 0;
                     $skippedCount = 0;
+                    $batchCount = 0;
 
                     // Check if invitations table exists
                     $invTableExists = false;
@@ -634,6 +638,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                             $sentCount++;
                         } else {
                             $failedCount++;
+                        }
+
+                        // Rate limiting: pause briefly every 8 emails to avoid API limits
+                        $batchCount++;
+                        if ($batchCount % 8 === 0) {
+                            usleep(1100000); // 1.1 seconds pause every 8 emails
                         }
                     }
 
