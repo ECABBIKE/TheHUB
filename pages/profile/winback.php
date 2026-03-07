@@ -44,7 +44,7 @@ if ($tablesExist) {
         $placeholders = !empty($brandIds) ? implode(',', array_fill(0, count($brandIds), '?')) : '0';
 
         // Check if already responded
-        $respCheck = $pdo->prepare("SELECT id, discount_code_given, responded_at FROM winback_responses WHERE campaign_id = ? AND rider_id = ?");
+        $respCheck = $pdo->prepare("SELECT id, discount_code, submitted_at FROM winback_responses WHERE campaign_id = ? AND rider_id = ?");
         $respCheck->execute([$c['id'], $currentUser['id']]);
         $response = $respCheck->fetch(PDO::FETCH_ASSOC);
 
@@ -54,25 +54,27 @@ if ($tablesExist) {
             $completedCampaigns[] = $c;
 
             // Track earned discount
-            if (!empty($response['discount_code_given'])) {
+            if (!empty($response['discount_code'])) {
                 $earnedDiscounts[] = [
-                    'code' => $response['discount_code_given'],
+                    'code' => $response['discount_code'],
                     'campaign' => $c['name'],
-                    'responded_at' => $response['responded_at']
+                    'submitted_at' => $response['submitted_at']
                 ];
             }
             continue;
         }
 
         // Check if user qualifies based on audience type
+        // Use series_events junction table (correct) with events.series_id fallback
         $qualifies = false;
+        $brandFilter = !empty($brandIds)
+            ? " AND EXISTS (SELECT 1 FROM series_events se2 JOIN series s2 ON se2.series_id = s2.id WHERE se2.event_id = e.id AND s2.brand_id IN ($placeholders))"
+            : "";
 
         if ($audienceType === 'churned') {
             $sql = "SELECT COUNT(DISTINCT e.id) FROM results r
                     JOIN events e ON r.event_id = e.id
-                    JOIN series s ON e.series_id = s.id
-                    WHERE r.cyclist_id = ? AND YEAR(e.date) BETWEEN ? AND ?" .
-                    (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                    WHERE r.cyclist_id = ? AND YEAR(e.date) BETWEEN ? AND ?" . $brandFilter;
             $params = array_merge([$currentUser['id'], $c['start_year'], $c['end_year']], $brandIds);
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -80,9 +82,7 @@ if ($tablesExist) {
 
             $sql2 = "SELECT COUNT(*) FROM results r
                      JOIN events e ON r.event_id = e.id
-                     JOIN series s ON e.series_id = s.id
-                     WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" .
-                     (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                     WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" . $brandFilter;
             $params2 = array_merge([$currentUser['id'], $c['target_year']], $brandIds);
             $stmt2 = $pdo->prepare($sql2);
             $stmt2->execute($params2);
@@ -92,9 +92,7 @@ if ($tablesExist) {
         } elseif ($audienceType === 'active') {
             $sql = "SELECT COUNT(*) FROM results r
                     JOIN events e ON r.event_id = e.id
-                    JOIN series s ON e.series_id = s.id
-                    WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" .
-                    (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                    WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" . $brandFilter;
             $params = array_merge([$currentUser['id'], $c['target_year']], $brandIds);
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -102,9 +100,7 @@ if ($tablesExist) {
         } elseif ($audienceType === 'one_timer') {
             $sql = "SELECT COUNT(DISTINCT e.id) FROM results r
                     JOIN events e ON r.event_id = e.id
-                    JOIN series s ON e.series_id = s.id
-                    WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" .
-                    (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                    WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" . $brandFilter;
             $params = array_merge([$currentUser['id'], $c['target_year']], $brandIds);
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -401,10 +397,10 @@ if ($tablesExist) {
                     <span class="campaign-badge completed">Klar!</span>
                 </div>
 
-                <?php if (!empty($c['response']['discount_code_given'])): ?>
+                <?php if (!empty($c['response']['discount_code'])): ?>
                     <div class="reward-box">
                         <h4>Din rabattkod</h4>
-                        <div class="reward-code"><?= htmlspecialchars($c['response']['discount_code_given']) ?></div>
+                        <div class="reward-code"><?= htmlspecialchars($c['response']['discount_code']) ?></div>
                         <?php if (!empty($c['external_codes_enabled'])): ?>
                             <?php if (!empty($c['external_event_name'])): ?>
                                 <div class="reward-target">Gäller för: <?= htmlspecialchars($c['external_event_name']) ?></div>
@@ -422,7 +418,7 @@ if ($tablesExist) {
 
                 <p style="color: var(--color-text-muted); font-size: 0.875rem;">
                     <i data-lucide="calendar" style="width:14px;height:14px;vertical-align:middle;"></i>
-                    Svarade <?= date('j M Y', strtotime($c['response']['responded_at'])) ?>
+                    Svarade <?= date('j M Y', strtotime($c['response']['submitted_at'])) ?>
                 </p>
             </div>
         <?php endforeach; ?>

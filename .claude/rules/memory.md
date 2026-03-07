@@ -17,6 +17,17 @@
 
 ## SENASTE FIXAR (2026-03-07, session 42)
 
+### Winback: SQL-fixar i winback.php och welcome.php
+- **Kolumnnamn fixade:** `winback_responses`-tabellen har `discount_code` (INTE `discount_code_given`) och `submitted_at` (INTE `responded_at`). Felaktiga namn kraschar sidan tyst.
+- **Kvalificerings-queries fixade:** Alla tre sidorna (winback.php, winback-survey.php, welcome.php) använde `JOIN series s ON e.series_id = s.id` för brand-filtrering. Korrigerat till `EXISTS (SELECT 1 FROM series_events se2 JOIN series s2 ON se2.series_id = s2.id WHERE se2.event_id = e.id AND s2.brand_id IN (...))`.
+- **VIKTIGT:** `winback_responses` kolumner: `discount_code`, `submitted_at` (INTE `discount_code_given`, `responded_at`).
+
+### Winback: Kampanjnotis på welcome.php redesignad
+- **Flytt:** Notisen flyttad från efter navigationsrutnätet till direkt efter THEHUB-about-sektionen (mer synlig).
+- **Redesign:** Visuellt kampanjkort med Back to Gravity-logga, "Back to Gravity" som stor rubrik (Oswald-font, accent-färg), beskrivningstext, och CTA-pill-knapp "Hämta din rabattkod".
+- **Mobilanpassat:** Edge-to-edge, mindre logga, full-bredds CTA-knapp.
+- **CSS-klasser:** `.welcome-btg-banner`, `.welcome-btg-title`, `.welcome-btg-cta` etc. (ersätter `.welcome-winback-*`).
+
 ### Winback: Kampanjer skapas som utkast (kräver aktivering)
 - **Ändring:** Nya winback-kampanjer skapas med `is_active = 0` (utkast). Admin/promotor måste manuellt aktivera kampanjen via play-knappen.
 - **Badge-status:** Tre tillstånd: "Utkast" (gul, ny kampanj utan svar), "Pausad" (gul, inaktiv med svar), "Aktiv" (grön).

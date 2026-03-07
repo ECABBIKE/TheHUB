@@ -40,27 +40,32 @@ if ($isLoggedIn) {
                     if ($respCheck->fetch()) continue;
 
                     // Check qualification based on audience type
+                    // Use series_events junction table (correct) with events.series_id fallback
                     $qualifies = false;
+                    $brandFilter = !empty($brandIds)
+                        ? " AND EXISTS (SELECT 1 FROM series_events se2 JOIN series s2 ON se2.series_id = s2.id WHERE se2.event_id = e.id AND s2.brand_id IN ($placeholders))"
+                        : "";
+
                     if ($audienceType === 'churned') {
-                        $sql = "SELECT COUNT(DISTINCT e.id) FROM results r JOIN events e ON r.event_id = e.id JOIN series s ON e.series_id = s.id WHERE r.cyclist_id = ? AND YEAR(e.date) BETWEEN ? AND ?" . (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                        $sql = "SELECT COUNT(DISTINCT e.id) FROM results r JOIN events e ON r.event_id = e.id WHERE r.cyclist_id = ? AND YEAR(e.date) BETWEEN ? AND ?" . $brandFilter;
                         $params = array_merge([$riderId, $c['start_year'], $c['end_year']], $brandIds);
                         $stmt = $pdo->prepare($sql);
                         $stmt->execute($params);
                         $historicalCount = (int)$stmt->fetchColumn();
 
-                        $sql2 = "SELECT COUNT(*) FROM results r JOIN events e ON r.event_id = e.id JOIN series s ON e.series_id = s.id WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" . (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                        $sql2 = "SELECT COUNT(*) FROM results r JOIN events e ON r.event_id = e.id WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" . $brandFilter;
                         $params2 = array_merge([$riderId, $c['target_year']], $brandIds);
                         $stmt2 = $pdo->prepare($sql2);
                         $stmt2->execute($params2);
                         $qualifies = ($historicalCount > 0 && (int)$stmt2->fetchColumn() == 0);
                     } elseif ($audienceType === 'active') {
-                        $sql = "SELECT COUNT(*) FROM results r JOIN events e ON r.event_id = e.id JOIN series s ON e.series_id = s.id WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" . (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                        $sql = "SELECT COUNT(*) FROM results r JOIN events e ON r.event_id = e.id WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" . $brandFilter;
                         $params = array_merge([$riderId, $c['target_year']], $brandIds);
                         $stmt = $pdo->prepare($sql);
                         $stmt->execute($params);
                         $qualifies = ((int)$stmt->fetchColumn() > 0);
                     } elseif ($audienceType === 'one_timer') {
-                        $sql = "SELECT COUNT(DISTINCT e.id) FROM results r JOIN events e ON r.event_id = e.id JOIN series s ON e.series_id = s.id WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" . (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                        $sql = "SELECT COUNT(DISTINCT e.id) FROM results r JOIN events e ON r.event_id = e.id WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" . $brandFilter;
                         $params = array_merge([$riderId, $c['target_year']], $brandIds);
                         $stmt = $pdo->prepare($sql);
                         $stmt->execute($params);
@@ -207,6 +212,107 @@ $homepageLogo = getBranding('logos.homepage');
         <p class="welcome-about-desc">Här hittar du kalender, resultat, serieställningar, ranking och databas över åkare och klubbar.</p>
     </div>
 
+    <?php if ($pendingWinbackCount > 0): ?>
+    <!-- Back to Gravity Campaign Banner -->
+    <a href="/profile/winback" class="welcome-btg-banner">
+        <div class="welcome-btg-left">
+            <img src="/uploads/media/branding/697f64b56775d_1769956533.png" alt="Back to Gravity" class="welcome-btg-logo" onerror="this.style.display='none'">
+        </div>
+        <div class="welcome-btg-center">
+            <h2 class="welcome-btg-title">Back to Gravity</h2>
+            <p class="welcome-btg-subtitle">Vi saknar dig! Svara på en kort enkät och få rabatt på din nästa anmälan.</p>
+            <span class="welcome-btg-cta">
+                <i data-lucide="gift" style="width:16px;height:16px;"></i>
+                Hämta din rabattkod
+                <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+            </span>
+        </div>
+    </a>
+    <style>
+    .welcome-btg-banner {
+        display: flex;
+        align-items: center;
+        gap: var(--space-lg);
+        margin: var(--space-lg) 0;
+        padding: var(--space-lg) var(--space-xl);
+        background: linear-gradient(135deg, var(--color-bg-surface), var(--color-accent-light));
+        border: 2px solid var(--color-accent);
+        border-radius: var(--radius-lg);
+        text-decoration: none;
+        color: var(--color-text-primary);
+        transition: all 0.2s;
+        overflow: hidden;
+    }
+    .welcome-btg-banner:hover {
+        background: linear-gradient(135deg, var(--color-accent-light), rgba(55, 212, 214, 0.2));
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(55, 212, 214, 0.2);
+    }
+    .welcome-btg-left {
+        flex-shrink: 0;
+    }
+    .welcome-btg-logo {
+        width: 80px;
+        height: auto;
+    }
+    .welcome-btg-center {
+        flex: 1;
+        min-width: 0;
+    }
+    .welcome-btg-title {
+        font-family: var(--font-heading);
+        font-size: 1.5rem;
+        margin: 0 0 var(--space-xs);
+        color: var(--color-accent-text);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .welcome-btg-subtitle {
+        margin: 0 0 var(--space-sm);
+        color: var(--color-text-secondary);
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+    .welcome-btg-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xs);
+        background: var(--color-accent);
+        color: #000;
+        padding: var(--space-xs) var(--space-md);
+        border-radius: var(--radius-full);
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    @media (max-width: 767px) {
+        .welcome-btg-banner {
+            margin-left: -16px;
+            margin-right: -16px;
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
+            width: calc(100% + 32px);
+            padding: var(--space-md);
+            gap: var(--space-md);
+        }
+        .welcome-btg-logo {
+            width: 60px;
+        }
+        .welcome-btg-title {
+            font-size: 1.25rem;
+        }
+        .welcome-btg-subtitle {
+            font-size: 0.85rem;
+        }
+        .welcome-btg-cta {
+            min-height: 40px;
+            justify-content: center;
+            width: 100%;
+        }
+    }
+    </style>
+    <?php endif; ?>
+
     <!-- Stats Row -->
     <div class="welcome-stats">
         <div class="welcome-stat">
@@ -269,74 +375,6 @@ $homepageLogo = getBranding('logos.homepage');
         <?php endif; ?>
     </div>
 
-    <?php if ($pendingWinbackCount > 0): ?>
-    <!-- Winback Campaign Notification -->
-    <a href="/profile/winback" class="welcome-winback-banner">
-        <div class="welcome-winback-content">
-            <?= hub_icon('gift', 'welcome-winback-icon') ?>
-            <div>
-                <strong>Du har en erbjudande som väntar!</strong>
-                <span>Svara på en kort enkät och få en rabattkod</span>
-            </div>
-            <?= hub_icon('chevron-right', 'welcome-winback-arrow') ?>
-        </div>
-    </a>
-    <style>
-    .welcome-winback-banner {
-        display: block;
-        margin: var(--space-lg) 0;
-        padding: var(--space-md) var(--space-lg);
-        background: linear-gradient(135deg, rgba(55, 212, 214, 0.15), rgba(55, 212, 214, 0.05));
-        border: 1px solid var(--color-accent);
-        border-radius: var(--radius-md);
-        text-decoration: none;
-        color: var(--color-text-primary);
-        transition: background 0.2s;
-    }
-    .welcome-winback-banner:hover {
-        background: linear-gradient(135deg, rgba(55, 212, 214, 0.25), rgba(55, 212, 214, 0.1));
-    }
-    .welcome-winback-content {
-        display: flex;
-        align-items: center;
-        gap: var(--space-md);
-    }
-    .welcome-winback-icon {
-        width: 32px;
-        height: 32px;
-        color: var(--color-accent);
-        flex-shrink: 0;
-    }
-    .welcome-winback-content div {
-        flex: 1;
-    }
-    .welcome-winback-content strong {
-        display: block;
-        font-family: var(--font-heading-secondary);
-        font-size: 1.05rem;
-    }
-    .welcome-winback-content span {
-        color: var(--color-text-secondary);
-        font-size: 0.875rem;
-    }
-    .welcome-winback-arrow {
-        width: 20px;
-        height: 20px;
-        color: var(--color-accent);
-        flex-shrink: 0;
-    }
-    @media (max-width: 767px) {
-        .welcome-winback-banner {
-            margin-left: -16px;
-            margin-right: -16px;
-            border-radius: 0;
-            border-left: none;
-            border-right: none;
-            width: calc(100% + 32px);
-        }
-    }
-    </style>
-    <?php endif; ?>
 
     <?php if (!empty($upcomingEvents)): ?>
     <!-- Upcoming Events - 3 cards in a row -->
