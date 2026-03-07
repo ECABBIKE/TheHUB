@@ -828,13 +828,13 @@ include __DIR__ . '/components/unified-layout.php';
                     </thead>
                     <tbody>
                         <?php foreach ($s['orders'] as $order): ?>
-                        <tr<?= !empty($order['is_series_split']) ? ' style="border-left: 3px solid var(--color-accent); opacity: 0.9;"' : '' ?>>
+                        <tr<?= !empty($order['is_series_split']) ? ' style="border-left: 2px solid var(--color-border-strong); opacity: 0.9;"' : '' ?>>
                             <td><a href="/admin/orders.php?search=<?= urlencode($order['order_number']) ?>"><?= htmlspecialchars($order['order_number']) ?></a></td>
                             <td><?= date('Y-m-d', strtotime($order['created_at'])) ?></td>
                             <td>
                                 <?= htmlspecialchars($order['source_name'] ?? '-') ?>
                                 <?php if (!empty($order['is_series_split'])): ?>
-                                    <span class="badge" style="font-size:10px;background:var(--color-accent-light);color:var(--color-accent);">Serieanmälan</span>
+                                    <span class="badge" style="font-size:10px;">Serie</span>
                                 <?php elseif (($order['source_type'] ?? '') === 'serie'): ?>
                                     <span class="badge" style="font-size:10px;">Serie</span>
                                 <?php endif; ?>

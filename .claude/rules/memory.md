@@ -15,6 +15,16 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-07, session 46)
+
+### Ekonomivyn: Köparnamn + subtilare serie-styling
+- **Köparnamn tillagt:** `o.customer_name` tillagd i SQL-frågorna för BÅDE admin- och promotor-ekonomivyn. Visas som ny kolumn "Köpare" i desktop-tabellen och i metadata-raden på mobil.
+- **Serie-split styling:** Bytt från 3px cyan `border-left` + "Serieanmälan"-text till diskret 2px `border-strong` + kort "Serie"-text. Opacity 0.85 behålls för visuell skillnad.
+- **Settlements.php:** Samma styling-fix applicerad.
+- **Filer:** `admin/promotor.php`, `admin/settlements.php`
+
+---
+
 ## SENASTE FIXAR (2026-03-07, session 45)
 
 ### Winback: Enkät-formuläret förbättrat

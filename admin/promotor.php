@@ -232,6 +232,7 @@ if ($isAdmin) {
             SELECT o.id, o.order_number, o.total_amount, o.payment_method, o.payment_status,
                    {$stripeFeeCol}
                    o.event_id, o.series_id, o.created_at,
+                   o.customer_name,
                    COALESCE(e.name, CONCAT(s_via_order.name, ' (serie)'), s_via_items.sname, '-') as event_name,
                    COALESCE(oi_count.participant_count, 1) as participant_count
             FROM orders o
@@ -743,6 +744,7 @@ if (!$isAdmin) {
                     SELECT DISTINCT o.id, o.order_number, o.total_amount, o.payment_method,
                            {$stripeFeeCol}
                            o.event_id, o.series_id, o.created_at, o.discount,
+                           o.customer_name,
                            COALESCE(e.name, CONCAT(s_direct.name, ' (serie)'), CONCAT(s_name.name, ' (serie)'), 'Serieanmälan') as event_name,
                            COALESCE(dc.code, '') as discount_code
                     FROM orders o
@@ -767,6 +769,7 @@ if (!$isAdmin) {
                         SELECT DISTINCT o.id, o.order_number, o.total_amount, o.payment_method,
                                {$stripeFeeCol}
                                o.event_id, o.created_at, o.discount,
+                               o.customer_name,
                                COALESCE(e.name, 'Serieanmälan') as event_name,
                                '' as discount_code
                         FROM orders o
@@ -933,7 +936,7 @@ include __DIR__ . '/components/unified-layout.php';
 <style>
 /* Order table styles */
 .order-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.order-table { font-variant-numeric: tabular-nums; min-width: 700px; }
+.order-table { font-variant-numeric: tabular-nums; min-width: 800px; }
 .order-table th { white-space: nowrap; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; }
 .order-table td { vertical-align: middle; white-space: nowrap; }
 .order-method { display: inline-flex; align-items: center; gap: var(--space-2xs); }
@@ -941,8 +944,8 @@ include __DIR__ . '/components/unified-layout.php';
 .fee-estimated { opacity: 0.6; font-style: italic; }
 .order-event { font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
 .summary-row td { font-weight: 600; border-top: 2px solid var(--color-border-strong); background: var(--color-bg-hover); }
-.series-split-row td { border-left: 3px solid var(--color-accent); opacity: 0.85; font-size: var(--text-sm); }
-.series-split-row td:first-child { border-left: 3px solid var(--color-accent); }
+.series-split-row td { opacity: 0.85; font-size: var(--text-sm); }
+.series-split-row td:first-child { border-left: 2px solid var(--color-border-strong); }
 .platform-fee-info {
     display: flex; align-items: center; gap: var(--space-xs); font-size: var(--text-sm);
     color: var(--color-text-secondary); margin-bottom: var(--space-sm);
@@ -1103,6 +1106,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <tr>
                         <th>Ordernr</th>
                         <th>Event</th>
+                        <th>Köpare</th>
                         <th style="text-align: right;">Belopp</th>
                         <th>Betalsätt</th>
                         <th style="text-align: right;">Avgift betalning</th>
@@ -1136,11 +1140,13 @@ include __DIR__ . '/components/unified-layout.php';
                         <td>
                             <div class="order-event"><?= h($order['event_name'] ?? '-') ?></div>
                             <?php if (!empty($order['is_series_split'])): ?>
-                            <div class="text-xs" style="color: var(--color-accent); opacity: 0.7;">
-                                <i data-lucide="link" style="width: 10px; height: 10px; display: inline;"></i>
-                                Serieanmälan
+                            <div class="text-xs text-secondary" style="opacity: 0.7;">
+                                Serie
                             </div>
                             <?php endif; ?>
+                        </td>
+                        <td>
+                            <span style="font-size: var(--text-sm);"><?= h($order['customer_name'] ?? '-') ?></span>
                         </td>
                         <td style="text-align: right; font-weight: 500;">
                             <?= number_format($order['total_amount'], 2, ',', ' ') ?> kr
@@ -1175,7 +1181,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </tbody>
                 <tfoot>
                     <tr class="summary-row">
-                        <td colspan="2" style="font-weight: 600;">Summa (<?= $payoutTotals['order_count'] ?> ordrar)</td>
+                        <td colspan="3" style="font-weight: 600;">Summa (<?= $payoutTotals['order_count'] ?> ordrar)</td>
                         <td style="text-align: right;"><?= number_format($payoutTotals['gross'], 2, ',', ' ') ?> kr</td>
                         <td></td>
                         <td style="text-align: right; color: var(--color-error);">-<?= number_format($payoutTotals['payment_fees'], 2, ',', ' ') ?> kr</td>
@@ -1203,10 +1209,11 @@ include __DIR__ . '/components/unified-layout.php';
                     <div style="font-weight: 500; color: var(--color-text-primary); margin-bottom: 2px;"><?= h($order['event_name'] ?? '-') ?></div>
                     <div class="text-xs text-secondary">
                         <code><?= h($order['order_number'] ?? '#' . $order['id']) ?></code>
+                        &middot; <?= h($order['customer_name'] ?? '') ?>
                         &middot; <?= date('j M Y', strtotime($order['created_at'])) ?>
                         &middot; <?= $methodLabel ?>
                         <?php if (!empty($order['is_series_split'])): ?>
-                        &middot; <span style="color: var(--color-accent);">Serie</span>
+                        &middot; <span class="text-secondary">Serie</span>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -1409,12 +1416,12 @@ function cancelFeeEdit(recipientId, originalText) {
 
 /* Economy table (reuse admin styles) */
 .eco-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.eco-table { font-variant-numeric: tabular-nums; min-width: 650px; }
+.eco-table { font-variant-numeric: tabular-nums; min-width: 750px; }
 .eco-table th { white-space: nowrap; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; }
 .eco-table td { vertical-align: middle; white-space: nowrap; }
 .eco-event { font-size: var(--text-xs); color: var(--color-text-muted); max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
-.eco-table .series-split-row td { border-left: 3px solid var(--color-accent); opacity: 0.85; }
-.eco-table .series-split-row td:first-child { border-left: 3px solid var(--color-accent); }
+.eco-table .series-split-row td { opacity: 0.85; }
+.eco-table .series-split-row td:first-child { border-left: 2px solid var(--color-border-strong); }
 .fee-est { opacity: 0.6; font-style: italic; }
 .eco-cards { display: none; }
 .eco-summary td { font-weight: 600; border-top: 2px solid var(--color-border-strong); background: var(--color-bg-hover); }
@@ -1722,6 +1729,7 @@ function cancelFeeEdit(recipientId, originalText) {
                     <tr>
                         <th>Ordernr</th>
                         <th>Event</th>
+                        <th>Köpare</th>
                         <th style="text-align:right;">Belopp</th>
                         <th>Betalsätt</th>
                         <th style="text-align:right;">Avgift</th>
@@ -1749,8 +1757,11 @@ function cancelFeeEdit(recipientId, originalText) {
                         <td>
                             <div class="eco-event"><?= h($order['event_name'] ?? 'Serie') ?></div>
                             <?php if (!empty($order['is_series_split'])): ?>
-                            <div class="text-xs" style="color: var(--color-accent); opacity: 0.7;">Serieanmälan</div>
+                            <div class="text-xs text-secondary" style="opacity: 0.7;">Serie</div>
                             <?php endif; ?>
+                        </td>
+                        <td>
+                            <span style="font-size: var(--text-sm);"><?= h($order['customer_name'] ?? '-') ?></span>
                         </td>
                         <td style="text-align:right;font-weight:500;"><?= number_format($order['total_amount'], 2, ',', ' ') ?> kr</td>
                         <td><span style="font-size:var(--text-sm);"><?= $methodLabel ?></span></td>
@@ -1777,7 +1788,7 @@ function cancelFeeEdit(recipientId, originalText) {
                 </tbody>
                 <tfoot>
                     <tr class="eco-summary">
-                        <td colspan="2" style="font-weight:600;">Summa (<?= $promotorOrderTotals['order_count'] ?> ordrar)</td>
+                        <td colspan="3" style="font-weight:600;">Summa (<?= $promotorOrderTotals['order_count'] ?> ordrar)</td>
                         <td style="text-align:right;"><?= number_format($promotorOrderTotals['gross'], 2, ',', ' ') ?> kr</td>
                         <td></td>
                         <td style="text-align:right;color:var(--color-error);">-<?= number_format($promotorOrderTotals['payment_fees'], 2, ',', ' ') ?> kr</td>
@@ -1796,16 +1807,17 @@ function cancelFeeEdit(recipientId, originalText) {
                 $methodLabel = match($method) { 'swish','swish_csv' => 'Swish', 'card' => 'Kort', 'manual' => 'Manuell', 'free' => 'Gratis', default => ucfirst($method) };
                 $totalFees = $order['payment_fee'] + $order['platform_fee'];
             ?>
-            <div style="padding:var(--space-md);border-bottom:1px solid var(--color-border);<?= !empty($order['is_series_split']) ? 'border-left:3px solid var(--color-accent);' : '' ?>">
+            <div style="padding:var(--space-md);border-bottom:1px solid var(--color-border);<?= !empty($order['is_series_split']) ? 'border-left:2px solid var(--color-border-strong);' : '' ?>">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--space-xs);">
                     <div>
                         <div style="font-weight:500;color:var(--color-text-primary);margin-bottom:2px;"><?= h($order['event_name'] ?? 'Serie') ?></div>
                         <div class="text-xs text-secondary">
                             <code><?= h($order['order_number'] ?? '#' . $order['id']) ?></code>
+                            &middot; <?= h($order['customer_name'] ?? '') ?>
                             &middot; <?= date('j M Y', strtotime($order['created_at'])) ?>
                             &middot; <?= $methodLabel ?>
                             <?php if (!empty($order['is_series_split'])): ?>
-                            &middot; <span style="color:var(--color-accent);">Serie</span>
+                            &middot; <span class="text-secondary">Serie</span>
                             <?php endif; ?>
                             <?php if (!empty($order['discount_code'])): ?>
                             &middot; <span style="color:var(--color-warning);"><?= h($order['discount_code']) ?></span>

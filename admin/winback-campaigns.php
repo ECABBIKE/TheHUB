@@ -490,10 +490,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             } elseif (!canEditCampaign($campaign)) {
                 $error = 'Du har inte behörighet att skicka inbjudningar för denna kampanj';
             } else {
-                // Get linked discount code
+                // Get linked discount code (not needed for external code campaigns)
                 $discountCode = null;
                 $discountText = '';
-                if (!empty($campaign['discount_code_id'])) {
+                $isExternalCodes = !empty($campaign['external_codes_enabled']);
+
+                if (!$isExternalCodes && !empty($campaign['discount_code_id'])) {
                     $stmt = $pdo->prepare("SELECT * FROM discount_codes WHERE id = ?");
                     $stmt->execute([$campaign['discount_code_id']]);
                     $discountCode = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -504,9 +506,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                     }
                 }
 
-                if (!$discountCode) {
-                    $error = 'Kampanjen saknar kopplad rabattkod';
-                } else {
+                // Validate: must have EITHER external codes OR a linked discount code
+                if ($isExternalCodes) {
+                    // Verify external codes actually exist for this campaign
+                    $extCodeCount = 0;
+                    try {
+                        $stmt = $pdo->prepare("SELECT COUNT(*) FROM winback_external_codes WHERE campaign_id = ?");
+                        $stmt->execute([$campaignId]);
+                        $extCodeCount = (int)$stmt->fetchColumn();
+                    } catch (Exception $e) {}
+
+                    if ($extCodeCount === 0) {
+                        $error = 'Kampanjen har externa koder aktiverat men inga koder har genererats. Spara kampanjen först för att generera koder.';
+                    }
+                } elseif (!$discountCode) {
+                    $error = 'Kampanjen saknar kopplad rabattkod eller externa koder';
+                }
+
+                if (empty($error)) {
                     $sentCount = 0;
                     $failedCount = 0;
                     $skippedCount = 0;
@@ -559,6 +576,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
 
                         // Replace variables
                         $hubLink = SITE_URL;
+                        $codeText = $isExternalCodes
+                            ? ($campaign['external_code_prefix'] ?? 'KOD')
+                            : htmlspecialchars($discountCode['code'] ?? '');
+                        $discountLabel = $isExternalCodes
+                            ? 'rabattkod (delas ut efter enkätsvar)'
+                            : $discountText;
+
                         $emailBody = str_replace([
                             '{{name}}',
                             '{{discount_code}}',
@@ -567,8 +591,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                             '{{survey_link}}'
                         ], [
                             htmlspecialchars($rider['firstname']),
-                            htmlspecialchars($discountCode['code']),
-                            $discountText,
+                            $codeText,
+                            $discountLabel,
                             $hubLink,
                             $surveyUrl
                         ], $emailBody);
@@ -614,8 +638,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                     }
 
                     if ($sentCount > 0) {
-                        $message = "Skickade $sentCount inbjudningar med rabattkod " . $discountCode['code'];
-                        if ($skippedCount > 0) $message .= ", hoppade over $skippedCount (redan inbjudna eller saknar email)";
+                        $codeInfo = $isExternalCodes
+                            ? 'externa koder (prefix: ' . htmlspecialchars($campaign['external_code_prefix'] ?? '') . ')'
+                            : 'rabattkod ' . ($discountCode['code'] ?? '');
+                        $message = "Skickade $sentCount inbjudningar med $codeInfo";
+                        if ($skippedCount > 0) $message .= ", hoppade över $skippedCount (redan inbjudna eller saknar e-post)";
                         if ($failedCount > 0) $message .= ", $failedCount misslyckades";
                     } else {
                         $error = "Inga inbjudningar skickades. $skippedCount hoppades över, $failedCount misslyckades.";
