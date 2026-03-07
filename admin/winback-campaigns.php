@@ -95,6 +95,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $externalCodePrefix = strtoupper(trim($_POST['external_code_prefix'] ?? ''));
         $externalEventName = trim($_POST['external_event_name'] ?? '');
 
+        // Response email links
+        $responseInfoUrl = trim($_POST['response_email_info_url'] ?? '');
+        $responseInfoText = trim($_POST['response_email_info_text'] ?? '');
+        $responseRegUrl = trim($_POST['response_email_reg_url'] ?? '');
+        $responseRegText = trim($_POST['response_email_reg_text'] ?? '');
+
         // Validate audience type
         if (!in_array($audienceType, ['churned', 'active', 'one_timer'])) {
             $audienceType = 'churned';
@@ -123,10 +129,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
 
             if ($hasDiscountCodeId) {
                 $stmt = $pdo->prepare("
-                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_code_id, email_subject, email_body, owner_user_id, allow_promotor_access, external_codes_enabled, external_code_prefix, external_event_name, is_active)
-                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_code_id, email_subject, email_body, response_email_info_url, response_email_info_text, response_email_reg_url, response_email_reg_text, owner_user_id, allow_promotor_access, external_codes_enabled, external_code_prefix, external_event_name, is_active)
+                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
                 ");
-                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $externalCodesEnabled ? null : $discountCodeId, $emailSubject, $emailBody, $ownerId, $allowPromotorAccess, $externalCodesEnabled, $externalCodesEnabled ? $externalCodePrefix : null, $externalCodesEnabled ? $externalEventName : null]);
+                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $externalCodesEnabled ? null : $discountCodeId, $emailSubject, $emailBody, $responseInfoUrl ?: null, $responseInfoText ?: null, $responseRegUrl ?: null, $responseRegText ?: null, $ownerId, $allowPromotorAccess, $externalCodesEnabled, $externalCodesEnabled ? $externalCodePrefix : null, $externalCodesEnabled ? $externalEventName : null]);
                 $newCampaignId = $pdo->lastInsertId();
 
                 if ($externalCodesEnabled && $newCampaignId) {
@@ -180,6 +186,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             $externalCodePrefix = strtoupper(trim($_POST['external_code_prefix'] ?? ''));
             $externalEventName = trim($_POST['external_event_name'] ?? '');
 
+            // Response email links
+            $responseInfoUrl = trim($_POST['response_email_info_url'] ?? '');
+            $responseInfoText = trim($_POST['response_email_info_text'] ?? '');
+            $responseRegUrl = trim($_POST['response_email_reg_url'] ?? '');
+            $responseRegText = trim($_POST['response_email_reg_text'] ?? '');
+
             // Validate audience type
             if (!in_array($audienceType, ['churned', 'active', 'one_timer'])) {
                 $audienceType = 'churned';
@@ -209,12 +221,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                     $stmt = $pdo->prepare("
                         UPDATE winback_campaigns
                         SET name = ?, discount_code_id = ?, email_subject = ?, email_body = ?,
+                            response_email_info_url = ?, response_email_info_text = ?,
+                            response_email_reg_url = ?, response_email_reg_text = ?,
                             audience_type = ?, start_year = ?, end_year = ?, target_year = ?, brand_ids = ?,
                             owner_user_id = ?, allow_promotor_access = ?,
                             external_codes_enabled = ?, external_code_prefix = ?, external_event_name = ?
                         WHERE id = ?
                     ");
                     $stmt->execute([$name, $externalCodesEnabled ? null : $discountCodeId, $emailSubject, $emailBody,
+                                    $responseInfoUrl ?: null, $responseInfoText ?: null,
+                                    $responseRegUrl ?: null, $responseRegText ?: null,
                                     $audienceType, $startYear, $endYear, $targetYear, $brandIdsJson,
                                     $ownerId, $allowPromotorAccess,
                                     $externalCodesEnabled, $externalCodesEnabled ? $externalCodePrefix : null, $externalCodesEnabled ? $externalEventName : null,
@@ -224,11 +240,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                     $stmt = $pdo->prepare("
                         UPDATE winback_campaigns
                         SET name = ?, discount_code_id = ?, email_subject = ?, email_body = ?,
+                            response_email_info_url = ?, response_email_info_text = ?,
+                            response_email_reg_url = ?, response_email_reg_text = ?,
                             audience_type = ?, start_year = ?, end_year = ?, target_year = ?, brand_ids = ?,
                             external_codes_enabled = ?, external_code_prefix = ?, external_event_name = ?
                         WHERE id = ?
                     ");
                     $stmt->execute([$name, $externalCodesEnabled ? null : $discountCodeId, $emailSubject, $emailBody,
+                                    $responseInfoUrl ?: null, $responseInfoText ?: null,
+                                    $responseRegUrl ?: null, $responseRegText ?: null,
                                     $audienceType, $startYear, $endYear, $targetYear, $brandIdsJson,
                                     $externalCodesEnabled, $externalCodesEnabled ? $externalCodePrefix : null, $externalCodesEnabled ? $externalEventName : null,
                                     $id]);
@@ -380,6 +400,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                 } catch (Exception $e) {
                     $error = 'Fel vid radering: ' . $e->getMessage();
                 }
+            }
+        }
+    } elseif ($action === 'delete_response') {
+        $responseId = (int)$_POST['response_id'];
+        $campaignId = (int)$_POST['campaign_id'];
+
+        // Get campaign to check permissions
+        $stmt = $pdo->prepare("SELECT * FROM winback_campaigns WHERE id = ?");
+        $stmt->execute([$campaignId]);
+        $campaignForDel = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$campaignForDel || !canEditCampaign($campaignForDel)) {
+            $error = 'Du har inte behörighet att radera svar';
+        } else {
+            try {
+                // Delete answers first
+                $pdo->prepare("DELETE FROM winback_answers WHERE response_id = ?")->execute([$responseId]);
+                // Delete response
+                $pdo->prepare("DELETE FROM winback_responses WHERE id = ? AND campaign_id = ?")->execute([$responseId, $campaignId]);
+                $message = 'Svar raderat';
+            } catch (Exception $e) {
+                $error = 'Fel vid radering: ' . $e->getMessage();
+            }
+        }
+    } elseif ($action === 'delete_all_responses') {
+        $campaignId = (int)$_POST['campaign_id'];
+
+        $stmt = $pdo->prepare("SELECT * FROM winback_campaigns WHERE id = ?");
+        $stmt->execute([$campaignId]);
+        $campaignForDel = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$campaignForDel || !canEditCampaign($campaignForDel)) {
+            $error = 'Du har inte behörighet att nollställa kampanjen';
+        } else {
+            try {
+                // Get all response IDs
+                $stmt = $pdo->prepare("SELECT id FROM winback_responses WHERE campaign_id = ?");
+                $stmt->execute([$campaignId]);
+                $respIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+                if (!empty($respIds)) {
+                    $placeholders = implode(',', array_fill(0, count($respIds), '?'));
+                    $pdo->prepare("DELETE FROM winback_answers WHERE response_id IN ($placeholders)")->execute($respIds);
+                    $pdo->prepare("DELETE FROM winback_responses WHERE campaign_id = ?")->execute([$campaignId]);
+                }
+                $message = 'Alla ' . count($respIds) . ' svar raderade. Kampanjen är nollställd.';
+            } catch (Exception $e) {
+                $error = 'Fel vid nollställning: ' . $e->getMessage();
             }
         }
     } elseif ($action === 'update_external_usage') {
@@ -2259,7 +2327,18 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
             <?php endif; ?>
 
             <!-- Response list (for admin tracking) -->
-            <h3 style="margin: var(--space-xl) 0 var(--space-lg);">Svarande (<?= count($campaignResponses) ?>)</h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin:var(--space-xl) 0 var(--space-lg);">
+                <h3 style="margin:0;">Svarande (<?= count($campaignResponses) ?>)</h3>
+                <?php if (count($campaignResponses) > 0): ?>
+                <form method="POST" style="margin:0;" onsubmit="return confirm('Radera ALLA <?= count($campaignResponses) ?> svar och nollställ kampanjen? Detta kan inte ångras.');">
+                    <input type="hidden" name="action" value="delete_all_responses">
+                    <input type="hidden" name="campaign_id" value="<?= $selectedCampaign ?>">
+                    <button type="submit" class="btn-admin btn-admin-danger btn-sm">
+                        <i data-lucide="trash-2"></i> Nollställ alla svar
+                    </button>
+                </form>
+                <?php endif; ?>
+            </div>
             <div class="admin-table-container">
                 <table class="admin-table">
                     <thead>
@@ -2268,6 +2347,7 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                             <th>Namn</th>
                             <th>Klubb</th>
                             <th>Rabattkod</th>
+                            <th style="width:60px;"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2281,6 +2361,16 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                             </td>
                             <td><?= htmlspecialchars($resp['club_name'] ?? '-') ?></td>
                             <td><code><?= htmlspecialchars($resp['discount_code']) ?></code></td>
+                            <td>
+                                <form method="POST" style="margin:0;" onsubmit="return confirm('Radera svar från <?= htmlspecialchars($resp['firstname'] . ' ' . $resp['lastname']) ?>?');">
+                                    <input type="hidden" name="action" value="delete_response">
+                                    <input type="hidden" name="response_id" value="<?= $resp['id'] ?>">
+                                    <input type="hidden" name="campaign_id" value="<?= $selectedCampaign ?>">
+                                    <button type="submit" class="btn-admin btn-admin-danger btn-sm" style="padding:4px 8px;" title="Radera svar">
+                                        <i data-lucide="x"></i>
+                                    </button>
+                                </form>
+                            </td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -2451,8 +2541,38 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
                 </div>
             </div>
 
+            <div style="margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border-radius:var(--radius-md);">
+                <h4 style="margin:0 0 var(--space-sm) 0;font-size:0.9rem;color:var(--color-text-secondary);">
+                    <i data-lucide="mail" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+                    Svarsmailet (efter enkät)
+                </h4>
+                <small style="color:var(--color-text-muted);display:block;margin-bottom:var(--space-md);">
+                    Länkar som visas i mailet som skickas till deltagaren efter att de svarat på enkäten.
+                </small>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-sm);margin-bottom:var(--space-md);">
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label">Infolänk URL</label>
+                        <input type="url" name="response_email_info_url" class="form-input" placeholder="https://thehub.gravityseries.se/calendar/...">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label">Infolänk text</label>
+                        <input type="text" name="response_email_info_text" class="form-input" placeholder="T.ex. Information Gesunda Enduro 2026">
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-sm);">
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label">Anmälningslänk URL</label>
+                        <input type="url" name="response_email_reg_url" class="form-input" placeholder="https://entrysystem.se/form/...">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label">Anmälningslänk text</label>
+                        <input type="text" name="response_email_reg_text" class="form-input" placeholder="T.ex. Anmälan SWE Cup - Gesunda Enduro">
+                    </div>
+                </div>
+            </div>
+
             <div class="form-group" style="margin-bottom:var(--space-md);">
-                <label class="form-label">Varumårken *</label>
+                <label class="form-label">Varumärken *</label>
                 <div style="display:flex;flex-wrap:wrap;gap:var(--space-sm);">
                     <?php foreach ($brands as $b): ?>
                     <label style="display:flex;align-items:center;gap:var(--space-xs);padding:var(--space-sm);background:var(--color-bg-page);border-radius:var(--radius-sm);cursor:pointer;">
@@ -2844,17 +2964,47 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
             </div>
 
             <div style="margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border-radius:var(--radius-md);">
-                <h4 style="margin:0 0 var(--space-sm) 0;font-size:0.9rem;color:var(--color-text-secondary);">E-postinnehall</h4>
+                <h4 style="margin:0 0 var(--space-sm) 0;font-size:0.9rem;color:var(--color-text-secondary);">E-postinnehåll (inbjudan)</h4>
                 <div class="form-group" style="margin-bottom:var(--space-md);">
-                    <label class="form-label">Amnesrad</label>
+                    <label class="form-label">Ämnesrad</label>
                     <input type="text" name="email_subject" id="edit-email-subject" class="form-input" placeholder="T.ex. Vi saknar dig!">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Meddelande</label>
-                    <textarea name="email_body" id="edit-email-body" class="form-input" rows="5" placeholder="Skriv ditt meddelande har..."></textarea>
+                    <textarea name="email_body" id="edit-email-body" class="form-input" rows="5" placeholder="Skriv ditt meddelande här..."></textarea>
                     <small style="color:var(--color-text-muted);display:block;margin-top:4px;">
                         Variabler: <code>{{name}}</code>, <code>{{hub_link}}</code>, <code>{{survey_link}}</code>, <code>{{discount_code}}</code>, <code>{{discount_text}}</code>
                     </small>
+                </div>
+            </div>
+
+            <div style="margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border-radius:var(--radius-md);">
+                <h4 style="margin:0 0 var(--space-sm) 0;font-size:0.9rem;color:var(--color-text-secondary);">
+                    <i data-lucide="mail" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+                    Svarsmailet (efter enkät)
+                </h4>
+                <small style="color:var(--color-text-muted);display:block;margin-bottom:var(--space-md);">
+                    Länkar som visas i mailet som skickas till deltagaren efter att de svarat på enkäten.
+                </small>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-sm);margin-bottom:var(--space-md);">
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label">Infolänk URL</label>
+                        <input type="url" name="response_email_info_url" id="edit-resp-info-url" class="form-input" placeholder="https://thehub.gravityseries.se/calendar/...">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label">Infolänk text</label>
+                        <input type="text" name="response_email_info_text" id="edit-resp-info-text" class="form-input" placeholder="T.ex. Information Gesunda Enduro 2026">
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-sm);">
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label">Anmälningslänk URL</label>
+                        <input type="url" name="response_email_reg_url" id="edit-resp-reg-url" class="form-input" placeholder="https://entrysystem.se/form/...">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label">Anmälningslänk text</label>
+                        <input type="text" name="response_email_reg_text" id="edit-resp-reg-text" class="form-input" placeholder="T.ex. Anmälan SWE Cup - Gesunda Enduro">
+                    </div>
                 </div>
             </div>
 
@@ -2911,6 +3061,12 @@ function editCampaign(campaign) {
     document.getElementById('edit-discount-code-id').value = campaign.discount_code_id || '';
     document.getElementById('edit-email-subject').value = campaign.email_subject || 'Vi saknar dig!';
     document.getElementById('edit-email-body').value = campaign.email_body || '';
+
+    // Response email links
+    document.getElementById('edit-resp-info-url').value = campaign.response_email_info_url || '';
+    document.getElementById('edit-resp-info-text').value = campaign.response_email_info_text || '';
+    document.getElementById('edit-resp-reg-url').value = campaign.response_email_reg_url || '';
+    document.getElementById('edit-resp-reg-text').value = campaign.response_email_reg_text || '';
 
     // Set external codes fields
     const extEnabled = campaign.external_codes_enabled == 1;

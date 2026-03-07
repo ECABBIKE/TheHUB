@@ -285,6 +285,9 @@ $migrationChecks = [
     '083_backfill_orders_series_id.sql' => [
         'data' => ["orders.series_id IS NOT NULL AND id IN (SELECT oi83.order_id FROM order_items oi83 JOIN event_registrations er83 ON er83.id = oi83.registration_id JOIN series_events se83 ON se83.event_id = er83.event_id WHERE oi83.item_type = 'registration' GROUP BY oi83.order_id HAVING COUNT(DISTINCT er83.event_id) >= 2)"]
     ],
+    '084_winback_response_email_links.sql' => [
+        'columns' => ['winback_campaigns.response_email_info_url']
+    ],
 ];
 
 // ============================================================================
