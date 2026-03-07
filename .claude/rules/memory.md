@@ -15,6 +15,18 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-07, session 48)
+
+### Resultatimport: Tidtagningsformat + kompletteringsläge + manuell koppling
+- **Nytt format:** Stödjer nu tidtagningssystemformat med kolumner: Place(race), Place(cat), Bib, Category, Name, Association, Progress, Time, SS1-SS10.
+- **Auto-detektering:** Formatet detekteras automatiskt baserat på kolumnstruktur och Category-kolumn.
+- **Auto-klassdetektering:** Om "Category"-kolumnen finns (t.ex. H35, D19) mappas den automatiskt till befintliga klasser i databasen. Nya klasser skapas vid behov.
+- **Kompletteringsläge:** Nytt importläge "Komplettera" som bara lägger till saknade resultat och behåller befintliga. Resultat som redan finns i klassen hoppas över (visas överstrukna i preview).
+- **Manuell åkarkoppling:** I förhandsgranskningen kan man söka och manuellt koppla åkare mot databasen via AJAX-sök (per rad). Sökresultat visar namn + klubb, klick kopplar åkaren.
+- **Fuzzy-matchning:** Ny matchningsnivå "Fuzzy" för namn som nästan matchar (3 första tecken i för- och efternamn).
+- **AJAX-endpoint:** Ny `?ajax=search_rider&q=...` endpoint i samma fil för rider-sökning.
+- **Filer:** `admin/event-import-paste.php` (omskriven)
+
 ## SENASTE FIXAR (2026-03-07, session 47)
 
 ### Winback: AJAX batch-sändning + testmail + ny mail-branding
