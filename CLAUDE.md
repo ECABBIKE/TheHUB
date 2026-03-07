@@ -285,6 +285,42 @@ Vanliga Lucide-ikoner:
 
 ---
 
+## KNAPPAR MED TEXT - MÅSTE RYMMAS
+
+**Knappar som innehåller text MÅSTE alltid ha texten synlig inom knappens ytterlinje.**
+
+Knapptext får ALDRIG klippas av, överlappa eller sticka ut utanför knappen — varken på desktop eller mobil. Om utrymmet inte räcker, anpassa med:
+- `white-space: nowrap` + `overflow: hidden` + `text-overflow: ellipsis` (text förkortas med ...)
+- Separera textknappar från ikonknappar i layouten (olika flex-grupper)
+- Ge textknappar `flex: 1` och ikonknappar fast bredd
+- På mobil: minst `min-height: 40px` för touch targets
+
+```html
+<!-- FEL - Text och ikoner blandat i en flat flex-rad som squish:ar -->
+<div style="display:flex; gap:4px;">
+    <a class="btn">Målgrupp</a>
+    <a class="btn">Resultat</a>
+    <button class="btn"><i data-lucide="edit-2"></i></button>
+    <button class="btn"><i data-lucide="pause"></i></button>
+    <button class="btn"><i data-lucide="trash-2"></i></button>
+</div>
+
+<!-- RÄTT - Textknappar och ikonknappar i separata grupper -->
+<div class="actions">
+    <div class="actions-text">
+        <a class="btn">Målgrupp</a>
+        <a class="btn">Resultat</a>
+    </div>
+    <div class="actions-icons">
+        <button class="btn"><i data-lucide="edit-2"></i></button>
+        <button class="btn"><i data-lucide="pause"></i></button>
+        <button class="btn"><i data-lucide="trash-2"></i></button>
+    </div>
+</div>
+```
+
+---
+
 ## LÅSTA FILER - ÄNDRA ALDRIG
 
 Följande filer får INTE modifieras utan explicit godkännande:
