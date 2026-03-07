@@ -53,70 +53,29 @@ try {
 
     foreach ($campaigns as $c) {
         $brandIds = json_decode($c['brand_ids'] ?? '[]', true) ?: [];
+        $audienceType = $c['audience_type'] ?? 'churned';
+        $placeholders = !empty($brandIds) ? implode(',', array_fill(0, count($brandIds), '?')) : '0';
 
-        // Check if user qualifies: competed in start_year-end_year but NOT in target_year
-        // For this brand's series
+        // Use series_events junction table for brand filtering (same as winback.php and welcome.php)
+        $brandFilter = !empty($brandIds)
+            ? " AND EXISTS (SELECT 1 FROM series_events se2 JOIN series s2 ON se2.series_id = s2.id WHERE se2.event_id = e.id AND s2.brand_id IN ($placeholders))"
+            : "";
 
-        if (empty($brandIds)) {
-            // All brands - just check years
-            $checkSql = "
-                SELECT COUNT(DISTINCT e.id) as cnt
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                WHERE r.cyclist_id = ?
-                  AND YEAR(e.date) BETWEEN ? AND ?
-            ";
-            $stmt = $pdo->prepare($checkSql);
-            $stmt->execute([$currentUser['id'], $c['start_year'], $c['end_year']]);
-            $historicalCount = (int)$stmt->fetchColumn();
+        // Historical participation
+        $checkSql = "SELECT COUNT(DISTINCT e.id) FROM results r JOIN events e ON r.event_id = e.id WHERE r.cyclist_id = ? AND YEAR(e.date) BETWEEN ? AND ?" . $brandFilter;
+        $params = array_merge([$currentUser['id'], $c['start_year'], $c['end_year']], $brandIds);
+        $stmt = $pdo->prepare($checkSql);
+        $stmt->execute($params);
+        $historicalCount = (int)$stmt->fetchColumn();
 
-            $checkSql2 = "
-                SELECT COUNT(*) as cnt
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                WHERE r.cyclist_id = ?
-                  AND YEAR(e.date) = ?
-            ";
-            $stmt2 = $pdo->prepare($checkSql2);
-            $stmt2->execute([$currentUser['id'], $c['target_year']]);
-            $targetYearCount = (int)$stmt2->fetchColumn();
-        } else {
-            // Specific brands
-            $placeholders = implode(',', array_fill(0, count($brandIds), '?'));
-
-            $checkSql = "
-                SELECT COUNT(DISTINCT e.id) as cnt
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                JOIN series s ON e.series_id = s.id
-                JOIN brand_series_map bsm ON s.id = bsm.series_id
-                WHERE r.cyclist_id = ?
-                  AND YEAR(e.date) BETWEEN ? AND ?
-                  AND bsm.brand_id IN ($placeholders)
-            ";
-            $params = array_merge([$currentUser['id'], $c['start_year'], $c['end_year']], $brandIds);
-            $stmt = $pdo->prepare($checkSql);
-            $stmt->execute($params);
-            $historicalCount = (int)$stmt->fetchColumn();
-
-            $checkSql2 = "
-                SELECT COUNT(*) as cnt
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                JOIN series s ON e.series_id = s.id
-                JOIN brand_series_map bsm ON s.id = bsm.series_id
-                WHERE r.cyclist_id = ?
-                  AND YEAR(e.date) = ?
-                  AND bsm.brand_id IN ($placeholders)
-            ";
-            $params2 = array_merge([$currentUser['id'], $c['target_year']], $brandIds);
-            $stmt2 = $pdo->prepare($checkSql2);
-            $stmt2->execute($params2);
-            $targetYearCount = (int)$stmt2->fetchColumn();
-        }
+        // Target year participation
+        $checkSql2 = "SELECT COUNT(DISTINCT e.id) FROM results r JOIN events e ON r.event_id = e.id WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" . $brandFilter;
+        $params2 = array_merge([$currentUser['id'], $c['target_year']], $brandIds);
+        $stmt2 = $pdo->prepare($checkSql2);
+        $stmt2->execute($params2);
+        $targetYearCount = (int)$stmt2->fetchColumn();
 
         // Check qualification based on audience type
-        $audienceType = $c['audience_type'] ?? 'churned';
         $qualifies = false;
         if ($audienceType === 'churned') {
             $qualifies = ($historicalCount > 0 && $targetYearCount == 0);
@@ -211,12 +170,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
                 }
 
                 // Get rider stats
+                $extBrandFilter = !empty($brandIds)
+                    ? "AND EXISTS (SELECT 1 FROM series_events se2 JOIN series s2 ON se2.series_id = s2.id WHERE se2.event_id = e.id AND s2.brand_id IN (" . implode(',', array_fill(0, count($brandIds), '?')) . "))"
+                    : "";
                 $statsSql = "
                     SELECT COUNT(DISTINCT res.event_id) as total_starts
                     FROM results res
                     INNER JOIN events e ON res.event_id = e.id
-                    INNER JOIN series s ON e.series_id = s.id
-                    WHERE res.cyclist_id = ? $brandFilter
+                    WHERE res.cyclist_id = ? $extBrandFilter
                 ";
                 $statsStmt = $pdo->prepare($statsSql);
                 $statsStmt->execute(array_merge([$currentUser['id']], $brandParams));
