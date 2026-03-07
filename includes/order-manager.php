@@ -126,7 +126,7 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
             if (($item['type'] ?? 'event') === 'event' && !empty($item['event_id'])) {
                 if ($firstEventId === null) $firstEventId = intval($item['event_id']);
             }
-            if (($item['type'] ?? 'event') === 'series' && !empty($item['series_id'])) {
+            if (!empty($item['series_id'])) {
                 if ($firstSeriesId === null) $firstSeriesId = intval($item['series_id']);
             }
         }
