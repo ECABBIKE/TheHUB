@@ -208,7 +208,7 @@ if ($tablesExist) {
     align-items: center;
     gap: var(--space-sm);
     background: var(--color-accent);
-    color: #000;
+    color: var(--color-bg-page);
     padding: var(--space-sm) var(--space-xl);
     border-radius: var(--radius-md);
     font-weight: 600;
@@ -217,6 +217,7 @@ if ($tablesExist) {
 }
 .cta-button:hover {
     background: var(--color-accent-hover);
+    color: var(--color-bg-page);
     transform: translateY(-1px);
 }
 

@@ -62,7 +62,7 @@ function explodeSeriesOrdersToEvents(array $orders, $db): array {
             continue;
         }
 
-        // Get series registrations for this order
+        // Get series registrations for this order (series path orders)
         $seriesRegs = [];
         try {
             $seriesRegs = $db->getAll("
@@ -74,8 +74,27 @@ function explodeSeriesOrdersToEvents(array $orders, $db): array {
             ", [$orderId]);
         } catch (Exception $e) {}
 
+        // If no series_registrations found, try event-path registrations
+        // (series registrations created as individual event_registrations)
+        $eventPathRegs = [];
         if (empty($seriesRegs)) {
-            // Fallback: equal distribution
+            try {
+                $eventPathRegs = $db->getAll("
+                    SELECT oi.unit_price, er.event_id, er.category as class_name
+                    FROM order_items oi
+                    JOIN event_registrations er ON er.id = oi.registration_id
+                    WHERE oi.order_id = ? AND oi.item_type = 'registration'
+                    AND er.event_id IN (
+                        SELECT event_id FROM series_events WHERE series_id = ?
+                        UNION
+                        SELECT id FROM events WHERE series_id = ?
+                    )
+                ", [$orderId, $seriesId, $seriesId]);
+            } catch (Exception $e) {}
+        }
+
+        if (empty($seriesRegs) && empty($eventPathRegs)) {
+            // Final fallback: equal distribution
             $perEventAmount = round($orderAmount / $eventCount, 2);
             $remainder = round($orderAmount - ($perEventAmount * $eventCount), 2);
 
@@ -94,11 +113,32 @@ function explodeSeriesOrdersToEvents(array $orders, $db): array {
             continue;
         }
 
-        // For each series registration, get per-event pricing
+        // Calculate per-event shares
         $eventShares = [];
         $totalRegAmount = 0;
 
-        foreach ($seriesRegs as $reg) {
+        if (!empty($eventPathRegs)) {
+            // Event-path: use actual per-event prices from order_items
+            $regEventIds = [];
+            foreach ($eventPathRegs as $reg) {
+                $evId = (int)$reg['event_id'];
+                $price = (float)$reg['unit_price'];
+                $eventShares[$evId] = ($eventShares[$evId] ?? 0) + $price;
+                $totalRegAmount += $price;
+                $regEventIds[$evId] = true;
+            }
+
+            // For events in the series that DON'T have a registration in this order,
+            // distribute proportionally from events that do
+            foreach ($seriesEvents as $evt) {
+                $evId = (int)$evt['id'];
+                if (!isset($regEventIds[$evId])) {
+                    $eventShares[$evId] = 0;
+                }
+            }
+        } else {
+            // Series-path: use series_registrations pricing rules
+            foreach ($seriesRegs as $reg) {
             $classId = (int)$reg['class_id'];
             $regFinalPrice = (float)$reg['final_price'];
             $discountPct = (float)$reg['discount_percent'];
@@ -134,7 +174,8 @@ function explodeSeriesOrdersToEvents(array $orders, $db): array {
                     $eventShares[$evId] = ($eventShares[$evId] ?? 0) + $perEvent;
                 }
             }
-        }
+            } // end foreach ($seriesRegs)
+        } // end else (series-path)
 
         // Normalize to match actual order amount
         $shareTotal = array_sum($eventShares);

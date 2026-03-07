@@ -15,15 +15,43 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-07, session 45)
+
+### Winback: Enkät-formuläret förbättrat
+- **Frågeheader:** Bytt från numrerad cirkel till "FRÅGA #1" label-format med vänsterorienterad frågetext.
+- **Textruta (fråga #5):** Ny `.wb-text-area` klass med ordentlig styling (2px border, focus-glow, 120px min-höjd).
+- **Dark mode-fix CTA-knapp:** `color: #000` → `color: var(--color-bg-page)` på `.cta-button` i winback.php.
+- **Dark mode-fix skala:** `color: #000` → `color: var(--color-bg-page)` på vald skalknapp.
+
+### Winback: Svarsmailet med konfigurerbara länkar
+- **Problem:** Mailet som skickas efter enkätsvar hade ingen länk till eventinformation eller anmälningsplattform.
+- **Nya kolumner:** `response_email_info_url`, `response_email_info_text`, `response_email_reg_url`, `response_email_reg_text` på `winback_campaigns`.
+- **Migration 084:** Lägger till de 4 kolumnerna.
+- **Admin-UI:** Ny sektion "Svarsmailet (efter enkät)" i kampanjformuläret (create + edit) med URL + text per länk.
+- **E-post:** Infolänk (cyan knapp) + anmälningslänk (grön knapp) visas i mailet om konfigurerade.
+- **Svarsida:** Samma länkar visas som knappar på success-sidan efter enkätsvar.
+- **Filer:** `pages/profile/winback-survey.php`, `pages/profile/winback.php`, `admin/winback-campaigns.php`, `Tools/migrations/084_winback_response_email_links.sql`, `admin/migrations.php`
+
+### Winback: Radera svar / nollställ kampanj
+- **Ny funktion:** Admin kan radera enskilda svar (X-knapp per rad) eller nollställa hela kampanjen ("Nollställ alla svar"-knapp).
+- **Bekräftelsedialoger:** Båda kräver JavaScript confirm().
+- **Kaskadradering:** Raderar winback_answers först, sedan winback_responses.
+- **Behörighetskontroll:** Använder `canEditCampaign()` för att verifiera behörighet.
+
+---
+
 ## SENASTE FIXAR (2026-03-07, session 44)
 
 ### KRITISK FIX: Serie-ordrar saknade series_id → intäkter hamnade på fel event
 - **Problem:** Värnamo och Tranås (och andra serie-event) visade 0 kr i ekonomivyn. All intäkt från serieanmälningar hamnade på det event som bokades (första eventet i serien).
 - **Orsak:** `order-manager.php` rad 129 kollade `item.type === 'series'` men serieanmälningar har `type: 'event'` + `is_series_registration: true`. Villkoret matchade ALDRIG → `orders.series_id` sattes aldrig → `explodeSeriesOrdersToEvents()` hoppade över alla serie-ordrar.
 - **Fix 1:** Ändrat villkoret till `!empty($item['series_id'])` — om ett item har series_id, använd det oavsett type.
-- **Fix 2:** Migration 083 backfyllar `orders.series_id` för alla befintliga ordrar via `order_items → series_registrations`.
+- **Fix 2:** Migration 083 backfyllar `orders.series_id` via `order_items → event_registrations → series_events` (hittar ordrar med 2+ event i samma serie).
+- **Fix 3:** `explodeSeriesOrdersToEvents()` hanterar nu BÅDA kodvägarna: serie-path (series_registrations) OCH event-path (event_registrations med unit_price per event).
+- **Fix 4:** Promotor.php event-filter utökat med Path 5: hittar serie-ordrar via `order_items → event_registrations`.
 - **VIKTIGT:** Kör migration 083 via `/admin/migrations.php` för att fixa befintliga ordrar!
-- **Filer:** `includes/order-manager.php`, `Tools/migrations/083_backfill_orders_series_id.sql`, `admin/migrations.php`
+- **VIKTIGT:** Serieanmälningar skapar event_registrations (item_type='registration'), INTE series_registrations. Varukorgen skickar items med type='event' + is_series_registration=true.
+- **Filer:** `includes/order-manager.php`, `includes/economy-helpers.php`, `admin/promotor.php`, `Tools/migrations/083_backfill_orders_series_id.sql`, `admin/migrations.php`
 
 ---
 

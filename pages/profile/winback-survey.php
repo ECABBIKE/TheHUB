@@ -294,6 +294,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
                         . '<p style="margin:0;font-size:28px;font-weight:700;letter-spacing:2px;color:#37d4d6;font-family:monospace;">' . htmlspecialchars($discountCode) . '</p>'
                         . '</div>'
                         . '<p>Ange koden vid anmälan på den externa plattformen.</p>';
+
+                    // Add configurable links (info + registration)
+                    $infoUrl = trim($campaign['response_email_info_url'] ?? '');
+                    $infoText = trim($campaign['response_email_info_text'] ?? '');
+                    $regUrl = trim($campaign['response_email_reg_url'] ?? '');
+                    $regText = trim($campaign['response_email_reg_text'] ?? '');
+
+                    if ($infoUrl || $regUrl) {
+                        $body .= '<div style="margin:24px 0;padding:20px;background:#f8f9fa;border-radius:12px;text-align:center;">';
+                        if ($infoUrl) {
+                            $linkLabel = $infoText ?: 'Mer information';
+                            $body .= '<p style="margin:0 0 12px;"><a href="' . htmlspecialchars($infoUrl) . '" style="display:inline-block;padding:12px 28px;background:#37d4d6;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">' . htmlspecialchars($linkLabel) . '</a></p>';
+                        }
+                        if ($regUrl) {
+                            $linkLabel = $regText ?: 'Anmäl dig här';
+                            $body .= '<p style="margin:0;"><a href="' . htmlspecialchars($regUrl) . '" style="display:inline-block;padding:12px 28px;background:#10b981;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">' . htmlspecialchars($linkLabel) . '</a></p>';
+                        }
+                        $body .= '</div>';
+                    }
+
                     hub_send_email($currentUser['email'], $subject, $body);
                 } catch (Exception $mailEx) {
                     error_log('Winback external code email failed: ' . $mailEx->getMessage());
@@ -379,9 +399,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
 
         <p class="wb-help">Klicka på koden för att kopiera. Använd vid anmälan.</p>
 
+        <?php
+        $infoUrl = trim($campaign['response_email_info_url'] ?? '');
+        $infoText = trim($campaign['response_email_info_text'] ?? '');
+        $regUrl = trim($campaign['response_email_reg_url'] ?? '');
+        $regText = trim($campaign['response_email_reg_text'] ?? '');
+        ?>
+        <?php if ($infoUrl || $regUrl): ?>
+        <div class="wb-links-box">
+            <?php if ($infoUrl): ?>
+                <a href="<?= htmlspecialchars($infoUrl) ?>" class="wb-link-btn wb-link-info" target="_blank">
+                    <i data-lucide="info"></i>
+                    <?= htmlspecialchars($infoText ?: 'Mer information') ?>
+                </a>
+            <?php endif; ?>
+            <?php if ($regUrl): ?>
+                <a href="<?= htmlspecialchars($regUrl) ?>" class="wb-link-btn wb-link-reg" target="_blank">
+                    <i data-lucide="external-link"></i>
+                    <?= htmlspecialchars($regText ?: 'Anmäl dig här') ?>
+                </a>
+            <?php endif; ?>
+        </div>
+        <?php else: ?>
         <a href="/calendar" class="btn btn-primary btn-lg" style="margin-top: var(--space-lg);">
             <i data-lucide="calendar"></i> Se kommande tävlingar
         </a>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -419,7 +462,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
 
         <div class="card wb-question-card">
             <div class="card-header wb-question-header">
-                <span class="wb-question-num"><?= $qNum ?></span>
+                <div class="wb-question-label">FRÅGA #<?= $qNum ?></div>
                 <h3>
                     <?= htmlspecialchars($q['question_text']) ?>
                     <?php if ($q['is_required']): ?>
@@ -481,8 +524,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
 
                 <?php elseif ($q['question_type'] === 'text'): ?>
                     <textarea name="q_<?= $q['id'] ?>"
-                              class="form-textarea"
-                              rows="4"
+                              class="wb-text-area"
+                              rows="5"
                               placeholder="Skriv här..."
                               <?= $q['is_required'] ? 'required' : '' ?>></textarea>
                 <?php endif; ?>
@@ -542,27 +585,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
 }
 .wb-question-header {
     display: flex;
-    align-items: flex-start;
-    gap: var(--space-sm);
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+.wb-question-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--color-accent);
 }
 .wb-question-header h3 {
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
     line-height: 1.4;
-}
-.wb-question-num {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
-    background: var(--color-accent);
-    color: #fff;
-    border-radius: 50%;
-    font-size: 0.8rem;
-    font-weight: 700;
+    text-align: left;
 }
 
 /* Options grid - 2 columns desktop, 1 column mobile */
@@ -645,7 +683,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
 .wb-scale-option input:checked + .wb-scale-number {
     background: var(--color-accent);
     border-color: var(--color-accent);
-    color: #000;
+    color: var(--color-bg-page);
+}
+
+/* Text question textarea */
+.wb-text-area {
+    width: 100%;
+    min-height: 120px;
+    padding: var(--space-md);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-page);
+    color: var(--color-text-primary);
+    resize: vertical;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+.wb-text-area:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-light);
+}
+.wb-text-area::placeholder {
+    color: var(--color-text-muted);
 }
 .wb-scale-labels {
     display: flex;
@@ -713,6 +775,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
 .wb-discount-value { font-size: 1.25rem; font-weight: 600; color: var(--color-success); margin-top: var(--space-sm); }
 .wb-discount-expires { font-size: 0.85rem; color: var(--color-text-muted); margin-top: var(--space-xs); }
 .wb-help { font-size: 0.85rem; color: var(--color-text-muted); }
+
+/* Link buttons on success card */
+.wb-links-box {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin-top: var(--space-lg);
+}
+.wb-link-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-xl);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s;
+    min-height: 48px;
+}
+.wb-link-btn i { width: 18px; height: 18px; }
+.wb-link-info {
+    background: var(--color-accent);
+    color: var(--color-bg-page);
+}
+.wb-link-info:hover {
+    background: var(--color-accent-hover);
+    color: var(--color-bg-page);
+}
+.wb-link-reg {
+    background: var(--color-success);
+    color: #fff;
+}
+.wb-link-reg:hover {
+    background: #059669;
+    color: #fff;
+}
 
 /* Mobile */
 @media (max-width: 767px) {
