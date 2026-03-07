@@ -17,6 +17,64 @@ require_once HUB_ROOT . '/components/icons.php';
 
 $isLoggedIn = hub_is_logged_in();
 
+// Check for pending winback campaigns (logged-in users only)
+$pendingWinbackCount = 0;
+if ($isLoggedIn) {
+    try {
+        $currentUser = hub_current_user();
+        $riderId = $currentUser['id'] ?? 0;
+        if ($riderId > 0) {
+            $winbackCheck = $pdo->query("SHOW TABLES LIKE 'winback_campaigns'");
+            if ($winbackCheck->rowCount() > 0) {
+                $campStmt = $pdo->query("SELECT * FROM winback_campaigns WHERE is_active = 1");
+                $winbackCampaigns = $campStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($winbackCampaigns as $c) {
+                    $brandIds = json_decode($c['brand_ids'] ?? '[]', true) ?: [];
+                    $audienceType = $c['audience_type'] ?? 'churned';
+                    $placeholders = !empty($brandIds) ? implode(',', array_fill(0, count($brandIds), '?')) : '0';
+
+                    // Check if already responded
+                    $respCheck = $pdo->prepare("SELECT id FROM winback_responses WHERE campaign_id = ? AND rider_id = ?");
+                    $respCheck->execute([$c['id'], $riderId]);
+                    if ($respCheck->fetch()) continue;
+
+                    // Check qualification based on audience type
+                    $qualifies = false;
+                    if ($audienceType === 'churned') {
+                        $sql = "SELECT COUNT(DISTINCT e.id) FROM results r JOIN events e ON r.event_id = e.id JOIN series s ON e.series_id = s.id WHERE r.cyclist_id = ? AND YEAR(e.date) BETWEEN ? AND ?" . (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                        $params = array_merge([$riderId, $c['start_year'], $c['end_year']], $brandIds);
+                        $stmt = $pdo->prepare($sql);
+                        $stmt->execute($params);
+                        $historicalCount = (int)$stmt->fetchColumn();
+
+                        $sql2 = "SELECT COUNT(*) FROM results r JOIN events e ON r.event_id = e.id JOIN series s ON e.series_id = s.id WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" . (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                        $params2 = array_merge([$riderId, $c['target_year']], $brandIds);
+                        $stmt2 = $pdo->prepare($sql2);
+                        $stmt2->execute($params2);
+                        $qualifies = ($historicalCount > 0 && (int)$stmt2->fetchColumn() == 0);
+                    } elseif ($audienceType === 'active') {
+                        $sql = "SELECT COUNT(*) FROM results r JOIN events e ON r.event_id = e.id JOIN series s ON e.series_id = s.id WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" . (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                        $params = array_merge([$riderId, $c['target_year']], $brandIds);
+                        $stmt = $pdo->prepare($sql);
+                        $stmt->execute($params);
+                        $qualifies = ((int)$stmt->fetchColumn() > 0);
+                    } elseif ($audienceType === 'one_timer') {
+                        $sql = "SELECT COUNT(DISTINCT e.id) FROM results r JOIN events e ON r.event_id = e.id JOIN series s ON e.series_id = s.id WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" . (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                        $params = array_merge([$riderId, $c['target_year']], $brandIds);
+                        $stmt = $pdo->prepare($sql);
+                        $stmt->execute($params);
+                        $qualifies = ((int)$stmt->fetchColumn() == 1);
+                    }
+                    if ($qualifies) $pendingWinbackCount++;
+                }
+            }
+        }
+    } catch (PDOException $e) {
+        $pendingWinbackCount = 0;
+    }
+}
+
 // Always fetch data - page looks the same for all visitors
 $pdo = hub_db();
 $riderCount = 0;
@@ -210,6 +268,75 @@ $homepageLogo = getBranding('logos.homepage');
         </a>
         <?php endif; ?>
     </div>
+
+    <?php if ($pendingWinbackCount > 0): ?>
+    <!-- Winback Campaign Notification -->
+    <a href="/profile/winback" class="welcome-winback-banner">
+        <div class="welcome-winback-content">
+            <?= hub_icon('gift', 'welcome-winback-icon') ?>
+            <div>
+                <strong>Du har en erbjudande som väntar!</strong>
+                <span>Svara på en kort enkät och få en rabattkod</span>
+            </div>
+            <?= hub_icon('chevron-right', 'welcome-winback-arrow') ?>
+        </div>
+    </a>
+    <style>
+    .welcome-winback-banner {
+        display: block;
+        margin: var(--space-lg) 0;
+        padding: var(--space-md) var(--space-lg);
+        background: linear-gradient(135deg, rgba(55, 212, 214, 0.15), rgba(55, 212, 214, 0.05));
+        border: 1px solid var(--color-accent);
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        color: var(--color-text-primary);
+        transition: background 0.2s;
+    }
+    .welcome-winback-banner:hover {
+        background: linear-gradient(135deg, rgba(55, 212, 214, 0.25), rgba(55, 212, 214, 0.1));
+    }
+    .welcome-winback-content {
+        display: flex;
+        align-items: center;
+        gap: var(--space-md);
+    }
+    .welcome-winback-icon {
+        width: 32px;
+        height: 32px;
+        color: var(--color-accent);
+        flex-shrink: 0;
+    }
+    .welcome-winback-content div {
+        flex: 1;
+    }
+    .welcome-winback-content strong {
+        display: block;
+        font-family: var(--font-heading-secondary);
+        font-size: 1.05rem;
+    }
+    .welcome-winback-content span {
+        color: var(--color-text-secondary);
+        font-size: 0.875rem;
+    }
+    .welcome-winback-arrow {
+        width: 20px;
+        height: 20px;
+        color: var(--color-accent);
+        flex-shrink: 0;
+    }
+    @media (max-width: 767px) {
+        .welcome-winback-banner {
+            margin-left: -16px;
+            margin-right: -16px;
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
+            width: calc(100% + 32px);
+        }
+    }
+    </style>
+    <?php endif; ?>
 
     <?php if (!empty($upcomingEvents)): ?>
     <!-- Upcoming Events - 3 cards in a row -->
