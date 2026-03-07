@@ -470,6 +470,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             $error = 'Kampanj hittades inte eller saknar externa koder';
         }
 
+    } elseif ($action === 'send_test_email') {
+        // Send a test email to the admin
+        $campaignId = (int)$_POST['campaign_id'];
+        $testEmail = trim($_POST['test_email'] ?? '');
+
+        if (empty($testEmail) || !filter_var($testEmail, FILTER_VALIDATE_EMAIL)) {
+            $error = 'Ange en giltig e-postadress';
+        } else {
+            require_once __DIR__ . '/../includes/mail.php';
+
+            $stmt = $pdo->prepare("SELECT * FROM winback_campaigns WHERE id = ?");
+            $stmt->execute([$campaignId]);
+            $campaign = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$campaign) {
+                $error = 'Kampanj hittades inte';
+            } elseif (!canEditCampaign($campaign)) {
+                $error = 'Du har inte behörighet';
+            } else {
+                $isExternalCodes = !empty($campaign['external_codes_enabled']);
+
+                // Build discount info
+                $discountCode = null;
+                $discountText = '';
+                if (!$isExternalCodes && !empty($campaign['discount_code_id'])) {
+                    $stmt = $pdo->prepare("SELECT * FROM discount_codes WHERE id = ?");
+                    $stmt->execute([$campaign['discount_code_id']]);
+                    $discountCode = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($discountCode) {
+                        $discountText = $discountCode['discount_type'] === 'percentage'
+                            ? intval($discountCode['discount_value']) . '% rabatt'
+                            : number_format($discountCode['discount_value'], 0) . ' kr rabatt';
+                    }
+                }
+
+                $surveyUrl = 'https://thehub.gravityseries.se/profile/winback-survey?t=TEST_TOKEN_EXAMPLE';
+
+                $subject = !empty($campaign['email_subject'])
+                    ? $campaign['email_subject'] . ' - TheHUB'
+                    : 'Vi saknar dig! - TheHUB';
+
+                $emailBody = !empty($campaign['email_body'])
+                    ? $campaign['email_body']
+                    : "Hej {{name}},\n\nVi har märkt att du inte tävlat på ett tag.\n\nSvara på en kort enkät så får du rabattkoden {{discount_code}} ({{discount_text}}) på din nästa anmälan!";
+
+                $codeText = $isExternalCodes
+                    ? ($campaign['external_code_prefix'] ?? 'KOD') . '123'
+                    : htmlspecialchars($discountCode['code'] ?? 'TESTKOD');
+                $discountLabel = $isExternalCodes
+                    ? 'rabattkod (delas ut efter enkätsvar)'
+                    : ($discountText ?: 'testrabatt');
+
+                $emailBody = str_replace([
+                    '{{name}}',
+                    '{{discount_code}}',
+                    '{{discount_text}}',
+                    '{{hub_link}}',
+                    '{{survey_link}}'
+                ], [
+                    'Testperson',
+                    $codeText,
+                    $discountLabel,
+                    SITE_URL ?? 'https://thehub.gravityseries.se',
+                    $surveyUrl
+                ], $emailBody);
+
+                $body = '
+                    <div class="header">
+                        <div class="logo">TheHUB</div>
+                    </div>
+                    <div style="white-space: pre-wrap;">' . nl2br(htmlspecialchars_decode($emailBody)) . '</div>
+                    <p class="text-center" style="margin-top: 24px;">
+                        <a href="' . $surveyUrl . '" class="btn">Svara på enkäten</a>
+                    </p>
+                ';
+
+                $fullBody = hub_email_template('custom', ['content' => $body]);
+                $sent = hub_send_email($testEmail, '[TEST] ' . $subject, $fullBody);
+
+                if ($sent) {
+                    $message = "Testmail skickat till $testEmail";
+                } else {
+                    $error = "Kunde inte skicka testmail till $testEmail";
+                }
+            }
+        }
+
     } elseif ($action === 'send_invitations') {
         // Send invitations to selected riders
         $campaignId = (int)$_POST['campaign_id'];
@@ -524,9 +611,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                 }
 
                 if (empty($error)) {
+                    // Extend timeout for large sends
+                    set_time_limit(0);
+
                     $sentCount = 0;
                     $failedCount = 0;
                     $skippedCount = 0;
+                    $batchCount = 0;
 
                     // Check if invitations table exists
                     $invTableExists = false;
@@ -634,6 +725,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                             $sentCount++;
                         } else {
                             $failedCount++;
+                        }
+
+                        // Rate limiting: pause briefly every 8 emails to avoid API limits
+                        $batchCount++;
+                        if ($batchCount % 8 === 0) {
+                            usleep(1100000); // 1.1 seconds pause every 8 emails
                         }
                     }
 
@@ -1767,11 +1864,14 @@ $audienceLabel = match($audienceTypeView) {
                     <div class="audience-select-all">
                         <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
                             <input type="checkbox" id="select-all-riders" onchange="toggleAllRiders(this.checked)">
-                            <strong>Välj alla med email</strong>
+                            <strong>Välj alla med e-post</strong>
                         </label>
                     </div>
-                    <div class="audience-buttons">
+                    <div class="audience-buttons" style="display:flex;align-items:center;gap:var(--space-sm);flex-wrap:wrap;">
                         <span id="selected-count">0 valda</span>
+                        <button type="button" class="btn-admin btn-admin-ghost" onclick="sendTestEmail(<?= $selectedCampaign ?>)" title="Skicka testmail till dig">
+                            <i data-lucide="mail-check"></i> Testmail
+                        </button>
                         <button type="submit" class="btn-admin btn-admin-primary" id="send-btn" disabled>
                             <i data-lucide="send"></i> Skicka inbjudningar
                         </button>
@@ -1917,6 +2017,19 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
         e.preventDefault();
     }
 });
+
+function sendTestEmail(campaignId) {
+    const email = prompt('Skicka testmail till vilken e-postadress?', '<?= htmlspecialchars($_SESSION['admin_email'] ?? $_SESSION['hub_user_email'] ?? '') ?>');
+    if (!email) return;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.innerHTML = '<input type="hidden" name="action" value="send_test_email">'
+        + '<input type="hidden" name="campaign_id" value="' + campaignId + '">'
+        + '<input type="hidden" name="test_email" value="' + email.replace(/"/g, '&quot;') + '">';
+    document.body.appendChild(form);
+    form.submit();
+}
 </script>
 
 <?php } // End access check ?>

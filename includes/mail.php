@@ -817,8 +817,13 @@ function hub_email_template(string $template, array $vars = []): string {
         '
     ];
 
-    // Get template content
-    $content = $templates[$template] ?? '<p>Email template not found.</p>';
+    // Special 'custom' template: just render the content directly
+    if ($template === 'custom' && isset($vars['content'])) {
+        $content = $vars['content'];
+    } else {
+        // Get template content
+        $content = $templates[$template] ?? '<p>Email template not found.</p>';
+    }
 
     // Process Mustache-style conditional sections: {{#key}}...{{/key}}
     // If value is truthy/non-empty, show the block; otherwise remove it
