@@ -282,6 +282,9 @@ $migrationChecks = [
     '082_fix_winback_swedish_characters.sql' => [
         'data' => ["winback_questions.question_text LIKE '%är%' AND question_text LIKE '%tävla%'"]
     ],
+    '083_backfill_orders_series_id.sql' => [
+        'data' => ["orders.series_id IS NOT NULL AND id IN (SELECT order_id FROM order_items WHERE item_type = 'series_registration')"]
+    ],
 ];
 
 // ============================================================================

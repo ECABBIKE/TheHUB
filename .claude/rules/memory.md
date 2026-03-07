@@ -15,6 +15,18 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-07, session 44)
+
+### KRITISK FIX: Serie-ordrar saknade series_id → intäkter hamnade på fel event
+- **Problem:** Värnamo och Tranås (och andra serie-event) visade 0 kr i ekonomivyn. All intäkt från serieanmälningar hamnade på det event som bokades (första eventet i serien).
+- **Orsak:** `order-manager.php` rad 129 kollade `item.type === 'series'` men serieanmälningar har `type: 'event'` + `is_series_registration: true`. Villkoret matchade ALDRIG → `orders.series_id` sattes aldrig → `explodeSeriesOrdersToEvents()` hoppade över alla serie-ordrar.
+- **Fix 1:** Ändrat villkoret till `!empty($item['series_id'])` — om ett item har series_id, använd det oavsett type.
+- **Fix 2:** Migration 083 backfyllar `orders.series_id` för alla befintliga ordrar via `order_items → series_registrations`.
+- **VIKTIGT:** Kör migration 083 via `/admin/migrations.php` för att fixa befintliga ordrar!
+- **Filer:** `includes/order-manager.php`, `Tools/migrations/083_backfill_orders_series_id.sql`, `admin/migrations.php`
+
+---
+
 ## SENASTE FIXAR (2026-03-07, session 43)
 
 ### Winback: Enkätformuläret omdesignat
