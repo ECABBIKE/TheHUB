@@ -115,27 +115,11 @@ if ($tablesExist) {
 ?>
 
 <style>
-.winback-hero {
+.wb-intro {
     text-align: center;
-    padding: var(--space-xl) var(--space-md);
-    background: linear-gradient(135deg, var(--color-bg-surface), var(--color-accent-light));
-    border-radius: var(--radius-lg);
     margin-bottom: var(--space-lg);
-}
-.winback-hero img {
-    max-width: 300px;
-    width: 100%;
-    margin-bottom: var(--space-md);
-}
-.winback-hero h1 {
-    font-family: var(--font-heading);
-    font-size: 2rem;
-    margin: 0 0 var(--space-sm);
-    color: var(--color-text-primary);
-}
-.winback-hero p {
     color: var(--color-text-secondary);
-    margin: 0;
+    line-height: 1.5;
 }
 
 .campaign-card {
@@ -150,7 +134,7 @@ if ($tablesExist) {
     border-width: 2px;
 }
 .campaign-card.completed {
-    opacity: 0.8;
+    opacity: 0.75;
 }
 .campaign-header {
     display: flex;
@@ -159,7 +143,7 @@ if ($tablesExist) {
     margin-bottom: var(--space-md);
 }
 .campaign-name {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 600;
     color: var(--color-text-primary);
     margin: 0;
@@ -169,26 +153,29 @@ if ($tablesExist) {
     border-radius: var(--radius-full);
     font-size: 0.75rem;
     font-weight: 600;
+    flex-shrink: 0;
 }
 .campaign-badge.pending {
-    background: var(--color-accent);
-    color: #000;
+    background: var(--color-accent-light);
+    color: var(--color-accent-text);
 }
 .campaign-badge.completed {
-    background: var(--color-success);
-    color: #fff;
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--color-success);
 }
 
 .reward-box {
     background: var(--color-bg-page);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     padding: var(--space-md);
     margin-bottom: var(--space-md);
 }
 .reward-box h4 {
-    margin: 0 0 var(--space-sm);
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
+    margin: 0 0 var(--space-xs);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
 }
 .reward-code {
     font-family: monospace;
@@ -198,31 +185,22 @@ if ($tablesExist) {
     letter-spacing: 2px;
 }
 .reward-value {
-    font-size: 1.125rem;
-    color: var(--color-success);
+    font-size: 1rem;
+    color: var(--color-accent-text);
     font-weight: 600;
 }
 .reward-target {
-    font-size: 0.875rem;
+    font-size: 0.85rem;
     color: var(--color-text-muted);
     margin-top: var(--space-xs);
 }
 
-.prize-draw-box {
-    background: linear-gradient(135deg, #ffd700, #ffb700);
-    color: #000;
-    border-radius: var(--radius-md);
-    padding: var(--space-lg);
-    text-align: center;
-    margin-top: var(--space-md);
-}
-.prize-draw-box h3 {
-    margin: 0 0 var(--space-sm);
-    font-size: 1.25rem;
-}
-.prize-draw-box p {
-    margin: 0;
-    opacity: 0.8;
+.wb-prize-note {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-top: var(--space-sm);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--color-border);
 }
 
 .cta-button {
@@ -231,7 +209,7 @@ if ($tablesExist) {
     gap: var(--space-sm);
     background: var(--color-accent);
     color: #000;
-    padding: var(--space-md) var(--space-xl);
+    padding: var(--space-sm) var(--space-xl);
     border-radius: var(--radius-md);
     font-weight: 600;
     text-decoration: none;
@@ -239,7 +217,7 @@ if ($tablesExist) {
 }
 .cta-button:hover {
     background: var(--color-accent-hover);
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 .empty-state {
@@ -253,20 +231,7 @@ if ($tablesExist) {
     margin-bottom: var(--space-md);
 }
 
-/* Mobile */
 @media (max-width: 767px) {
-    .winback-hero {
-        margin-left: -16px;
-        margin-right: -16px;
-        border-radius: 0;
-        padding: var(--space-lg) var(--space-md);
-    }
-    .winback-hero img {
-        max-width: 200px;
-    }
-    .winback-hero h1 {
-        font-size: 1.5rem;
-    }
     .campaign-card {
         margin-left: -16px;
         margin-right: -16px;
@@ -278,18 +243,9 @@ if ($tablesExist) {
         flex-direction: column;
         gap: var(--space-xs);
     }
-    .campaign-name {
-        font-size: 1.1rem;
-    }
     .reward-code {
-        font-size: 1.125rem;
+        font-size: 1.25rem;
         letter-spacing: 1px;
-    }
-    .prize-draw-box {
-        padding: var(--space-md);
-    }
-    .prize-draw-box h3 {
-        font-size: 1.1rem;
     }
     .cta-button {
         display: flex;
@@ -308,12 +264,7 @@ if ($tablesExist) {
     </h1>
 </div>
 
-<!-- Hero Section -->
-<div class="winback-hero">
-    <img src="/uploads/media/branding/697f64b56775d_1769956533.png" alt="Back to Gravity" onerror="this.style.display='none'">
-    <h1>Vi saknar dig!</h1>
-    <p>Svara på en kort enkät och få rabatt på din nästa anmälan</p>
-</div>
+<p class="wb-intro">Vi saknar dig på startlinjen! Svara på en kort enkät och få en rabattkod som tack.</p>
 
 <?php if (!$tablesExist): ?>
     <div class="alert alert-info">
@@ -368,11 +319,6 @@ if ($tablesExist) {
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
-
-                <div class="prize-draw-box">
-                    <h3><i data-lucide="gift" style="width:20px;height:20px;vertical-align:middle;margin-right:var(--space-xs);"></i> Utlottning av fina priser!</h3>
-                    <p>Alla som svarar är med i utlottningen</p>
-                </div>
 
                 <div style="text-align: center; margin-top: var(--space-lg);">
                     <a href="/profile/winback-survey?campaign=<?= $c['id'] ?>" class="cta-button">
