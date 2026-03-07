@@ -986,8 +986,11 @@ include __DIR__ . '/components/unified-layout.php';
                     </thead>
                     <tbody>
                         <?php foreach ($preview['results'] as $idx => $row): ?>
-                        <?php $nameJs = json_encode($row['firstname'] . ' ' . $row['lastname'], JSON_UNESCAPED_UNICODE); ?>
-                        <tr class="<?= $row['already_exists'] ? 'opacity-50' : '' ?>" id="row-<?= $idx ?>">
+                        <?php
+                        // Store name as data attribute (safe for HTML), read from JS
+                        $rowName = $row['firstname'] . ' ' . $row['lastname'];
+                        ?>
+                        <tr class="<?= $row['already_exists'] ? 'opacity-50' : '' ?>" id="row-<?= $idx ?>" data-name="<?= h($rowName) ?>">
                             <td>
                                 <select name="status_override[<?= $idx ?>]" class="admin-form-select" style="font-size:0.8rem;padding:2px 4px;min-height:auto;width:70px;" id="statusSelect-<?= $idx ?>">
                                     <?php if ($row['status'] === 'finished' && $row['position']): ?>
@@ -1053,16 +1056,16 @@ include __DIR__ . '/components/unified-layout.php';
                                             <?php if ($row['rider_id']): ?>
                                                 <span class="text-sm">
                                                     <a href="/rider/<?= $row['rider_id'] ?>" target="_blank"><?= h($row['db_name'] ?? '') ?></a>
-                                                    <button type="button" class="btn-link text-sm" onclick="openRiderSearch(<?= $idx ?>, <?= $nameJs ?>)" title="Byt åkare">
+                                                    <button type="button" class="btn-link text-sm" onclick="openRiderSearch(<?= $idx ?>, getRowName(<?= $idx ?>))" title="Byt åkare">
                                                         <i data-lucide="pencil" style="width:14px;height:14px;"></i>
                                                     </button>
-                                                    <button type="button" class="btn-link text-sm" style="color:var(--color-error);" onclick="unlinkRider(<?= $idx ?>, <?= $nameJs ?>)" title="Ta bort koppling">
+                                                    <button type="button" class="btn-link text-sm" style="color:var(--color-error);" onclick="unlinkRider(<?= $idx ?>, getRowName(<?= $idx ?>))" title="Ta bort koppling">
                                                         <i data-lucide="x" style="width:14px;height:14px;"></i>
                                                     </button>
                                                 </span>
                                             <?php else: ?>
                                                 <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                                                    <button type="button" class="btn-admin btn-admin-secondary btn-sm" onclick="openRiderSearch(<?= $idx ?>, <?= $nameJs ?>)">
+                                                    <button type="button" class="btn-admin btn-admin-secondary btn-sm" onclick="openRiderSearch(<?= $idx ?>, getRowName(<?= $idx ?>))">
                                                         <i data-lucide="search" style="width:14px;height:14px;"></i>
                                                         Sök
                                                     </button>
@@ -1316,6 +1319,10 @@ tr.opacity-50 td { text-decoration: line-through; }
 <script>
 let searchTimeout = null;
 
+function getRowName(idx) {
+    return document.getElementById('row-' + idx).getAttribute('data-name');
+}
+
 function openRiderSearch(idx, defaultQuery) {
     const searchBox = document.getElementById('riderSearch-' + idx);
     const display = document.getElementById('riderDisplay-' + idx);
@@ -1382,7 +1389,7 @@ function unlinkRider(idx, defaultQuery) {
     // Update display to show search/create buttons
     const display = document.getElementById('riderDisplay-' + idx);
     display.innerHTML = '<div style="display:flex;gap:4px;flex-wrap:wrap;">' +
-        '<button type="button" class="btn-admin btn-admin-secondary btn-sm" onclick="openRiderSearch(' + idx + ', ' + JSON.stringify(defaultQuery) + ')">' +
+        '<button type="button" class="btn-admin btn-admin-secondary btn-sm" onclick="openRiderSearch(' + idx + ', getRowName(' + idx + '))">' +
         '<i data-lucide="search" style="width:14px;height:14px;"></i> Sök</button>' +
         '<button type="button" class="btn-admin btn-admin-secondary btn-sm" style="color:var(--color-success);" onclick="markCreateNew(' + idx + ')">' +
         '<i data-lucide="user-plus" style="width:14px;height:14px;"></i> Skapa ny</button></div>';
