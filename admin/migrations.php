@@ -279,6 +279,9 @@ $migrationChecks = [
         'tables' => ['winback_external_codes'],
         'columns' => ['winback_campaigns.external_codes_enabled', 'winback_campaigns.external_code_prefix', 'winback_campaigns.external_event_name', 'winback_responses.external_code_id']
     ],
+    '082_fix_winback_swedish_characters.sql' => [
+        'data' => ["winback_questions.question_text LIKE '%är%' AND question_text LIKE '%tävla%'"]
+    ],
 ];
 
 // ============================================================================

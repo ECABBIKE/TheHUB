@@ -15,6 +15,24 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-07, session 43)
+
+### Winback: Enkätformuläret omdesignat
+- **Varje fråga i eget kort:** Formuläret använder nu separata `.card`-element per fråga med numrerade cirklar (1, 2, 3...) i headern.
+- **Tvåkolumns grid:** Checkbox/radio-options visas i 2-kolumns grid på desktop, 1 kolumn på mobil.
+- **"Annat"-fritextfält:** Om en checkbox/radio-option heter "Annat" visas ett textfält när den bockas i. Texten sparas som "Annat: [fritext]" i databasen.
+- **Svenska tecken i databasen:** Migration 082 uppdaterar alla seed-frågor och options med korrekta å, ä, ö.
+- **Svenska tecken i admin:** Fixade 6 strängar i winback-campaigns.php (Fråga, Frågestatus, etc.)
+- **Survey-sidans kvalificeringslogik:** Använde obefintlig `brand_series_map`-tabell → bytt till `series_events` EXISTS-query (samma som welcome.php och winback.php).
+- **Filer:** `pages/profile/winback-survey.php` (omskriven form+CSS), `admin/winback-campaigns.php`, `Tools/migrations/082_fix_winback_swedish_characters.sql`, `admin/migrations.php`
+
+### Winback: Kampanjnotis på welcome.php
+- **Flytt:** Notisen flyttad från efter navigationsrutnätet till direkt efter THEHUB-about-sektionen.
+- **Ren design:** Centrerat kort med "Back To Gravity" som rubrik (Oswald, accent), beskrivning, hela kortet klickbart.
+- **CSS-klasser:** `.welcome-btg-banner`, `.welcome-btg-title`, `.welcome-btg-subtitle`.
+
+---
+
 ## SENASTE FIXAR (2026-03-07, session 42)
 
 ### Winback: SQL-fixar i winback.php och welcome.php

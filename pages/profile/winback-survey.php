@@ -31,7 +31,7 @@ if (!$tablesExist) {
     </div>
     <div class="alert alert-info">
         <i data-lucide="info"></i>
-        <div>Denna funktion ar inte aktiverad annu. Kontakta admin.</div>
+        <div>Denna funktion är inte aktiverad ännu. Kontakta admin.</div>
     </div>
     <?php
     return;
@@ -255,9 +255,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
             foreach ($questions as $q) {
                 $fieldName = 'q_' . $q['id'];
                 $value = $_POST[$fieldName] ?? null;
+                $annatText = trim($_POST[$fieldName . '_annat'] ?? '');
 
                 if ($q['question_type'] === 'checkbox' && is_array($value)) {
+                    // Replace "Annat" with actual text if provided
+                    if ($annatText) {
+                        $value = array_map(function($v) use ($annatText) {
+                            return mb_strtolower(trim($v)) === 'annat' ? 'Annat: ' . $annatText : $v;
+                        }, $value);
+                    }
                     $answerStmt->execute([$responseId, $q['id'], json_encode($value), null]);
+                } elseif ($q['question_type'] === 'radio') {
+                    // Replace "Annat" with actual text if provided
+                    if ($annatText && mb_strtolower(trim($value)) === 'annat') {
+                        $value = 'Annat: ' . $annatText;
+                    }
+                    $answerStmt->execute([$responseId, $q['id'], $value, null]);
                 } elseif ($q['question_type'] === 'scale') {
                     $answerStmt->execute([$responseId, $q['id'], null, (int)$value]);
                 } else {
@@ -374,15 +387,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
 
 <?php else: ?>
 <!-- Survey form -->
-<div class="card wb-form-card">
-    <div class="card-header">
-        <h2>
-            <i data-lucide="message-square"></i>
-            Vi saknar dig!
-        </h2>
-    </div>
-    <div class="card-body">
-        <div class="wb-intro">
+<form method="POST" class="wb-form">
+    <input type="hidden" name="action" value="submit_survey">
+
+    <!-- Intro card -->
+    <div class="card wb-intro-card">
+        <div class="card-body">
             <p>
                 Vi har sett att du inte tävlade <?= $campaign['target_year'] ?> och vill gärna höra vad vi kan göra bättre.
                 Svara på några korta frågor så får du en <strong>rabattkod</strong> som tack!
@@ -400,80 +410,100 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
                 </span>
             </div>
         </div>
-
-        <form method="POST" class="wb-form">
-            <input type="hidden" name="action" value="submit_survey">
-
-            <?php foreach ($questions as $q): ?>
-                <div class="wb-question">
-                    <label class="wb-question-label">
-                        <?= htmlspecialchars($q['question_text']) ?>
-                        <?php if ($q['is_required']): ?>
-                            <span class="wb-required">*</span>
-                        <?php endif; ?>
-                    </label>
-
-                    <?php if ($q['question_type'] === 'checkbox'): ?>
-                        <?php $options = json_decode($q['options'] ?? '[]', true) ?: []; ?>
-                        <div class="wb-checkbox-group">
-                            <?php foreach ($options as $i => $opt): ?>
-                                <label class="wb-checkbox-option">
-                                    <input type="checkbox" name="q_<?= $q['id'] ?>[]" value="<?= htmlspecialchars($opt) ?>">
-                                    <span class="wb-checkbox-label"><?= htmlspecialchars($opt) ?></span>
-                                </label>
-                            <?php endforeach; ?>
-                        </div>
-
-                    <?php elseif ($q['question_type'] === 'radio'): ?>
-                        <?php $options = json_decode($q['options'] ?? '[]', true) ?: []; ?>
-                        <div class="wb-radio-group">
-                            <?php foreach ($options as $i => $opt): ?>
-                                <label class="wb-radio-option">
-                                    <input type="radio" name="q_<?= $q['id'] ?>" value="<?= htmlspecialchars($opt) ?>" <?= $q['is_required'] ? 'required' : '' ?>>
-                                    <span class="wb-radio-label"><?= htmlspecialchars($opt) ?></span>
-                                </label>
-                            <?php endforeach; ?>
-                        </div>
-
-                    <?php elseif ($q['question_type'] === 'scale'): ?>
-                        <div class="wb-scale">
-                            <div class="wb-scale-options">
-                                <?php for ($i = 1; $i <= 10; $i++): ?>
-                                    <label class="wb-scale-option">
-                                        <input type="radio" name="q_<?= $q['id'] ?>" value="<?= $i ?>" <?= $q['is_required'] ? 'required' : '' ?>>
-                                        <span class="wb-scale-number"><?= $i ?></span>
-                                    </label>
-                                <?php endfor; ?>
-                            </div>
-                            <div class="wb-scale-labels">
-                                <span>Mycket osannolikt</span>
-                                <span>Definitivt</span>
-                            </div>
-                        </div>
-
-                    <?php elseif ($q['question_type'] === 'text'): ?>
-                        <textarea name="q_<?= $q['id'] ?>"
-                                  class="form-textarea"
-                                  rows="3"
-                                  placeholder="Skriv här..."
-                                  <?= $q['is_required'] ? 'required' : '' ?>></textarea>
-                    <?php endif; ?>
-                </div>
-            <?php endforeach; ?>
-
-            <div class="wb-form-footer">
-                <p class="wb-privacy">
-                    <i data-lucide="shield"></i>
-                    Din feedback är anonym och används endast för att förbättra våra arrangemang.
-                </p>
-                <button type="submit" class="btn btn-primary btn-lg">
-                    <i data-lucide="send"></i>
-                    Skicka och hämta rabattkod
-                </button>
-            </div>
-        </form>
     </div>
-</div>
+
+    <!-- Question cards -->
+    <?php $qNum = 0; foreach ($questions as $q): $qNum++; ?>
+        <?php $options = json_decode($q['options'] ?? '[]', true) ?: []; ?>
+        <?php $hasAnnat = false; foreach ($options as $opt) { if (mb_strtolower(trim($opt)) === 'annat') { $hasAnnat = true; break; } } ?>
+
+        <div class="card wb-question-card">
+            <div class="card-header wb-question-header">
+                <span class="wb-question-num"><?= $qNum ?></span>
+                <h3>
+                    <?= htmlspecialchars($q['question_text']) ?>
+                    <?php if ($q['is_required']): ?>
+                        <span class="wb-required">*</span>
+                    <?php endif; ?>
+                </h3>
+            </div>
+            <div class="card-body">
+                <?php if ($q['question_type'] === 'checkbox'): ?>
+                    <div class="wb-options-grid">
+                        <?php foreach ($options as $i => $opt): ?>
+                            <?php $isAnnat = mb_strtolower(trim($opt)) === 'annat'; ?>
+                            <label class="wb-option-card <?= $isAnnat ? 'wb-option-annat' : '' ?>">
+                                <input type="checkbox" name="q_<?= $q['id'] ?>[]" value="<?= htmlspecialchars($opt) ?>"
+                                    <?php if ($isAnnat): ?>onchange="toggleAnnatField(this, 'annat_<?= $q['id'] ?>')"<?php endif; ?>>
+                                <span class="wb-option-text"><?= htmlspecialchars($opt) ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if ($hasAnnat): ?>
+                        <div class="wb-annat-field" id="annat_<?= $q['id'] ?>" style="display:none;">
+                            <input type="text" name="q_<?= $q['id'] ?>_annat" class="form-input" placeholder="Beskriv vad...">
+                        </div>
+                    <?php endif; ?>
+
+                <?php elseif ($q['question_type'] === 'radio'): ?>
+                    <div class="wb-options-grid">
+                        <?php foreach ($options as $i => $opt): ?>
+                            <?php $isAnnat = mb_strtolower(trim($opt)) === 'annat'; ?>
+                            <label class="wb-option-card <?= $isAnnat ? 'wb-option-annat' : '' ?>">
+                                <input type="radio" name="q_<?= $q['id'] ?>" value="<?= htmlspecialchars($opt) ?>" <?= $q['is_required'] ? 'required' : '' ?>
+                                    <?php if ($isAnnat): ?>onchange="toggleAnnatField(this, 'annat_<?= $q['id'] ?>')"<?php endif; ?>
+                                    <?php if (!$isAnnat): ?>onchange="hideAnnatField('annat_<?= $q['id'] ?>')"<?php endif; ?>>
+                                <span class="wb-option-text"><?= htmlspecialchars($opt) ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if ($hasAnnat): ?>
+                        <div class="wb-annat-field" id="annat_<?= $q['id'] ?>" style="display:none;">
+                            <input type="text" name="q_<?= $q['id'] ?>_annat" class="form-input" placeholder="Beskriv vad...">
+                        </div>
+                    <?php endif; ?>
+
+                <?php elseif ($q['question_type'] === 'scale'): ?>
+                    <div class="wb-scale">
+                        <div class="wb-scale-options">
+                            <?php for ($i = 1; $i <= 10; $i++): ?>
+                                <label class="wb-scale-option">
+                                    <input type="radio" name="q_<?= $q['id'] ?>" value="<?= $i ?>" <?= $q['is_required'] ? 'required' : '' ?>>
+                                    <span class="wb-scale-number"><?= $i ?></span>
+                                </label>
+                            <?php endfor; ?>
+                        </div>
+                        <div class="wb-scale-labels">
+                            <span>Mycket osannolikt</span>
+                            <span>Definitivt</span>
+                        </div>
+                    </div>
+
+                <?php elseif ($q['question_type'] === 'text'): ?>
+                    <textarea name="q_<?= $q['id'] ?>"
+                              class="form-textarea"
+                              rows="4"
+                              placeholder="Skriv här..."
+                              <?= $q['is_required'] ? 'required' : '' ?>></textarea>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endforeach; ?>
+
+    <!-- Submit card -->
+    <div class="card wb-submit-card">
+        <div class="card-body">
+            <p class="wb-privacy">
+                <i data-lucide="shield"></i>
+                Din feedback är anonym och används endast för att förbättra våra arrangemang.
+            </p>
+            <button type="submit" class="btn btn-primary btn-lg wb-submit-btn">
+                <i data-lucide="send"></i>
+                Skicka och hämta rabattkod
+            </button>
+        </div>
+    </div>
+</form>
 <?php endif; ?>
 
 <style>
@@ -483,22 +513,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
     margin-top: var(--space-xs);
 }
 
-.wb-form-card {
-    border: 2px solid var(--color-accent-light);
-}
+.wb-required { color: var(--color-error); }
 
-.wb-intro {
-    margin-bottom: var(--space-xl);
-    padding: var(--space-lg);
-    background: var(--color-bg-page);
-    border-radius: var(--radius-md);
+/* Intro card */
+.wb-intro-card {
+    border-left: 4px solid var(--color-accent);
 }
-
-.wb-intro p {
-    margin-bottom: var(--space-md);
+.wb-intro-card p {
+    margin: 0 0 var(--space-md);
     line-height: 1.6;
 }
-
 .wb-reward-preview {
     display: inline-flex;
     align-items: center;
@@ -506,114 +530,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
     padding: var(--space-sm) var(--space-md);
     background: var(--color-accent-light);
     border-radius: var(--radius-md);
-    color: var(--color-accent);
+    color: var(--color-accent-text);
     font-weight: 600;
+    font-size: 0.9rem;
 }
+.wb-reward-preview i { width: 18px; height: 18px; }
 
-.wb-reward-preview i {
-    width: 20px;
-    height: 20px;
-}
-
-.wb-question {
-    margin-bottom: var(--space-xl);
-    padding-bottom: var(--space-lg);
-    border-bottom: 1px solid var(--color-border);
-}
-
-.wb-question:last-of-type {
-    border-bottom: none;
-}
-
-.wb-question-label {
-    display: block;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--color-text-primary);
+/* Question cards */
+.wb-question-card {
     margin-bottom: var(--space-md);
 }
-
-.wb-required {
-    color: var(--color-error);
-}
-
-/* Checkbox group */
-.wb-checkbox-group {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-}
-
-.wb-checkbox-option {
+.wb-question-header {
     display: flex;
     align-items: flex-start;
     gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-md);
-    background: var(--color-bg-page);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: all 0.15s;
 }
-
-.wb-checkbox-option:hover {
-    background: var(--color-bg-hover);
+.wb-question-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
 }
-
-.wb-checkbox-option input {
-    margin-top: 2px;
-    accent-color: var(--color-accent);
-}
-
-.wb-checkbox-option input:checked + .wb-checkbox-label {
-    color: var(--color-accent);
-    font-weight: 500;
-}
-
-/* Radio group */
-.wb-radio-group {
+.wb-question-num {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    background: var(--color-accent);
+    color: #000;
+    border-radius: 50%;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+/* Options grid - 2 columns desktop, 1 column mobile */
+.wb-options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: var(--space-sm);
 }
-
-.wb-radio-option {
+.wb-option-card {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
     padding: var(--space-sm) var(--space-md);
     background: var(--color-bg-page);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all 0.15s;
+    min-height: 44px;
 }
-
-.wb-radio-option:hover {
+.wb-option-card:hover {
+    border-color: var(--color-accent);
     background: var(--color-bg-hover);
 }
-
-.wb-radio-option input {
+.wb-option-card input {
     accent-color: var(--color-accent);
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+.wb-option-card:has(input:checked) {
+    border-color: var(--color-accent);
+    background: var(--color-accent-light);
+}
+.wb-option-text {
+    font-size: 0.9rem;
+    line-height: 1.3;
+}
+
+/* Annat (Other) field */
+.wb-annat-field {
+    margin-top: var(--space-sm);
+    padding-left: var(--space-xs);
+}
+.wb-annat-field .form-input {
+    font-size: 0.9rem;
 }
 
 /* Scale */
-.wb-scale {
-    margin-top: var(--space-sm);
-}
-
+.wb-scale { margin-top: var(--space-xs); }
 .wb-scale-options {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
     gap: var(--space-xs);
 }
-
-.wb-scale-option {
-    flex: 1;
-}
-
-.wb-scale-option input {
-    display: none;
-}
-
+.wb-scale-option input { display: none; }
 .wb-scale-number {
     display: flex;
     align-items: center;
@@ -621,24 +626,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
     height: 48px;
     background: var(--color-bg-page);
     border: 2px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     font-weight: 600;
     color: var(--color-text-secondary);
     cursor: pointer;
     transition: all 0.15s;
 }
-
 .wb-scale-option:hover .wb-scale-number {
     border-color: var(--color-accent);
     color: var(--color-accent);
 }
-
 .wb-scale-option input:checked + .wb-scale-number {
     background: var(--color-accent);
     border-color: var(--color-accent);
-    color: white;
+    color: #000;
 }
-
 .wb-scale-labels {
     display: flex;
     justify-content: space-between;
@@ -647,26 +649,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
     color: var(--color-text-muted);
 }
 
-/* Form footer */
-.wb-form-footer {
-    margin-top: var(--space-xl);
-    padding-top: var(--space-lg);
-    border-top: 1px solid var(--color-border);
+/* Submit card */
+.wb-submit-card {
+    border-top: 2px solid var(--color-accent);
 }
-
 .wb-privacy {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
     margin-bottom: var(--space-md);
-    font-size: 0.875rem;
+    font-size: 0.85rem;
     color: var(--color-text-muted);
 }
-
-.wb-privacy i {
-    width: 16px;
-    height: 16px;
-    color: var(--color-success);
+.wb-privacy i { width: 16px; height: 16px; color: var(--color-success); flex-shrink: 0; }
+.wb-submit-btn {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+    font-size: 1rem;
 }
 
 /* Success card */
@@ -674,33 +674,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
     text-align: center;
     border: 2px solid var(--color-success);
 }
-
-.wb-success-card .card-body {
-    padding: var(--space-2xl);
-}
-
+.wb-success-card .card-body { padding: var(--space-2xl); }
 .wb-success-icon {
-    width: 80px;
-    height: 80px;
+    width: 72px; height: 72px;
     margin: 0 auto var(--space-lg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
+    display: flex; align-items: center; justify-content: center;
+    background: var(--color-accent-light);
     border-radius: 50%;
-    color: white;
+    color: var(--color-accent);
 }
-
-.wb-success-icon i {
-    width: 40px;
-    height: 40px;
-}
-
-.wb-success-text {
-    color: var(--color-text-secondary);
-    margin-bottom: var(--space-xl);
-}
-
+.wb-success-icon i { width: 36px; height: 36px; }
+.wb-success-text { color: var(--color-text-secondary); margin-bottom: var(--space-xl); }
 .wb-discount-box {
     background: var(--color-bg-page);
     border: 2px dashed var(--color-accent);
@@ -708,51 +692,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
     padding: var(--space-xl);
     margin-bottom: var(--space-md);
 }
-
 .wb-discount-label {
-    font-size: 0.875rem;
-    color: var(--color-text-muted);
-    text-transform: uppercase;
+    font-size: 0.8rem; color: var(--color-text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px;
     margin-bottom: var(--space-sm);
 }
-
 .wb-discount-code {
-    font-family: monospace;
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--color-accent);
-    letter-spacing: 2px;
-    cursor: pointer;
-    padding: var(--space-sm);
-    border-radius: var(--radius-sm);
-    transition: background 0.15s;
+    font-family: monospace; font-size: 2rem; font-weight: 700;
+    color: var(--color-accent); letter-spacing: 2px;
+    cursor: pointer; padding: var(--space-sm);
+    border-radius: var(--radius-sm); transition: background 0.15s;
 }
-
-.wb-discount-code:hover {
-    background: var(--color-accent-light);
-}
-
-.wb-discount-value {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--color-success);
-    margin-top: var(--space-sm);
-}
-
-.wb-discount-expires {
-    font-size: 0.875rem;
-    color: var(--color-text-muted);
-    margin-top: var(--space-xs);
-}
-
-.wb-help {
-    font-size: 0.875rem;
-    color: var(--color-text-muted);
-}
+.wb-discount-code:hover { background: var(--color-accent-light); }
+.wb-discount-value { font-size: 1.25rem; font-weight: 600; color: var(--color-success); margin-top: var(--space-sm); }
+.wb-discount-expires { font-size: 0.85rem; color: var(--color-text-muted); margin-top: var(--space-xs); }
+.wb-help { font-size: 0.85rem; color: var(--color-text-muted); }
 
 /* Mobile */
 @media (max-width: 767px) {
-    .wb-form-card,
+    .wb-question-card,
+    .wb-intro-card,
+    .wb-submit-card,
     .wb-success-card {
         margin-left: -16px;
         margin-right: -16px;
@@ -760,77 +720,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
         border-left: none !important;
         border-right: none !important;
     }
-
-    .wb-intro {
-        padding: var(--space-md);
-    }
-
-    .wb-reward-preview {
-        display: flex;
-        font-size: 0.9rem;
-    }
-
-    .wb-scale-options {
-        flex-wrap: wrap;
-    }
-
-    .wb-scale-option {
-        flex: 0 0 calc(20% - var(--space-xs));
-    }
-
-    .wb-scale-number {
-        height: 44px;
-        font-size: 0.9rem;
-    }
-
-    .wb-success-card .card-body {
-        padding: var(--space-lg);
-    }
-
-    .wb-success-icon {
-        width: 64px;
-        height: 64px;
-    }
-
-    .wb-success-icon i {
-        width: 32px;
-        height: 32px;
-    }
-
-    .wb-discount-box {
-        padding: var(--space-md);
-    }
-
-    .wb-discount-code {
-        font-size: 1.5rem;
-        letter-spacing: 1px;
-    }
-
-    .wb-form-footer .btn {
-        width: 100%;
-        min-height: 48px;
-        justify-content: center;
-    }
+    .wb-intro-card { border-left: none; border-top: 4px solid var(--color-accent); }
+    .wb-submit-card { border-top: 2px solid var(--color-accent); }
+    .wb-options-grid { grid-template-columns: 1fr; }
+    .wb-scale-options { grid-template-columns: repeat(5, 1fr); }
+    .wb-scale-number { height: 44px; font-size: 0.9rem; }
+    .wb-success-card .card-body { padding: var(--space-lg); }
+    .wb-discount-box { padding: var(--space-md); }
+    .wb-discount-code { font-size: 1.5rem; letter-spacing: 1px; }
+    .wb-reward-preview { display: flex; width: 100%; }
 }
 
 @media (max-width: 480px) {
-    .wb-scale-option {
-        flex: 0 0 calc(20% - 4px);
-    }
-
-    .wb-scale-number {
-        height: 40px;
-        font-size: 0.8rem;
-    }
-
-    .wb-discount-code {
-        font-size: 1.25rem;
-        letter-spacing: 0;
-    }
-
-    .wb-discount-value {
-        font-size: 1rem;
-    }
+    .wb-scale-number { height: 40px; font-size: 0.8rem; }
+    .wb-discount-code { font-size: 1.25rem; letter-spacing: 0; }
 }
 </style>
 
@@ -848,5 +751,25 @@ function copyCode(el) {
             el.style.color = '';
         }, 1500);
     });
+}
+
+function toggleAnnatField(checkbox, fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    if (checkbox.checked) {
+        field.style.display = 'block';
+        field.querySelector('input').focus();
+    } else {
+        field.style.display = 'none';
+        field.querySelector('input').value = '';
+    }
+}
+
+function hideAnnatField(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (field) {
+        field.style.display = 'none';
+        field.querySelector('input').value = '';
+    }
 }
 </script>

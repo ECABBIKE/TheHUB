@@ -264,7 +264,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                 VALUES (?, ?, ?, ?, ?, ?, 1)
             ");
             $stmt->execute([$campaignId, $questionText, $questionType, $optionsJson, $sortOrder, $isRequired]);
-            $message = 'Fraga skapad!';
+            $message = 'Fråga skapad!';
         } else {
             $error = 'Frågetext krävs';
         }
@@ -297,17 +297,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
     } elseif ($action === 'toggle_question') {
         $id = (int)$_POST['id'];
         $pdo->prepare("UPDATE winback_questions SET active = NOT active WHERE id = ?")->execute([$id]);
-        $message = 'Fragestatus uppdaterad';
+        $message = 'Frågestatus uppdaterad';
     } elseif ($action === 'delete_question') {
         $id = (int)$_POST['id'];
         // Check if question has answers
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM winback_answers WHERE question_id = ?");
         $stmt->execute([$id]);
         if ($stmt->fetchColumn() > 0) {
-            $error = 'Kan inte ta bort fraga som har svar. Inaktivera istället.';
+            $error = 'Kan inte ta bort fråga som har svar. Inaktivera istället.';
         } else {
             $pdo->prepare("DELETE FROM winback_questions WHERE id = ?")->execute([$id]);
-            $message = 'Fraga borttagen';
+            $message = 'Fråga borttagen';
         }
     } elseif ($action === 'cleanup_duplicates') {
         // Find and remove duplicate questions (keep the one with lowest ID)
@@ -1864,7 +1864,7 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);">
                 <div class="form-group" style="grid-column: span 2;">
                     <label class="form-label">Frågetext *</label>
-                    <input type="text" name="question_text" class="form-input" required placeholder="T.ex. Vad skulle fa dig att tavla igen?">
+                    <input type="text" name="question_text" class="form-input" required placeholder="T.ex. Vad skulle få dig att tävla igen?">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Fragetyp</label>
@@ -1928,7 +1928,7 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
                     <thead>
                         <tr>
                             <th style="width:40px;">#</th>
-                            <th>Fraga</th>
+                            <th>Fråga</th>
                             <th>Typ</th>
                             <th>Kampanj</th>
                             <th>Status</th>
