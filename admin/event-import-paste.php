@@ -4,6 +4,9 @@
  * Quick import tool for pasting tab-separated results class by class
  * Supports both standard format and timing system format (enduro/DH)
  */
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/club-matching.php';
@@ -451,37 +454,47 @@ function findClassByCategory($db, $categoryName) {
     return null;
 }
 
-// Handle AJAX rider search
-if (isset($_GET['ajax']) && $_GET['ajax'] === 'search_rider') {
+// Handle AJAX searches
+if (isset($_GET['ajax'])) {
     header('Content-Type: application/json');
     $q = trim($_GET['q'] ?? '');
-    if (strlen($q) < 2) {
-        echo json_encode([]);
+
+    if ($_GET['ajax'] === 'search_rider') {
+        if (strlen($q) < 2) { echo json_encode([]); exit; }
+
+        $words = preg_split('/\s+/', $q);
+        if (count($words) >= 2) {
+            $riders = $db->getAll("
+                SELECT r.id, r.firstname, r.lastname, c.name as club_name
+                FROM riders r LEFT JOIN clubs c ON r.club_id = c.id
+                WHERE r.firstname LIKE ? AND r.lastname LIKE ?
+                ORDER BY r.lastname, r.firstname LIMIT 10
+            ", ['%' . $words[0] . '%', '%' . $words[count($words)-1] . '%']);
+        } else {
+            $riders = $db->getAll("
+                SELECT r.id, r.firstname, r.lastname, c.name as club_name
+                FROM riders r LEFT JOIN clubs c ON r.club_id = c.id
+                WHERE r.firstname LIKE ? OR r.lastname LIKE ?
+                ORDER BY r.lastname, r.firstname LIMIT 10
+            ", ['%' . $q . '%', '%' . $q . '%']);
+        }
+        echo json_encode($riders);
         exit;
     }
 
-    $words = preg_split('/\s+/', $q);
-    if (count($words) >= 2) {
-        $riders = $db->getAll("
-            SELECT r.id, r.firstname, r.lastname, c.name as club_name
-            FROM riders r
-            LEFT JOIN clubs c ON r.club_id = c.id
-            WHERE r.firstname LIKE ? AND r.lastname LIKE ?
-            ORDER BY r.lastname, r.firstname
-            LIMIT 10
-        ", ['%' . $words[0] . '%', '%' . $words[count($words)-1] . '%']);
-    } else {
-        $riders = $db->getAll("
-            SELECT r.id, r.firstname, r.lastname, c.name as club_name
-            FROM riders r
-            LEFT JOIN clubs c ON r.club_id = c.id
-            WHERE r.firstname LIKE ? OR r.lastname LIKE ?
-            ORDER BY r.lastname, r.firstname
-            LIMIT 10
-        ", ['%' . $q . '%', '%' . $q . '%']);
+    if ($_GET['ajax'] === 'search_club') {
+        if (strlen($q) < 2) { echo json_encode([]); exit; }
+
+        $clubs = $db->getAll("
+            SELECT id, name, city FROM clubs
+            WHERE name LIKE ? AND active = 1
+            ORDER BY name LIMIT 10
+        ", ['%' . $q . '%']);
+        echo json_encode($clubs);
+        exit;
     }
 
-    echo json_encode($riders);
+    echo json_encode([]);
     exit;
 }
 
@@ -527,6 +540,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hasDetectedClasses = !empty($parsed['detected_classes']);
 
         if ($action === 'preview') {
+          try {
             $preview = $parsed;
             $preview['class_id'] = $classId;
             $preview['complement_mode'] = $complementMode;
@@ -629,11 +643,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
             unset($row);
+          } catch (Exception $e) {
+            $message = 'Fel vid förhandsgranskning: ' . $e->getMessage();
+            $messageType = 'error';
+            $preview = null;
+          } catch (Error $e) {
+            $message = 'Allvarligt fel: ' . $e->getMessage() . ' på rad ' . $e->getLine();
+            $messageType = 'error';
+            $preview = null;
+          }
 
         } else {
             // ===== DO IMPORT =====
             $riderOverrides = $_POST['rider_id'] ?? [];
             $skipRows = $_POST['skip_row'] ?? [];
+            $statusOverrides = $_POST['status_override'] ?? [];
+            $clubOverrides = $_POST['club_override'] ?? [];
+            $clubNameOverrides = $_POST['club_name_override'] ?? [];
 
             $stats = [
                 'total' => count($parsed['results']),
@@ -690,15 +716,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     if (!$riderId) {
-                        // Find or create club
+                        // Find or create club (use override if set)
                         $clubId = null;
-                        if (!empty($row['club_name'])) {
-                            $club = findClubByName($db, $row['club_name']);
+                        $clubNameForRow = $row['club_name'];
+                        if (!empty($clubOverrides[$idx])) {
+                            $clubId = (int)$clubOverrides[$idx];
+                        } elseif (!empty($clubNameOverrides[$idx])) {
+                            $clubNameForRow = $clubNameOverrides[$idx];
+                        }
+
+                        if (!$clubId && !empty($clubNameForRow)) {
+                            $club = findClubByName($db, $clubNameForRow);
                             if ($club) {
                                 $clubId = $club['id'];
                             } else {
                                 $clubId = $db->insert('clubs', [
-                                    'name' => $row['club_name'],
+                                    'name' => $clubNameForRow,
                                     'active' => 1
                                 ]);
                                 $stats['clubs_created']++;
@@ -717,9 +750,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } else {
                         // For manually linked riders, still find/create club for the result row
                         $clubId = null;
-                        if (!empty($row['club_name'])) {
-                            $club = findClubByName($db, $row['club_name']);
-                            if ($club) $clubId = $club['id'];
+                        if (!empty($clubOverrides[$idx])) {
+                            $clubId = (int)$clubOverrides[$idx];
+                        } else {
+                            $clubNameForRow = !empty($clubNameOverrides[$idx]) ? $clubNameOverrides[$idx] : $row['club_name'];
+                            if (!empty($clubNameForRow)) {
+                                $club = findClubByName($db, $clubNameForRow);
+                                if ($club) $clubId = $club['id'];
+                            }
                         }
                     }
 
@@ -742,10 +780,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         continue;
                     }
 
+                    // Apply status override from preview form
+                    $rowStatus = $row['status'];
+                    $rowPosition = $row['position'];
+                    if (isset($statusOverrides[$idx])) {
+                        $overrideStatus = $statusOverrides[$idx];
+                        if (in_array($overrideStatus, ['dns', 'dnf', 'dq'])) {
+                            $rowStatus = $overrideStatus;
+                            $rowPosition = null;
+                        } elseif ($overrideStatus === 'finished' && $row['status'] !== 'finished') {
+                            $rowStatus = 'finished';
+                        }
+                    }
+
                     // Calculate points
                     $points = 0;
-                    if ($row['status'] === 'finished' && $row['position']) {
-                        $points = calculatePoints($db, $eventId, $row['position'], $row['status'], $rowClassId);
+                    if ($rowStatus === 'finished' && $rowPosition) {
+                        $points = calculatePoints($db, $eventId, $rowPosition, $rowStatus, $rowClassId);
                     }
 
                     // Prepare result data
@@ -755,10 +806,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'club_id' => $clubId,
                         'class_id' => $rowClassId,
                         'bib_number' => $row['bib_number'],
-                        'position' => $row['position'],
+                        'position' => $rowPosition,
                         'finish_time' => $row['finish_time'],
-                        'status' => $row['status'],
-                        'laps' => $row['laps'],
+                        'status' => $rowStatus,
                         'points' => $points
                     ];
 
@@ -922,7 +972,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <table class="table">
                     <thead>
                         <tr>
-                            <th style="width: 50px;">Plac</th>
+                            <th style="width: 70px;">Status</th>
                             <th style="width: 60px;">Nr</th>
                             <?php if (!empty($preview['detected_classes'])): ?>
                             <th style="width: 70px;">Klass</th>
@@ -931,29 +981,55 @@ include __DIR__ . '/components/unified-layout.php';
                             <th>Klubb</th>
                             <th>Tid</th>
                             <th style="width: 80px;">Match</th>
-                            <th style="min-width: 220px;">Kopplad åkare</th>
+                            <th style="min-width: 250px;">Kopplad åkare</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($preview['results'] as $idx => $row): ?>
+                        <?php $nameJs = json_encode($row['firstname'] . ' ' . $row['lastname'], JSON_UNESCAPED_UNICODE); ?>
                         <tr class="<?= $row['already_exists'] ? 'opacity-50' : '' ?>" id="row-<?= $idx ?>">
                             <td>
-                                <?php if ($row['status'] !== 'finished'): ?>
-                                    <span class="badge badge-warning"><?= strtoupper($row['status']) ?></span>
-                                <?php else: ?>
-                                    <?= $row['position'] ?>
-                                <?php endif; ?>
+                                <select name="status_override[<?= $idx ?>]" class="admin-form-select" style="font-size:0.8rem;padding:2px 4px;min-height:auto;width:70px;" id="statusSelect-<?= $idx ?>">
+                                    <?php if ($row['status'] === 'finished' && $row['position']): ?>
+                                        <option value="finished" selected><?= $row['position'] ?></option>
+                                    <?php else: ?>
+                                        <option value="finished">OK</option>
+                                    <?php endif; ?>
+                                    <option value="dns" <?= $row['status'] === 'dns' ? 'selected' : '' ?>>DNS</option>
+                                    <option value="dnf" <?= $row['status'] === 'dnf' ? 'selected' : '' ?>>DNF</option>
+                                    <option value="dq" <?= $row['status'] === 'dq' ? 'selected' : '' ?>>DQ</option>
+                                </select>
                             </td>
                             <td><?= h($row['bib_number']) ?></td>
                             <?php if (!empty($preview['detected_classes'])): ?>
-                            <td><code><?= h($row['category']) ?></code></td>
+                            <td><code><?= h($row['category'] ?? '') ?></code></td>
                             <?php endif; ?>
                             <td>
                                 <strong><?= h($row['firstname'] . ' ' . $row['lastname']) ?></strong>
                             </td>
-                            <td class="text-sm"><?= h($row['club_name']) ?></td>
+                            <td class="text-sm">
+                                <div class="club-cell" id="clubCell-<?= $idx ?>">
+                                    <input type="hidden" name="club_override[<?= $idx ?>]" value="" id="clubId-<?= $idx ?>">
+                                    <input type="hidden" name="club_name_override[<?= $idx ?>]" value="<?= h($row['club_name']) ?>" id="clubName-<?= $idx ?>">
+                                    <span id="clubDisplay-<?= $idx ?>" style="cursor:pointer;" onclick="openClubSearch(<?= $idx ?>, '<?= h(addslashes($row['club_name'])) ?>')" title="Klicka för att söka klubb">
+                                        <?= h($row['club_name']) ?: '<em class="text-secondary">-</em>' ?>
+                                    </span>
+                                    <div class="rider-search-box" id="clubSearch-<?= $idx ?>" style="display:none;min-width:200px;">
+                                        <div style="display:flex;gap:4px;">
+                                            <input type="text" class="admin-form-input" style="font-size:0.85rem;padding:4px 8px;"
+                                                   id="clubSearchInput-<?= $idx ?>"
+                                                   placeholder="Sök klubb..."
+                                                   oninput="searchClub(<?= $idx ?>, this.value)">
+                                            <button type="button" class="btn-admin btn-admin-secondary btn-sm" onclick="closeClubSearch(<?= $idx ?>)" title="Stäng">
+                                                <i data-lucide="x" style="width:14px;height:14px;"></i>
+                                            </button>
+                                        </div>
+                                        <div class="rider-search-results" id="clubResults-<?= $idx ?>" style="max-height:150px;overflow-y:auto;margin-top:4px;"></div>
+                                    </div>
+                                </div>
+                            </td>
                             <td class="text-sm"><?= h($row['finish_time'] ?? '-') ?></td>
-                            <td>
+                            <td id="matchBadge-<?= $idx ?>">
                                 <?php if ($row['already_exists']): ?>
                                     <span class="badge badge-warning" title="Finns redan i klassen">Finns</span>
                                 <?php elseif ($row['rider_match'] === 'Ny'): ?>
@@ -961,7 +1037,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <?php elseif ($row['rider_match'] === 'UCI-ID'): ?>
                                     <span class="badge badge-success">UCI-ID</span>
                                 <?php elseif ($row['rider_match'] === 'Fuzzy'): ?>
-                                    <span class="badge badge-warning">Fuzzy</span>
+                                    <span class="badge badge-warning">Fuzzy?</span>
                                 <?php else: ?>
                                     <span class="badge badge-secondary">Namn</span>
                                 <?php endif; ?>
@@ -976,16 +1052,25 @@ include __DIR__ . '/components/unified-layout.php';
                                         <div class="rider-link-display" id="riderDisplay-<?= $idx ?>">
                                             <?php if ($row['rider_id']): ?>
                                                 <span class="text-sm">
-                                                    <a href="/rider/<?= $row['rider_id'] ?>" target="_blank"><?= h($row['db_name']) ?></a>
-                                                    <button type="button" class="btn-link text-sm" onclick="openRiderSearch(<?= $idx ?>, '<?= h(addslashes($row['firstname'] . ' ' . $row['lastname'])) ?>')" title="Byt åkare">
+                                                    <a href="/rider/<?= $row['rider_id'] ?>" target="_blank"><?= h($row['db_name'] ?? '') ?></a>
+                                                    <button type="button" class="btn-link text-sm" onclick="openRiderSearch(<?= $idx ?>, <?= $nameJs ?>)" title="Byt åkare">
                                                         <i data-lucide="pencil" style="width:14px;height:14px;"></i>
+                                                    </button>
+                                                    <button type="button" class="btn-link text-sm" style="color:var(--color-error);" onclick="unlinkRider(<?= $idx ?>, <?= $nameJs ?>)" title="Ta bort koppling">
+                                                        <i data-lucide="x" style="width:14px;height:14px;"></i>
                                                     </button>
                                                 </span>
                                             <?php else: ?>
-                                                <button type="button" class="btn-admin btn-admin-secondary btn-sm" onclick="openRiderSearch(<?= $idx ?>, '<?= h(addslashes($row['firstname'] . ' ' . $row['lastname'])) ?>')">
-                                                    <i data-lucide="search" style="width:14px;height:14px;"></i>
-                                                    Sök åkare
-                                                </button>
+                                                <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                                                    <button type="button" class="btn-admin btn-admin-secondary btn-sm" onclick="openRiderSearch(<?= $idx ?>, <?= $nameJs ?>)">
+                                                        <i data-lucide="search" style="width:14px;height:14px;"></i>
+                                                        Sök
+                                                    </button>
+                                                    <button type="button" class="btn-admin btn-admin-secondary btn-sm" style="color:var(--color-success);" onclick="markCreateNew(<?= $idx ?>)">
+                                                        <i data-lucide="user-plus" style="width:14px;height:14px;"></i>
+                                                        Skapa ny
+                                                    </button>
+                                                </div>
                                             <?php endif; ?>
                                         </div>
 
@@ -1290,30 +1375,126 @@ function searchRider(idx, query) {
     }, 250);
 }
 
+function unlinkRider(idx, defaultQuery) {
+    // Clear rider link - set to 0 (will create new on import)
+    document.getElementById('riderId-' + idx).value = '0';
+
+    // Update display to show search/create buttons
+    const display = document.getElementById('riderDisplay-' + idx);
+    display.innerHTML = '<div style="display:flex;gap:4px;flex-wrap:wrap;">' +
+        '<button type="button" class="btn-admin btn-admin-secondary btn-sm" onclick="openRiderSearch(' + idx + ', ' + JSON.stringify(defaultQuery) + ')">' +
+        '<i data-lucide="search" style="width:14px;height:14px;"></i> Sök</button>' +
+        '<button type="button" class="btn-admin btn-admin-secondary btn-sm" style="color:var(--color-success);" onclick="markCreateNew(' + idx + ')">' +
+        '<i data-lucide="user-plus" style="width:14px;height:14px;"></i> Skapa ny</button></div>';
+
+    // Update match badge
+    const matchBadge = document.getElementById('matchBadge-' + idx);
+    if (matchBadge) matchBadge.innerHTML = '<span class="badge badge-info">Ny</span>';
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function markCreateNew(idx) {
+    // Set rider_id to 0 - import will create new rider
+    document.getElementById('riderId-' + idx).value = '0';
+
+    // Update display
+    const display = document.getElementById('riderDisplay-' + idx);
+    display.innerHTML = '<span class="text-sm" style="color:var(--color-success);"><i data-lucide="user-plus" style="width:14px;height:14px;vertical-align:middle;"></i> Skapas vid import</span>';
+
+    // Update match badge
+    const matchBadge = document.getElementById('matchBadge-' + idx);
+    if (matchBadge) matchBadge.innerHTML = '<span class="badge badge-success">Ny+</span>';
+
+    closeRiderSearch(idx);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 function selectRider(idx, riderId, riderName) {
     // Set hidden input
     document.getElementById('riderId-' + idx).value = riderId;
 
     // Update display
     const display = document.getElementById('riderDisplay-' + idx);
+    const escapedName = riderName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     display.innerHTML = '<span class="text-sm">' +
-        '<a href="/rider/' + riderId + '" target="_blank">' + riderName + '</a> ' +
+        '<a href="/rider/' + riderId + '" target="_blank">' + escapedName + '</a> ' +
         '<button type="button" class="btn-link text-sm" onclick="openRiderSearch(' + idx + ', \'\')" title="Byt åkare">' +
-        '<i data-lucide="pencil" style="width:14px;height:14px;"></i></button></span>';
+        '<i data-lucide="pencil" style="width:14px;height:14px;"></i></button> ' +
+        '<button type="button" class="btn-link text-sm" style="color:var(--color-error);" onclick="unlinkRider(' + idx + ', \'\')" title="Ta bort koppling">' +
+        '<i data-lucide="x" style="width:14px;height:14px;"></i></button></span>';
 
     // Update match badge
-    const row = document.getElementById('row-' + idx);
-    if (row) {
-        const matchCell = row.querySelectorAll('td');
-        const matchTd = matchCell[matchCell.length - 2]; // second to last
-        if (matchTd) matchTd.innerHTML = '<span class="badge badge-success">Manuell</span>';
-    }
+    const matchBadge = document.getElementById('matchBadge-' + idx);
+    if (matchBadge) matchBadge.innerHTML = '<span class="badge badge-success">Manuell</span>';
 
     // Close search
     closeRiderSearch(idx);
 
     // Re-init lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+let clubSearchTimeout = null;
+
+function openClubSearch(idx, defaultQuery) {
+    const searchBox = document.getElementById('clubSearch-' + idx);
+    if (searchBox) {
+        searchBox.style.display = 'block';
+        const input = document.getElementById('clubSearchInput-' + idx);
+        if (input) {
+            input.value = defaultQuery || '';
+            input.focus();
+            if (defaultQuery) searchClub(idx, defaultQuery);
+        }
+    }
+}
+
+function closeClubSearch(idx) {
+    const searchBox = document.getElementById('clubSearch-' + idx);
+    if (searchBox) searchBox.style.display = 'none';
+}
+
+function searchClub(idx, query) {
+    clearTimeout(clubSearchTimeout);
+    const resultsDiv = document.getElementById('clubResults-' + idx);
+    if (!resultsDiv) return;
+
+    if (query.length < 2) {
+        resultsDiv.innerHTML = '<div class="text-sm text-secondary" style="padding:4px 8px;">Skriv minst 2 tecken...</div>';
+        return;
+    }
+
+    clubSearchTimeout = setTimeout(() => {
+        fetch('?event_id=<?= $eventId ?>&ajax=search_club&q=' + encodeURIComponent(query))
+            .then(r => r.json())
+            .then(clubs => {
+                let html = '';
+                clubs.forEach(c => {
+                    const escapedName = c.name.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+                    html += '<div class="rider-option" onclick="selectClub(' + idx + ', ' + c.id + ', \'' +
+                        c.name.replace(/'/g, "\\'") + '\')">' +
+                        '<strong>' + escapedName + '</strong>' +
+                        (c.city ? ' <span class="rider-club">' + c.city + '</span>' : '') +
+                        '</div>';
+                });
+                if (clubs.length === 0) {
+                    html = '<div class="text-sm text-secondary" style="padding:4px 8px;">Inga träffar. Klubben skapas vid import.</div>';
+                }
+                resultsDiv.innerHTML = html;
+            })
+            .catch(() => {
+                resultsDiv.innerHTML = '<div class="text-sm text-secondary" style="padding:4px 8px;">Sökfel</div>';
+            });
+    }, 250);
+}
+
+function selectClub(idx, clubId, clubName) {
+    document.getElementById('clubId-' + idx).value = clubId;
+    document.getElementById('clubName-' + idx).value = clubName;
+    const display = document.getElementById('clubDisplay-' + idx);
+    if (display) display.innerHTML = clubName;
+    closeClubSearch(idx);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
