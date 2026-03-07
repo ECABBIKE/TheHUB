@@ -215,24 +215,13 @@ $homepageLogo = getBranding('logos.homepage');
     <?php if ($pendingWinbackCount > 0): ?>
     <!-- Back to Gravity Campaign Banner -->
     <a href="/profile/winback" class="welcome-btg-banner">
-        <div class="welcome-btg-left">
-            <img src="/uploads/media/branding/697f64b56775d_1769956533.png" alt="Back to Gravity" class="welcome-btg-logo" onerror="this.style.display='none'">
-        </div>
-        <div class="welcome-btg-center">
-            <h2 class="welcome-btg-title">Back to Gravity</h2>
-            <p class="welcome-btg-subtitle">Vi saknar dig! Svara på en kort enkät och få rabatt på din nästa anmälan.</p>
-            <span class="welcome-btg-cta">
-                <i data-lucide="gift" style="width:16px;height:16px;"></i>
-                Hämta din rabattkod
-                <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
-            </span>
-        </div>
+        <h2 class="welcome-btg-title">Back To Gravity</h2>
+        <p class="welcome-btg-subtitle">Vi saknar dig på startlinjen och behöver din hjälp.<br>Svara på enkäten och få rabattkod till tävlingar 2026</p>
     </a>
     <style>
     .welcome-btg-banner {
-        display: flex;
-        align-items: center;
-        gap: var(--space-lg);
+        display: block;
+        text-align: center;
         margin: var(--space-lg) 0;
         padding: var(--space-lg) var(--space-xl);
         background: linear-gradient(135deg, var(--color-bg-surface), var(--color-accent-light));
@@ -241,23 +230,11 @@ $homepageLogo = getBranding('logos.homepage');
         text-decoration: none;
         color: var(--color-text-primary);
         transition: all 0.2s;
-        overflow: hidden;
     }
     .welcome-btg-banner:hover {
         background: linear-gradient(135deg, var(--color-accent-light), rgba(55, 212, 214, 0.2));
         transform: translateY(-2px);
         box-shadow: 0 4px 20px rgba(55, 212, 214, 0.2);
-    }
-    .welcome-btg-left {
-        flex-shrink: 0;
-    }
-    .welcome-btg-logo {
-        width: 80px;
-        height: auto;
-    }
-    .welcome-btg-center {
-        flex: 1;
-        min-width: 0;
     }
     .welcome-btg-title {
         font-family: var(--font-heading);
@@ -268,21 +245,10 @@ $homepageLogo = getBranding('logos.homepage');
         letter-spacing: 1px;
     }
     .welcome-btg-subtitle {
-        margin: 0 0 var(--space-sm);
+        margin: 0;
         color: var(--color-text-secondary);
         font-size: 0.9rem;
-        line-height: 1.4;
-    }
-    .welcome-btg-cta {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--space-xs);
-        background: var(--color-accent);
-        color: #000;
-        padding: var(--space-xs) var(--space-md);
-        border-radius: var(--radius-full);
-        font-weight: 600;
-        font-size: 0.85rem;
+        line-height: 1.5;
     }
     @media (max-width: 767px) {
         .welcome-btg-banner {
@@ -293,21 +259,9 @@ $homepageLogo = getBranding('logos.homepage');
             border-right: none;
             width: calc(100% + 32px);
             padding: var(--space-md);
-            gap: var(--space-md);
-        }
-        .welcome-btg-logo {
-            width: 60px;
         }
         .welcome-btg-title {
             font-size: 1.25rem;
-        }
-        .welcome-btg-subtitle {
-            font-size: 0.85rem;
-        }
-        .welcome-btg-cta {
-            min-height: 40px;
-            justify-content: center;
-            width: 100%;
         }
     }
     </style>
