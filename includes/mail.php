@@ -591,6 +591,10 @@ function hub_email_template(string $template, array $vars = []): string {
         .card { background: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .header { text-align: center; margin-bottom: 24px; }
         .logo { font-size: 24px; font-weight: bold; color: #61CE70; }
+        .logo-sub { font-size: 13px; color: #999; font-weight: 400; letter-spacing: 1px; }
+        .campaign-banner { text-align: center; margin-bottom: 16px; padding: 20px 0 12px; border-bottom: 2px solid #61CE70; }
+        .campaign-banner-title { font-size: 28px; font-weight: 800; color: #111; letter-spacing: 2px; text-transform: uppercase; margin: 0; }
+        .campaign-banner-sub { font-size: 13px; color: #999; margin: 4px 0 0; letter-spacing: 1px; }
         h1 { font-size: 24px; margin: 0 0 16px 0; color: #111; }
         p { margin: 0 0 16px 0; }
         .text-center { text-align: center; }
@@ -604,7 +608,7 @@ function hub_email_template(string $template, array $vars = []): string {
     $templates = [
         'password_reset' => '
             <div class="header">
-                <div class="logo">TheHUB</div>
+                <div class="logo">GravitySeries<span class="logo-sub"> - TheHUB</span></div>
             </div>
             <h1>Återställ ditt lösenord</h1>
             <p>Hej {{name}},</p>
@@ -620,7 +624,7 @@ function hub_email_template(string $template, array $vars = []): string {
 
         'welcome' => '
             <div class="header">
-                <div class="logo">TheHUB</div>
+                <div class="logo">GravitySeries<span class="logo-sub"> - TheHUB</span></div>
             </div>
             <h1>Välkommen till TheHUB!</h1>
             <p>Hej {{name}},</p>
@@ -633,7 +637,7 @@ function hub_email_template(string $template, array $vars = []): string {
 
         'account_activation' => '
             <div class="header">
-                <div class="logo">TheHUB</div>
+                <div class="logo">GravitySeries<span class="logo-sub"> - TheHUB</span></div>
             </div>
             <h1>Aktivera ditt konto</h1>
             <p>Hej {{name}},</p>
@@ -649,7 +653,7 @@ function hub_email_template(string $template, array $vars = []): string {
 
         'claim_approved' => '
             <div class="header">
-                <div class="logo">TheHUB</div>
+                <div class="logo">GravitySeries<span class="logo-sub"> - TheHUB</span></div>
             </div>
             <h1>Din profil är aktiverad!</h1>
             <p>Hej {{name}},</p>
@@ -663,7 +667,7 @@ function hub_email_template(string $template, array $vars = []): string {
 
         'winback_invitation' => '
             <div class="header">
-                <div class="logo">TheHUB</div>
+                <div class="logo">GravitySeries<span class="logo-sub"> - TheHUB</span></div>
             </div>
             <h1>Vi saknar dig!</h1>
             <p>Hej {{name}},</p>
@@ -679,7 +683,7 @@ function hub_email_template(string $template, array $vars = []): string {
 
         'payment_confirmation' => '
             <div class="header">
-                <div class="logo">TheHUB</div>
+                <div class="logo">GravitySeries<span class="logo-sub"> - TheHUB</span></div>
             </div>
             <h1>Betalningsbekräftelse</h1>
             <p>Hej {{name}},</p>
@@ -752,7 +756,7 @@ function hub_email_template(string $template, array $vars = []): string {
 
         'receipt' => '
             <div class="header">
-                <div class="logo">TheHUB</div>
+                <div class="logo">GravitySeries<span class="logo-sub"> - TheHUB</span></div>
             </div>
             <h1>Kvitto</h1>
             <p>Hej {{name}},</p>
@@ -865,7 +869,7 @@ function hub_email_template(string $template, array $vars = []): string {
             ' . $content . '
         </div>
         <div class="footer">
-            <p>TheHUB - Gravity Racing Sverige</p>
+            <p>GravitySeries - TheHUB</p>
             <p><a href="https://thehub.gravityseries.se">thehub.gravityseries.se</a></p>
         </div>
     </div>

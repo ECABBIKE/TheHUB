@@ -15,6 +15,18 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-07, session 47)
+
+### Winback: AJAX batch-sändning + testmail + ny mail-branding
+- **Timeout-fix:** Sändning av inbjudningar sker nu via AJAX (ett mail åt gången) istället för synkron loop. Ny API-endpoint `/api/winback-send.php` hanterar enskilda mail.
+- **Progressbar:** Visar realtidsprogress med skickade/hoppade/misslyckade + ETA.
+- **Testmail:** Ny "Testmail"-knapp skickar till valfri e-postadress med exempeldata.
+- **Nollställ inbjudningar:** Ny "Nollställ"-knapp raderar alla invitation-loggar så man kan skicka om.
+- **Mail-branding:** Alla mail: "TheHUB" → "GravitySeries - TheHUB" i header + footer.
+- **Back to Gravity-logga:** Winback-mail har nu BTG-logga (branding/697f64b56775d_1769956533.png) överst + "En kampanj från GravitySeries" undertext.
+- **hub_email_template:** Nya CSS-klasser `.campaign-banner`, `.campaign-banner-title`, `.campaign-banner-sub`, `.logo-sub` i mail.php.
+- **Filer:** `includes/mail.php`, `admin/winback-campaigns.php`, `api/winback-send.php` (ny)
+
 ## SENASTE FIXAR (2026-03-07, session 46)
 
 ### Ekonomivyn: Köparnamn + subtilare serie-styling
