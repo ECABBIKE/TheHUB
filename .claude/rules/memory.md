@@ -21,9 +21,12 @@
 - **Problem:** Värnamo och Tranås (och andra serie-event) visade 0 kr i ekonomivyn. All intäkt från serieanmälningar hamnade på det event som bokades (första eventet i serien).
 - **Orsak:** `order-manager.php` rad 129 kollade `item.type === 'series'` men serieanmälningar har `type: 'event'` + `is_series_registration: true`. Villkoret matchade ALDRIG → `orders.series_id` sattes aldrig → `explodeSeriesOrdersToEvents()` hoppade över alla serie-ordrar.
 - **Fix 1:** Ändrat villkoret till `!empty($item['series_id'])` — om ett item har series_id, använd det oavsett type.
-- **Fix 2:** Migration 083 backfyllar `orders.series_id` för alla befintliga ordrar via `order_items → series_registrations`.
+- **Fix 2:** Migration 083 backfyllar `orders.series_id` via `order_items → event_registrations → series_events` (hittar ordrar med 2+ event i samma serie).
+- **Fix 3:** `explodeSeriesOrdersToEvents()` hanterar nu BÅDA kodvägarna: serie-path (series_registrations) OCH event-path (event_registrations med unit_price per event).
+- **Fix 4:** Promotor.php event-filter utökat med Path 5: hittar serie-ordrar via `order_items → event_registrations`.
 - **VIKTIGT:** Kör migration 083 via `/admin/migrations.php` för att fixa befintliga ordrar!
-- **Filer:** `includes/order-manager.php`, `Tools/migrations/083_backfill_orders_series_id.sql`, `admin/migrations.php`
+- **VIKTIGT:** Serieanmälningar skapar event_registrations (item_type='registration'), INTE series_registrations. Varukorgen skickar items med type='event' + is_series_registration=true.
+- **Filer:** `includes/order-manager.php`, `includes/economy-helpers.php`, `admin/promotor.php`, `Tools/migrations/083_backfill_orders_series_id.sql`, `admin/migrations.php`
 
 ---
 

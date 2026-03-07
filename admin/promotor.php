@@ -120,9 +120,10 @@ if ($isAdmin) {
         if ($filterEvent > 0) {
             // Include direct event orders AND series orders covering this event
             // Path 1: Direct (o.event_id)
-            // Path 2: Via series_events junction table
-            // Path 3: Via series_registration_events snapshot
-            // Path 4: Via events.series_id (legacy)
+            // Path 2: Via series_registrations → series_events (series path)
+            // Path 3: Via series_registration_events snapshot (series path)
+            // Path 4: Via orders.series_id → series_events
+            // Path 5: Via order_items → event_registrations (event path - series as N event regs)
             $conditions[] = "(o.event_id = ?
                 OR o.id IN (
                     SELECT oi_f.order_id FROM order_items oi_f
@@ -138,7 +139,13 @@ if ($isAdmin) {
                 OR o.series_id IN (
                     SELECT se_f3.series_id FROM series_events se_f3 WHERE se_f3.event_id = ?
                 )
+                OR (o.series_id IS NOT NULL AND o.id IN (
+                    SELECT oi_f5.order_id FROM order_items oi_f5
+                    JOIN event_registrations er_f5 ON er_f5.id = oi_f5.registration_id
+                    WHERE er_f5.event_id = ? AND oi_f5.item_type = 'registration'
+                ))
             )";
+            $params[] = $filterEvent;
             $params[] = $filterEvent;
             $params[] = $filterEvent;
             $params[] = $filterEvent;
