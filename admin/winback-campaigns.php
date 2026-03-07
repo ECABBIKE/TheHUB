@@ -506,10 +506,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                     }
                 }
 
-                // External code campaigns get their codes after survey response, so no discount_code needed here
-                if (!$isExternalCodes && !$discountCode) {
-                    $error = 'Kampanjen saknar kopplad rabattkod';
-                } else {
+                // Validate: must have EITHER external codes OR a linked discount code
+                if ($isExternalCodes) {
+                    // Verify external codes actually exist for this campaign
+                    $extCodeCount = 0;
+                    try {
+                        $stmt = $pdo->prepare("SELECT COUNT(*) FROM winback_external_codes WHERE campaign_id = ?");
+                        $stmt->execute([$campaignId]);
+                        $extCodeCount = (int)$stmt->fetchColumn();
+                    } catch (Exception $e) {}
+
+                    if ($extCodeCount === 0) {
+                        $error = 'Kampanjen har externa koder aktiverat men inga koder har genererats. Spara kampanjen först för att generera koder.';
+                    }
+                } elseif (!$discountCode) {
+                    $error = 'Kampanjen saknar kopplad rabattkod eller externa koder';
+                }
+
+                if (empty($error)) {
                     $sentCount = 0;
                     $failedCount = 0;
                     $skippedCount = 0;
