@@ -1038,6 +1038,20 @@ include __DIR__ . '/components/unified-layout.php';
     align-items: flex-start;
     margin-bottom: var(--space-md);
 }
+.campaign-actions {
+    display: flex;
+    gap: var(--space-xs);
+    align-items: center;
+}
+.campaign-actions-text {
+    display: flex;
+    gap: var(--space-xs);
+}
+.campaign-actions-icons {
+    display: flex;
+    gap: var(--space-2xs);
+    align-items: center;
+}
 .campaign-name {
     font-size: 1.125rem;
     font-weight: 600;
@@ -1280,14 +1294,30 @@ include __DIR__ . '/components/unified-layout.php';
         flex-direction: column;
         gap: var(--space-sm);
     }
-    .campaign-header > div:last-child {
-        flex-wrap: wrap;
+    .campaign-actions {
         width: 100%;
+        justify-content: space-between;
     }
-    .campaign-header .btn-admin {
+    .campaign-actions-text {
         flex: 1;
-        min-width: 0;
+        gap: var(--space-xs);
+    }
+    .campaign-actions-text .btn-admin {
+        flex: 1;
         justify-content: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-height: 40px;
+    }
+    .campaign-actions-icons {
+        flex-shrink: 0;
+    }
+    .campaign-actions-icons .btn-admin {
+        min-width: 40px;
+        min-height: 40px;
+        justify-content: center;
+        padding: var(--space-xs);
     }
     .campaign-name {
         font-size: 1rem;
@@ -2518,27 +2548,31 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
                         <?php endif; ?>
                     </div>
                 </div>
-                <div style="display:flex;gap:var(--space-xs);">
-                    <a href="?view=audience&campaign=<?= $c['id'] ?>" class="btn-admin btn-admin-secondary btn-sm">
-                        <i data-lucide="users"></i> Målgrupp
-                    </a>
-                    <a href="?view=results&campaign=<?= $c['id'] ?>" class="btn-admin btn-admin-secondary btn-sm">
-                        <i data-lucide="bar-chart-2"></i> Resultat
-                    </a>
+                <div class="campaign-actions">
+                    <div class="campaign-actions-text">
+                        <a href="?view=audience&campaign=<?= $c['id'] ?>" class="btn-admin btn-admin-secondary btn-sm">
+                            <i data-lucide="users"></i> Målgrupp
+                        </a>
+                        <a href="?view=results&campaign=<?= $c['id'] ?>" class="btn-admin btn-admin-secondary btn-sm">
+                            <i data-lucide="bar-chart-2"></i> Resultat
+                        </a>
+                    </div>
                     <?php if ($canEdit): ?>
-                    <button type="button" class="btn-admin btn-admin-ghost btn-sm" onclick="editCampaign(<?= htmlspecialchars(json_encode($c)) ?>)" title="Redigera kampanj">
-                        <i data-lucide="edit-2"></i>
-                    </button>
-                    <form method="POST" style="display:inline;">
-                        <input type="hidden" name="action" value="toggle_campaign">
-                        <input type="hidden" name="id" value="<?= $c['id'] ?>">
-                        <button type="submit" class="btn-admin btn-admin-ghost btn-sm" title="<?= $c['is_active'] ? 'Pausa kampanj' : 'Aktivera kampanj' ?>">
-                            <i data-lucide="<?= $c['is_active'] ? 'pause' : 'play' ?>"></i>
+                    <div class="campaign-actions-icons">
+                        <button type="button" class="btn-admin btn-admin-ghost btn-sm" onclick="editCampaign(<?= htmlspecialchars(json_encode($c)) ?>)" title="Redigera kampanj">
+                            <i data-lucide="edit-2"></i>
                         </button>
-                    </form>
-                    <button type="button" class="btn-admin btn-admin-ghost btn-sm" onclick="confirmDeleteCampaign(<?= $c['id'] ?>, '<?= htmlspecialchars($c['name'], ENT_QUOTES) ?>', <?= $c['response_count'] ?>)" title="Radera kampanj" style="color: var(--color-error);">
-                        <i data-lucide="trash-2"></i>
-                    </button>
+                        <form method="POST" style="display:inline;">
+                            <input type="hidden" name="action" value="toggle_campaign">
+                            <input type="hidden" name="id" value="<?= $c['id'] ?>">
+                            <button type="submit" class="btn-admin btn-admin-ghost btn-sm" title="<?= $c['is_active'] ? 'Pausa kampanj' : 'Aktivera kampanj' ?>">
+                                <i data-lucide="<?= $c['is_active'] ? 'pause' : 'play' ?>"></i>
+                            </button>
+                        </form>
+                        <button type="button" class="btn-admin btn-admin-ghost btn-sm" onclick="confirmDeleteCampaign(<?= $c['id'] ?>, '<?= htmlspecialchars($c['name'], ENT_QUOTES) ?>', <?= $c['response_count'] ?>)" title="Radera kampanj" style="color: var(--color-error);">
+                            <i data-lucide="trash-2"></i>
+                        </button>
+                    </div>
                     <?php endif; ?>
                 </div>
             </div>
