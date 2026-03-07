@@ -441,7 +441,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
                     </div>
                     <?php if ($hasAnnat): ?>
                         <div class="wb-annat-field" id="annat_<?= $q['id'] ?>" style="display:none;">
-                            <input type="text" name="q_<?= $q['id'] ?>_annat" class="form-input" placeholder="Beskriv vad...">
+                            <textarea name="q_<?= $q['id'] ?>_annat" class="form-input" placeholder="Beskriv vad..." rows="3"></textarea>
                         </div>
                     <?php endif; ?>
 
@@ -459,7 +459,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
                     </div>
                     <?php if ($hasAnnat): ?>
                         <div class="wb-annat-field" id="annat_<?= $q['id'] ?>" style="display:none;">
-                            <input type="text" name="q_<?= $q['id'] ?>_annat" class="form-input" placeholder="Beskriv vad...">
+                            <textarea name="q_<?= $q['id'] ?>_annat" class="form-input" placeholder="Beskriv vad..." rows="3"></textarea>
                         </div>
                     <?php endif; ?>
 
@@ -559,7 +559,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
     height: 28px;
     min-width: 28px;
     background: var(--color-accent);
-    color: #000;
+    color: #fff;
     border-radius: 50%;
     font-size: 0.8rem;
     font-weight: 700;
@@ -604,11 +604,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
 
 /* Annat (Other) field */
 .wb-annat-field {
-    margin-top: var(--space-sm);
-    padding-left: var(--space-xs);
+    margin-top: var(--space-md);
 }
 .wb-annat-field .form-input {
-    font-size: 0.9rem;
+    width: 100%;
+    min-height: 80px;
+    font-size: 0.95rem;
+    padding: var(--space-sm) var(--space-md);
+    border: 2px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-page);
+    resize: vertical;
 }
 
 /* Scale */
@@ -756,12 +762,13 @@ function copyCode(el) {
 function toggleAnnatField(checkbox, fieldId) {
     const field = document.getElementById(fieldId);
     if (!field) return;
+    const input = field.querySelector('textarea, input');
     if (checkbox.checked) {
         field.style.display = 'block';
-        field.querySelector('input').focus();
+        if (input) input.focus();
     } else {
         field.style.display = 'none';
-        field.querySelector('input').value = '';
+        if (input) input.value = '';
     }
 }
 
@@ -769,7 +776,8 @@ function hideAnnatField(fieldId) {
     const field = document.getElementById(fieldId);
     if (field) {
         field.style.display = 'none';
-        field.querySelector('input').value = '';
+        const input = field.querySelector('textarea, input');
+        if (input) input.value = '';
     }
 }
 </script>

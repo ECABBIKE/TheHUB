@@ -18,9 +18,9 @@
 ## SENASTE FIXAR (2026-03-07, session 43)
 
 ### Winback: Enkätformuläret omdesignat
-- **Varje fråga i eget kort:** Formuläret använder nu separata `.card`-element per fråga med numrerade cirklar (1, 2, 3...) i headern.
+- **Varje fråga i eget kort:** Formuläret använder nu separata `.card`-element per fråga med numrerade cirklar (1, 2, 3...) i headern. Siffror i vitt (#fff) mot cyan-bakgrund.
 - **Tvåkolumns grid:** Checkbox/radio-options visas i 2-kolumns grid på desktop, 1 kolumn på mobil.
-- **"Annat"-fritextfält:** Om en checkbox/radio-option heter "Annat" visas ett textfält när den bockas i. Texten sparas som "Annat: [fritext]" i databasen.
+- **"Annat"-fritextfält:** Om en checkbox/radio-option heter "Annat" visas en textarea (3 rader, full bredd, starkare border) när den bockas i. Texten sparas som "Annat: [fritext]" i databasen.
 - **Svenska tecken i databasen:** Migration 082 uppdaterar alla seed-frågor och options med korrekta å, ä, ö.
 - **Svenska tecken i admin:** Fixade 6 strängar i winback-campaigns.php (Fråga, Frågestatus, etc.)
 - **Survey-sidans kvalificeringslogik:** Använde obefintlig `brand_series_map`-tabell → bytt till `series_events` EXISTS-query (samma som welcome.php och winback.php).
