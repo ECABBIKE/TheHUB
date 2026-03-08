@@ -85,6 +85,25 @@ try {
     error_log("Calendar index database error: " . $e->getMessage());
 }
 
+// Load festivals for admins only
+$festivals = [];
+$isAdmin = !empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin';
+if ($isAdmin) {
+    try {
+        $festStmt = $pdo->query("
+            SELECT f.*,
+                (SELECT COUNT(*) FROM festival_events fe WHERE fe.festival_id = f.id) as event_count,
+                (SELECT COUNT(*) FROM festival_activities fa WHERE fa.festival_id = f.id AND fa.active = 1) as activity_count
+            FROM festivals f
+            WHERE f.active = 1 AND f.start_date >= CURDATE()
+            ORDER BY f.start_date ASC
+        ");
+        $festivals = $festStmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // festivals table might not exist yet
+    }
+}
+
 // Format display names
 $formatNames = [
     'ENDURO' => 'Enduro',
@@ -173,6 +192,62 @@ if (!function_exists('getDeadlineInfo')) {
         </select>
     </div>
 </div>
+
+<?php if (!empty($festivals)): ?>
+<!-- Festivals (admin only) -->
+<div class="calendar-month-section" style="margin-bottom: var(--space-lg);">
+    <div class="calendar-month-divider">
+        <span class="calendar-month-label" style="color: var(--color-accent);"><i data-lucide="tent" style="width: 14px; height: 14px; vertical-align: -2px;"></i> Festivaler</span>
+        <span class="calendar-month-line"></span>
+        <span class="calendar-month-count"><?= count($festivals) ?> st</span>
+    </div>
+    <div class="event-list">
+        <?php foreach ($festivals as $fest):
+            $fDate = strtotime($fest['start_date']);
+            $fEndDate = !empty($fest['end_date']) ? strtotime($fest['end_date']) : null;
+            if ($fEndDate && $fEndDate > $fDate) {
+                $fDateStr = date('j', $fDate) . '-' . date('j', $fEndDate) . ' ' . hub_month_short($fDate);
+                $fDayName = hub_day_short($fDate) . '-' . hub_day_short($fEndDate);
+            } else {
+                $fDateStr = date('j', $fDate) . ' ' . hub_month_short($fDate);
+                $fDayName = hub_day_short($fDate);
+            }
+            $statusBadge = match($fest['status']) {
+                'draft' => '<span class="badge badge-warning" style="font-size:0.65rem;">Utkast</span>',
+                'published' => '<span class="badge badge-success" style="font-size:0.65rem;">Publicerad</span>',
+                'completed' => '<span class="badge" style="font-size:0.65rem;">Avslutad</span>',
+                'cancelled' => '<span class="badge badge-danger" style="font-size:0.65rem;">Inställd</span>',
+                default => ''
+            };
+        ?>
+        <a href="/festival/<?= $fest['id'] ?>" class="event-row" style="--event-accent: var(--color-accent)">
+            <div class="event-accent-bar"></div>
+            <div class="event-logo event-logo-placeholder">
+                <i data-lucide="tent"></i>
+            </div>
+            <span class="event-date-inline">
+                <strong><?= $fDateStr ?></strong>
+                <span class="event-day-name"><?= $fDayName ?></span>
+            </span>
+            <?= $statusBadge ?>
+            <h3 class="event-title"><?= htmlspecialchars($fest['name']) ?></h3>
+            <?php if ($fest['location']): ?>
+            <span class="event-location-inline">
+                <i data-lucide="map-pin"></i>
+                <?= htmlspecialchars($fest['location']) ?>
+            </span>
+            <?php endif; ?>
+            <span class="event-registrations">
+                <?= $fest['event_count'] ?> tävlingar · <?= $fest['activity_count'] ?> aktiviteter
+            </span>
+            <div class="event-arrow">
+                <i data-lucide="chevron-right"></i>
+            </div>
+        </a>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Events List -->
 <div class="calendar-events">
