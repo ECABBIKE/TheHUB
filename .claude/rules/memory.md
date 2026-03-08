@@ -15,6 +15,15 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-07, session 49)
+
+### Resultatimport: Redigera/sök åkarkoppling fungerade inte
+- **Problem:** Penna-knappen (byt åkare) och sök-knappen för manuellt kopplade åkare fungerade inte alls. Sökningen öppnades aldrig.
+- **Orsak:** `json_encode()` producerade dubbla citattecken (`"Oliver Barton"`) som lades inuti `onclick="..."` HTML-attribut → HTML-parsningen bröt alla onclick-handlers.
+- **Fix:** Bytt till `data-name` attribut på `<tr>` (HTML-escaped med `h()`) + ny JS-hjälpfunktion `getRowName(idx)` som läser attributet. Alla onclick-handlers anropar nu `getRowName()` istället för att inlina namn direkt.
+- **Även fixat:** `unlinkRider()` hade samma bugg i dynamiskt genererad HTML (`JSON.stringify(defaultQuery)` → `getRowName(idx)`).
+- **Filer:** `admin/event-import-paste.php`
+
 ## SENASTE FIXAR (2026-03-07, session 48)
 
 ### Resultatimport: Tidtagningsformat + kompletteringsläge + manuell koppling
