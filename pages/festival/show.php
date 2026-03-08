@@ -12,6 +12,18 @@ if (!defined('HUB_ROOT')) {
 
 $pdo = hub_db();
 
+// Check if festival section is publicly visible
+$isAdmin = !empty($_SESSION['admin_role']) && in_array($_SESSION['admin_role'], ['admin', 'super_admin']);
+$festivalPublic = (site_setting('festival_public_enabled', '0') === '1');
+if (!$festivalPublic && !$isAdmin) {
+    http_response_code(404);
+    $pageTitle = '404';
+    include __DIR__ . '/../../includes/header.php';
+    echo '<main class="container"><div class="card" style="padding: var(--space-2xl); text-align: center;"><h2>Sidan hittades inte</h2><p><a href="/">Tillbaka till startsidan</a></p></div></main>';
+    include __DIR__ . '/../../includes/footer.php';
+    exit;
+}
+
 // Get festival ID from router
 $festivalId = intval($pageInfo['params']['id'] ?? $_GET['id'] ?? 0);
 if ($festivalId <= 0) {
@@ -48,7 +60,6 @@ if (!$festival) {
 }
 
 // Only show published festivals (or draft for admins)
-$isAdmin = !empty($_SESSION['admin_role']) && in_array($_SESSION['admin_role'], ['admin', 'super_admin']);
 if ($festival['status'] !== 'published' && !$isAdmin) {
     http_response_code(404);
     $pageTitle = 'Festival hittades inte';
@@ -86,6 +97,38 @@ $activities = $pdo->prepare("
 $activities->execute([$festivalId]);
 $activities = $activities->fetchAll(PDO::FETCH_ASSOC);
 
+// Load activity groups (if table exists)
+$activityGroups = [];
+$groupsById = [];
+try {
+    $gStmt = $pdo->prepare("
+        SELECT g.*,
+            (SELECT COUNT(*) FROM festival_activities fa2 WHERE fa2.group_id = g.id AND fa2.active = 1) as activity_count,
+            (SELECT SUM(sub.rc) FROM (SELECT (SELECT COUNT(*) FROM festival_activity_registrations far2 WHERE far2.activity_id = fa3.id AND far2.status != 'cancelled') as rc FROM festival_activities fa3 WHERE fa3.group_id = g.id AND fa3.active = 1) sub) as total_reg_count
+        FROM festival_activity_groups g
+        WHERE g.festival_id = ? AND g.active = 1
+        ORDER BY g.date ASC, g.start_time ASC, g.sort_order ASC
+    ");
+    $gStmt->execute([$festivalId]);
+    $activityGroups = $gStmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($activityGroups as $g) {
+        $groupsById[$g['id']] = $g;
+    }
+} catch (PDOException $e) {
+    // Table doesn't exist yet - groups not available
+}
+
+// Separate grouped vs ungrouped activities
+$ungroupedActivities = [];
+$groupedActivityIds = [];
+foreach ($activities as $a) {
+    if (!empty($a['group_id']) && isset($groupsById[$a['group_id']])) {
+        $groupedActivityIds[] = $a['id'];
+    } else {
+        $ungroupedActivities[] = $a;
+    }
+}
+
 // Load banner
 $bannerUrl = null;
 if ($festival['header_banner_media_id']) {
@@ -110,10 +153,18 @@ if ($festival['pass_enabled']) {
     $passCount = $ps->fetchColumn();
 }
 
-// Group activities by date
+// Group ungrouped activities by date
 $activitiesByDate = [];
-foreach ($activities as $a) {
+foreach ($ungroupedActivities as $a) {
     $activitiesByDate[$a['date']][] = $a;
+}
+
+// Group activity groups by date
+$groupsByDate = [];
+foreach ($activityGroups as $g) {
+    if ($g['date']) {
+        $groupsByDate[$g['date']][] = $g;
+    }
 }
 
 // Group events by date
@@ -122,8 +173,12 @@ foreach ($events as $e) {
     $eventsByDate[$e['date']][] = $e;
 }
 
-// All dates (merged events + activities)
-$allDates = array_unique(array_merge(array_keys($eventsByDate), array_keys($activitiesByDate)));
+// All dates (merged events + activities + groups)
+$allDates = array_unique(array_merge(
+    array_keys($eventsByDate),
+    array_keys($activitiesByDate),
+    array_keys($groupsByDate)
+));
 sort($allDates);
 
 // Date formatting
@@ -228,25 +283,30 @@ include __DIR__ . '/../../includes/header.php';
                 $dayLabel = formatFestivalDate($date);
                 $dayEvents = $eventsByDate[$date] ?? [];
                 $dayActivities = $activitiesByDate[$date] ?? [];
+                $dayGroups = $groupsByDate[$date] ?? [];
+                $totalActivities = count($dayActivities) + count($dayGroups);
             ?>
             <div class="festival-day">
                 <div class="festival-day-header">
                     <div class="festival-day-label"><?= $dayLabel ?></div>
                     <div class="festival-day-count">
                         <?= count($dayEvents) ?> tävling<?= count($dayEvents) !== 1 ? 'ar' : '' ?>
-                        · <?= count($dayActivities) ?> aktivitet<?= count($dayActivities) !== 1 ? 'er' : '' ?>
+                        · <?= $totalActivities ?> aktivitet<?= $totalActivities !== 1 ? 'er' : '' ?>
                     </div>
                 </div>
 
                 <div class="festival-day-items">
                     <?php
-                    // Merge events and activities, sorted by time
+                    // Merge events, ungrouped activities and activity groups, sorted by time
                     $dayItems = [];
                     foreach ($dayEvents as $e) {
                         $dayItems[] = ['type' => 'event', 'time' => '00:00', 'data' => $e];
                     }
                     foreach ($dayActivities as $a) {
                         $dayItems[] = ['type' => 'activity', 'time' => $a['start_time'] ?? '23:59', 'data' => $a];
+                    }
+                    foreach ($dayGroups as $g) {
+                        $dayItems[] = ['type' => 'group', 'time' => $g['start_time'] ?? '23:59', 'data' => $g];
                     }
                     usort($dayItems, fn($a, $b) => strcmp($a['time'], $b['time']));
                     ?>
@@ -333,6 +393,43 @@ include __DIR__ . '/../../includes/header.php';
                                 <i data-lucide="chevron-right" style="width: 16px; height: 16px; color: var(--color-text-muted);"></i>
                             </div>
                         </div>
+                        <?php endif; ?>
+
+                        <?php if ($item['type'] === 'group'):
+                            $g = $item['data'];
+                            $gTypeInfo = $actTypes[$g['activity_type']] ?? $actTypes['other'];
+                            $gActCount = (int)($g['activity_count'] ?? 0);
+                            $gRegCount = (int)($g['total_reg_count'] ?? 0);
+                        ?>
+                        <a href="/festival/<?= $festivalId ?>/activity/<?= $g['id'] ?>" class="festival-item festival-item--group">
+                            <div class="festival-item-icon" style="background: <?= $gTypeInfo['color'] ?>20; color: <?= $gTypeInfo['color'] ?>;">
+                                <i data-lucide="<?= $gTypeInfo['icon'] ?>"></i>
+                            </div>
+                            <div class="festival-item-body">
+                                <div class="festival-item-title">
+                                    <?= htmlspecialchars($g['name']) ?>
+                                </div>
+                                <div class="festival-item-meta">
+                                    <?php if ($g['start_time']): ?>
+                                    <span><i data-lucide="clock" style="width: 12px; height: 12px;"></i> <?= substr($g['start_time'], 0, 5) ?><?= $g['end_time'] ? '–' . substr($g['end_time'], 0, 5) : '' ?></span>
+                                    <?php endif; ?>
+                                    <span class="festival-item-type"><?= $gTypeInfo['label'] ?></span>
+                                    <span class="festival-group-count"><?= $gActCount ?> aktivitet<?= $gActCount !== 1 ? 'er' : '' ?></span>
+                                    <?php if ($g['instructor_name']): ?>
+                                    <span><i data-lucide="user" style="width: 12px; height: 12px;"></i> <?= htmlspecialchars($g['instructor_name']) ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($gRegCount > 0): ?>
+                                    <span><i data-lucide="users" style="width: 12px; height: 12px;"></i> <?= $gRegCount ?> anmälda</span>
+                                    <?php endif; ?>
+                                </div>
+                                <?php if ($g['short_description']): ?>
+                                <p class="festival-item-desc"><?= htmlspecialchars(mb_strimwidth($g['short_description'], 0, 150, '...')) ?></p>
+                                <?php endif; ?>
+                            </div>
+                            <div class="festival-item-action">
+                                <i data-lucide="chevron-right" style="width: 16px; height: 16px; color: var(--color-text-muted);"></i>
+                            </div>
+                        </a>
                         <?php endif; ?>
 
                     <?php endforeach; ?>
@@ -492,6 +589,7 @@ const registrableRiders = <?= json_encode($registrableRiders, JSON_UNESCAPED_UNI
 const isLoggedIn = <?= hub_is_logged_in() ? 'true' : 'false' ?>;
 
 const activityData = <?= json_encode(array_map(function($a) use ($actTypes, $festival) {
+    // Note: grouped activities are accessible via their group page, not the modal
     $typeInfo = $actTypes[$a['activity_type']] ?? $actTypes['other'];
     return [
         'id' => (int)$a['id'],

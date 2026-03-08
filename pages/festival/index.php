@@ -12,6 +12,18 @@ if (!defined('HUB_ROOT')) {
 
 $pdo = hub_db();
 
+// Check if festival section is publicly visible
+$isAdmin = !empty($_SESSION['admin_role']) && in_array($_SESSION['admin_role'], ['admin', 'super_admin']);
+$festivalPublic = (site_setting('festival_public_enabled', '0') === '1');
+if (!$festivalPublic && !$isAdmin) {
+    http_response_code(404);
+    $pageTitle = '404';
+    include __DIR__ . '/../../includes/header.php';
+    echo '<main class="container"><div class="card" style="padding: var(--space-2xl); text-align: center;"><h2>Sidan hittades inte</h2><p><a href="/">Tillbaka till startsidan</a></p></div></main>';
+    include __DIR__ . '/../../includes/footer.php';
+    exit;
+}
+
 // Check table exists
 $tableExists = false;
 try {
@@ -21,7 +33,6 @@ try {
 
 $festivals = [];
 if ($tableExists) {
-    $isAdmin = !empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin';
     $statusFilter = $isAdmin ? "f.active = 1" : "f.status = 'published' AND f.active = 1";
 
     $festivals = $pdo->query("

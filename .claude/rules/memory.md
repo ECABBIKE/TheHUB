@@ -15,6 +15,21 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-08, session 54)
+
+### Festival: Aktivitetsgrupper + synlighetskontroll
+- **Ny funktion:** Aktivitetsgrupper (`festival_activity_groups`) - grupper som samlar flera aktiviteter under en klickbar rad på festivalsidan. Varje grupp har en egen detaljsida med delaktiviteter, deltagarlistor och kundvagnsfunktion.
+- **Migration 087:** `festival_activity_groups` tabell + `festival_activities.group_id` FK
+- **Routing:** `/festival/{id}/activity/{groupId}` → `pages/festival/activity.php` (special 4-segment route i router.php)
+- **Publik aktivitetsgrupp-sida:** `pages/festival/activity.php` - breadcrumb, grupphuvud (typ-badge, titel, meta), beskrivning, instruktörinfo, aktivitetslista med expanderbara deltagarlistor (`<details>`), sidebar med pass-CTA och festivalinfo
+- **Festival show.php uppdaterad:** Grupperar aktiviteter i grouped vs ungrouped. Grupper renderas som klickbara `<a>` rader med chevron-right ikon, aktivitetsantal, registreringsantal
+- **Admin festival-edit.php:** Ny "Grupper"-flik med CRUD (skapa, redigera, radera grupper). Gruppval-dropdown i aktivitetsformuläret. POST-handlers: save_group, delete_group, assign_activity_group
+- **CSS:** Nya klasser i festival.css: `.festival-breadcrumb`, `.activity-group-header`, `.activity-group-body`, `.activity-list-item`, `.activity-participants`, `.festival-item--group`
+- **Synlighetskontroll:** `site_setting('festival_public_enabled')` toggle i `/admin/public-settings.php`. Default: avstängd (admin-only). Alla tre publika festivalsidor (index, show, activity) kollar inställningen - visar 404 för icke-admin om festivalen inte är publikt aktiverad.
+- **VIKTIGT:** Festival ska ALDRIG ha egen ikon i navigation - ligger under Serier-gruppen i admin-tabs
+- **VIKTIGT:** Kör migration 087 via `/admin/migrations.php`
+- **Filer:** `Tools/migrations/087_festival_activity_groups.sql`, `pages/festival/activity.php`, `pages/festival/show.php`, `pages/festival/index.php`, `admin/festival-edit.php`, `admin/public-settings.php`, `admin/migrations.php`, `assets/css/pages/festival.css`, `router.php`
+
 ## SENASTE FIXAR (2026-03-08, session 53)
 
 ### Festival: Checkout-integration (backend klar, frontend pågår)

@@ -143,6 +143,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'included_in_pass' => isset($_POST['act_included_in_pass']) ? 1 : 0,
         ];
 
+        // Add group_id if column exists
+        try {
+            $pdo->query("SELECT group_id FROM festival_activities LIMIT 0");
+            $actData['group_id'] = !empty($_POST['act_group_id']) ? intval($_POST['act_group_id']) : null;
+        } catch (PDOException $e) {
+            // Column doesn't exist yet
+        }
+
         if (empty($actData['name'])) {
             $_SESSION['flash_message'] = 'Aktivitetsnamn krävs';
             $_SESSION['flash_type'] = 'error';
@@ -177,6 +185,87 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("DELETE FROM festival_activities WHERE id = ? AND festival_id = ?")->execute([$actId, $id]);
         $_SESSION['flash_message'] = 'Aktivitet raderad';
         $_SESSION['flash_type'] = 'success';
+        header("Location: /admin/festival-edit.php?id=$id&tab=activities");
+        exit;
+    }
+
+    // ── Save activity group ──
+    if ($action === 'save_group' && $id > 0) {
+        $groupId = intval($_POST['group_id'] ?? 0);
+        $groupData = [
+            'festival_id' => $id,
+            'name' => trim($_POST['grp_name'] ?? ''),
+            'description' => trim($_POST['grp_description'] ?? ''),
+            'short_description' => trim($_POST['grp_short_description'] ?? ''),
+            'activity_type' => $_POST['grp_type'] ?? 'other',
+            'date' => $_POST['grp_date'] ?? null,
+            'start_time' => !empty($_POST['grp_start_time']) ? $_POST['grp_start_time'] : null,
+            'end_time' => !empty($_POST['grp_end_time']) ? $_POST['grp_end_time'] : null,
+            'location_detail' => trim($_POST['grp_location'] ?? ''),
+            'instructor_name' => trim($_POST['grp_instructor'] ?? ''),
+            'instructor_info' => trim($_POST['grp_instructor_info'] ?? ''),
+        ];
+
+        if (empty($groupData['name'])) {
+            $_SESSION['flash_message'] = 'Gruppnamn krävs';
+            $_SESSION['flash_type'] = 'error';
+        } else {
+            try {
+                if ($groupId > 0) {
+                    $sets = [];
+                    $vals = [];
+                    foreach ($groupData as $col => $val) {
+                        $sets[] = "$col = ?";
+                        $vals[] = $val;
+                    }
+                    $vals[] = $groupId;
+                    $pdo->prepare("UPDATE festival_activity_groups SET " . implode(', ', $sets) . " WHERE id = ?")->execute($vals);
+                    $_SESSION['flash_message'] = 'Grupp uppdaterad';
+                } else {
+                    $cols = implode(', ', array_keys($groupData));
+                    $placeholders = implode(', ', array_fill(0, count($groupData), '?'));
+                    $pdo->prepare("INSERT INTO festival_activity_groups ($cols) VALUES ($placeholders)")->execute(array_values($groupData));
+                    $_SESSION['flash_message'] = 'Grupp skapad';
+                }
+                $_SESSION['flash_type'] = 'success';
+            } catch (PDOException $e) {
+                $_SESSION['flash_message'] = 'Fel: ' . $e->getMessage();
+                $_SESSION['flash_type'] = 'error';
+            }
+        }
+        header("Location: /admin/festival-edit.php?id=$id&tab=groups");
+        exit;
+    }
+
+    // ── Delete activity group ──
+    if ($action === 'delete_group' && $id > 0) {
+        $groupId = intval($_POST['group_id'] ?? 0);
+        // Unlink activities (set group_id = NULL), then delete group
+        try {
+            $pdo->prepare("UPDATE festival_activities SET group_id = NULL WHERE group_id = ?")->execute([$groupId]);
+            $pdo->prepare("DELETE FROM festival_activity_groups WHERE id = ? AND festival_id = ?")->execute([$groupId, $id]);
+            $_SESSION['flash_message'] = 'Grupp raderad (aktiviteter bevarade)';
+            $_SESSION['flash_type'] = 'success';
+        } catch (PDOException $e) {
+            $_SESSION['flash_message'] = 'Fel: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'error';
+        }
+        header("Location: /admin/festival-edit.php?id=$id&tab=groups");
+        exit;
+    }
+
+    // ── Assign activity to group ──
+    if ($action === 'assign_activity_group' && $id > 0) {
+        $actId = intval($_POST['activity_id'] ?? 0);
+        $groupId = !empty($_POST['group_id']) ? intval($_POST['group_id']) : null;
+        try {
+            $pdo->prepare("UPDATE festival_activities SET group_id = ? WHERE id = ? AND festival_id = ?")->execute([$groupId, $actId, $id]);
+            $_SESSION['flash_message'] = 'Aktivitet uppdaterad';
+            $_SESSION['flash_type'] = 'success';
+        } catch (PDOException $e) {
+            $_SESSION['flash_message'] = 'Fel: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'error';
+        }
         header("Location: /admin/festival-edit.php?id=$id&tab=activities");
         exit;
     }
@@ -237,6 +326,16 @@ if (!$isNew && $id > 0) {
     $actStmt = $pdo->prepare("SELECT * FROM festival_activities WHERE festival_id = ? ORDER BY date ASC, start_time ASC, sort_order ASC");
     $actStmt->execute([$id]);
     $activities = $actStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Load activity groups
+    $activityGroups = [];
+    try {
+        $gStmt = $pdo->prepare("SELECT g.*, (SELECT COUNT(*) FROM festival_activities fa WHERE fa.group_id = g.id) as activity_count FROM festival_activity_groups g WHERE g.festival_id = ? ORDER BY g.date ASC, g.sort_order ASC");
+        $gStmt->execute([$id]);
+        $activityGroups = $gStmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // Table doesn't exist yet
+    }
 }
 
 // Venues for dropdown
@@ -490,6 +589,10 @@ $activityTypes = [
     <a href="?id=<?= $id ?>&tab=events" class="festival-tab <?= $activeTab === 'events' ? 'active' : '' ?>">
         <i data-lucide="calendar"></i> Tävlingsevent
         <span class="badge" style="font-size: 0.7rem; padding: 1px 6px;"><?= count($festivalEvents) ?></span>
+    </a>
+    <a href="?id=<?= $id ?>&tab=groups" class="festival-tab <?= $activeTab === 'groups' ? 'active' : '' ?>">
+        <i data-lucide="layers"></i> Grupper
+        <span class="badge" style="font-size: 0.7rem; padding: 1px 6px;"><?= count($activityGroups) ?></span>
     </a>
     <a href="?id=<?= $id ?>&tab=activities" class="festival-tab <?= $activeTab === 'activities' ? 'active' : '' ?>">
         <i data-lucide="tent"></i> Aktiviteter
@@ -760,6 +863,164 @@ endif;
 <?php endif; ?>
 
 <!-- ============================================================ -->
+<!-- TAB: GRUPPER                                                  -->
+<!-- ============================================================ -->
+<?php if (!$isNew && $activeTab === 'groups'): ?>
+
+<!-- Befintliga grupper -->
+<?php if (!empty($activityGroups)): ?>
+<div style="margin-bottom: var(--space-lg);">
+    <?php foreach ($activityGroups as $grp):
+        $grpTypeInfo = $activityTypes[$grp['activity_type']] ?? $activityTypes['other'];
+    ?>
+    <div class="activity-card">
+        <div class="activity-card-header">
+            <div class="activity-card-title">
+                <i data-lucide="<?= $grpTypeInfo['icon'] ?>"></i>
+                <?= htmlspecialchars($grp['name']) ?>
+                <span class="badge" style="font-size: 0.65rem; padding: 1px 6px; margin-left: 4px;">
+                    <?= $grpTypeInfo['label'] ?>
+                </span>
+                <span class="badge" style="font-size: 0.65rem; padding: 1px 6px;">
+                    <?= (int)$grp['activity_count'] ?> aktiviteter
+                </span>
+            </div>
+            <div style="display: flex; gap: var(--space-2xs);">
+                <a href="/festival/<?= $id ?>/activity/<?= $grp['id'] ?>" target="_blank" class="btn-admin btn-admin-secondary" style="padding: 4px 8px;" title="Visa publik sida">
+                    <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
+                </a>
+                <a href="?id=<?= $id ?>&tab=groups&edit_grp=<?= $grp['id'] ?>#edit-group-form" class="btn-admin btn-admin-secondary" style="padding: 4px 8px;">
+                    <i data-lucide="pencil" style="width: 14px; height: 14px;"></i>
+                </a>
+                <form method="post" style="margin: 0;" onsubmit="return confirm('Radera denna grupp? Aktiviteter behålls men kopplas bort.')">
+                    <input type="hidden" name="action" value="delete_group">
+                    <input type="hidden" name="group_id" value="<?= $grp['id'] ?>">
+                    <button type="submit" class="btn-admin btn-admin-danger" style="padding: 4px 8px;">
+                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        <div class="activity-card-meta">
+            <?php if ($grp['date']): ?>
+            <span><i data-lucide="calendar"></i> <?= date('j M Y', strtotime($grp['date'])) ?></span>
+            <?php endif; ?>
+            <?php if ($grp['start_time']): ?>
+            <span><i data-lucide="clock"></i> <?= substr($grp['start_time'], 0, 5) ?><?= $grp['end_time'] ? ' – ' . substr($grp['end_time'], 0, 5) : '' ?></span>
+            <?php endif; ?>
+            <?php if ($grp['instructor_name']): ?>
+            <span><i data-lucide="user"></i> <?= htmlspecialchars($grp['instructor_name']) ?></span>
+            <?php endif; ?>
+            <?php if ($grp['location_detail']): ?>
+            <span><i data-lucide="map-pin"></i> <?= htmlspecialchars($grp['location_detail']) ?></span>
+            <?php endif; ?>
+        </div>
+        <?php if ($grp['short_description']): ?>
+        <p style="margin: var(--space-xs) 0 0; font-size: 0.85rem; color: var(--color-text-secondary);">
+            <?= htmlspecialchars(mb_strimwidth($grp['short_description'], 0, 200, '...')) ?>
+        </p>
+        <?php endif; ?>
+    </div>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<!-- Formulär: Skapa/redigera grupp -->
+<?php
+    $editGrp = null;
+    $editGrpId = intval($_GET['edit_grp'] ?? 0);
+    if ($editGrpId > 0) {
+        foreach ($activityGroups as $g) {
+            if ($g['id'] == $editGrpId) { $editGrp = $g; break; }
+        }
+    }
+?>
+
+<div class="admin-card" id="edit-group-form">
+    <div class="admin-card-header">
+        <h3><?= $editGrp ? 'Redigera grupp' : 'Ny grupp' ?></h3>
+    </div>
+    <div class="admin-card-body">
+        <form method="post">
+            <input type="hidden" name="action" value="save_group">
+            <?php if ($editGrp): ?>
+            <input type="hidden" name="group_id" value="<?= $editGrp['id'] ?>">
+            <?php endif; ?>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Gruppnamn *</label>
+                    <input type="text" name="grp_name" value="<?= htmlspecialchars($editGrp['name'] ?? '') ?>" required placeholder="T.ex. Enduro Clinics">
+                </div>
+                <div class="form-group">
+                    <label>Typ</label>
+                    <select name="grp_type">
+                        <?php foreach ($activityTypes as $key => $info): ?>
+                        <option value="<?= $key ?>" <?= ($editGrp['activity_type'] ?? '') === $key ? 'selected' : '' ?>>
+                            <?= $info['label'] ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Kort beskrivning (visas i programlistan)</label>
+                <input type="text" name="grp_short_description" value="<?= htmlspecialchars($editGrp['short_description'] ?? '') ?>" placeholder="Max 1-2 meningar" maxlength="500">
+            </div>
+
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>Datum</label>
+                    <input type="date" name="grp_date" value="<?= htmlspecialchars($editGrp['date'] ?? $festival['start_date'] ?? '') ?>">
+                </div>
+                <div class="form-group">
+                    <label>Starttid</label>
+                    <input type="time" name="grp_start_time" value="<?= htmlspecialchars($editGrp['start_time'] ?? '') ?>">
+                </div>
+                <div class="form-group">
+                    <label>Sluttid</label>
+                    <input type="time" name="grp_end_time" value="<?= htmlspecialchars($editGrp['end_time'] ?? '') ?>">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Instruktör / Ledare</label>
+                    <input type="text" name="grp_instructor" value="<?= htmlspecialchars($editGrp['instructor_name'] ?? '') ?>" placeholder="Namn">
+                </div>
+                <div class="form-group">
+                    <label>Plats (inom festivalen)</label>
+                    <input type="text" name="grp_location" value="<?= htmlspecialchars($editGrp['location_detail'] ?? '') ?>" placeholder="T.ex. Start/mål-området">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Om instruktören</label>
+                <textarea name="grp_instructor_info" rows="2"><?= htmlspecialchars($editGrp['instructor_info'] ?? '') ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Beskrivning (visas på gruppsidan)</label>
+                <textarea name="grp_description" rows="4"><?= htmlspecialchars($editGrp['description'] ?? '') ?></textarea>
+            </div>
+
+            <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-md);">
+                <button type="submit" class="btn-admin btn-admin-primary">
+                    <i data-lucide="save" style="width: 16px; height: 16px;"></i>
+                    <?= $editGrp ? 'Uppdatera grupp' : 'Skapa grupp' ?>
+                </button>
+                <?php if ($editGrp): ?>
+                <a href="?id=<?= $id ?>&tab=groups" class="btn-admin btn-admin-secondary">Avbryt</a>
+                <?php endif; ?>
+            </div>
+        </form>
+    </div>
+</div>
+
+<?php endif; ?>
+
+<!-- ============================================================ -->
 <!-- TAB: AKTIVITETER                                              -->
 <!-- ============================================================ -->
 <?php if (!$isNew && $activeTab === 'activities'): ?>
@@ -863,6 +1124,20 @@ endif;
                     </select>
                 </div>
             </div>
+
+            <?php if (!empty($activityGroups)): ?>
+            <div class="form-group">
+                <label>Grupp (valfritt)</label>
+                <select name="act_group_id">
+                    <option value="">– Ingen grupp –</option>
+                    <?php foreach ($activityGroups as $grp): ?>
+                    <option value="<?= $grp['id'] ?>" <?= (int)($editAct['group_id'] ?? 0) === (int)$grp['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($grp['name']) ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php endif; ?>
 
             <div class="form-row-3">
                 <div class="form-group">
