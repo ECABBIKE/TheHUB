@@ -15,6 +15,21 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-08, session 55)
+
+### Festival: Tidspass (time slots) + tävlingar i festivalpass
+- **Ny funktion:** Tidspass per aktivitet — istället för att skapa kopior av samma aktivitet kan man nu lägga till flera tidspass med datum, start/sluttid och max deltagare per pass.
+- **Ny funktion:** Tävlingsevent kan inkluderas i festivalpass — om en tävling är kopplad till en festival och markerad `included_in_pass`, blir registreringsavgiften 0 kr för deltagare med festivalpass.
+- **Migration 088:** `festival_activity_slots` tabell + `festival_activity_registrations.slot_id` + `festival_events.included_in_pass`
+- **Admin festival-edit.php:** Nya POST-handlers: `save_slot`, `delete_slot`, `toggle_event_pass`. Tidspass-sektion under aktivitetsformuläret med lista + skapa/redigera-formulär. "I pass"-checkbox per kopplat tävlingsevent (auto-submit). Pass-fliken visar inkluderade tävlingar.
+- **Publik single-activity.php:** Bokningssida-UX med datumgrupperade tidspass. Varje pass visar tid, platser kvar, "Välj"-knapp. `addSlotToCart()` JS inkluderar `slot_id` och datum/tid i varukorgens activity_name.
+- **Publik activity.php (grupper):** Aktiviteter med tidspass visar "X tidspass" i meta + "Välj pass"-knapp som länkar till single-activity-sidan.
+- **Publik show.php:** Visar "X tidspass" istället för platser om aktiviteten har slots.
+- **order-manager.php:** Event-registrering kollar nu `festival_events.included_in_pass` — om eventen ingår i pass och åkaren har pass (betalt eller i samma order), sätts priset till 0 kr. Aktivitetsregistrering stödjer `slot_id` med kapacitetskontroll per pass.
+- **CSS:** Nya klasser i festival.css: `.slot-date-group`, `.slot-date-header`, `.slot-row`, `.slot-time`, `.slot-spots`, `.slot-add-btn`
+- **VIKTIGT:** Kör migration 088 via `/admin/migrations.php`
+- **Filer:** `Tools/migrations/088_festival_activity_slots.sql`, `pages/festival/single-activity.php`, `pages/festival/activity.php`, `pages/festival/show.php`, `admin/festival-edit.php`, `includes/order-manager.php`, `assets/css/pages/festival.css`, `admin/migrations.php`
+
 ## SENASTE FIXAR (2026-03-08, session 54)
 
 ### Festival: Aktivitetsgrupper + synlighetskontroll

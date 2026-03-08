@@ -97,6 +97,22 @@ $activities = $pdo->prepare("
 $activities->execute([$festivalId]);
 $activities = $activities->fetchAll(PDO::FETCH_ASSOC);
 
+// Load activity slots count (indexed by activity_id)
+$activitySlotCounts = [];
+try {
+    $slStmt = $pdo->prepare("
+        SELECT s.activity_id, COUNT(*) as slot_count
+        FROM festival_activity_slots s
+        JOIN festival_activities fa ON s.activity_id = fa.id
+        WHERE fa.festival_id = ? AND s.active = 1
+        GROUP BY s.activity_id
+    ");
+    $slStmt->execute([$festivalId]);
+    foreach ($slStmt->fetchAll(PDO::FETCH_ASSOC) as $sc) {
+        $activitySlotCounts[$sc['activity_id']] = (int)$sc['slot_count'];
+    }
+} catch (PDOException $e) {}
+
 // Load activity groups (if table exists)
 $activityGroups = [];
 $groupsById = [];
@@ -414,7 +430,9 @@ include __DIR__ . '/../../includes/header.php';
                                     <?php if ($a['instructor_name']): ?>
                                     <span><i data-lucide="user" style="width: 12px; height: 12px;"></i> <?= htmlspecialchars($a['instructor_name']) ?></span>
                                     <?php endif; ?>
-                                    <?php if ($a['max_participants']): ?>
+                                    <?php if (!empty($activitySlotCounts[$a['id']])): ?>
+                                    <span style="color: var(--color-accent);"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> <?= $activitySlotCounts[$a['id']] ?> tidspass</span>
+                                    <?php elseif ($a['max_participants']): ?>
                                     <span><?= $a['reg_count'] ?>/<?= $a['max_participants'] ?> platser</span>
                                     <?php endif; ?>
                                 </div>

@@ -880,6 +880,62 @@ html.activity-modal-open {
     color: var(--color-text-muted);
 }
 
+/* ─── TIME SLOTS (single-activity.php) ─── */
+.slot-date-group {
+    border-bottom: 1px solid var(--color-border);
+}
+.slot-date-group:last-child {
+    border-bottom: none;
+}
+.slot-date-header {
+    padding: var(--space-xs) var(--space-md);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+    background: var(--color-bg-hover);
+}
+.slot-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+    transition: background 0.15s;
+}
+.slot-row:last-child {
+    border-bottom: none;
+}
+.slot-row:hover {
+    background: var(--color-bg-hover);
+}
+.slot-row--full {
+    opacity: 0.5;
+}
+.slot-time {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.slot-time-value {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--color-text-primary);
+}
+.slot-spots {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+.slot-add-btn {
+    padding: var(--space-xs) var(--space-md) !important;
+    font-size: 0.85rem !important;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    white-space: nowrap;
+}
+
 /* ─── ACTIVITY GROUP ROW (show.php) ─── */
 .festival-item--group {
     cursor: pointer;
@@ -908,20 +964,6 @@ html.activity-modal-open {
 }
 
 @media (max-width: 767px) {
-    /* Modal fullscreen on mobile */
-    .activity-modal-backdrop {
-        padding: 0;
-        align-items: flex-end;
-    }
-    .activity-modal {
-        max-height: 85vh;
-        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-        border-bottom: none;
-    }
-    .activity-modal-info-grid {
-        grid-template-columns: 1fr;
-    }
-
     .festival-hero {
         min-height: 220px;
         margin: -16px -16px 0;
@@ -1009,6 +1051,9 @@ html.activity-modal-open {
     .activity-list-item-action .btn {
         width: 100%;
         justify-content: center;
+        min-height: 40px;
+    }
+    .slot-add-btn {
         min-height: 40px;
     }
 }

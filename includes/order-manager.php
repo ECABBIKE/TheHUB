@@ -374,6 +374,44 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                     }
                 }
 
+                // Festival pass discount: if event is included in a festival pass
+                $eventPassDiscount = false;
+                try {
+                    $fePassStmt = $pdo->prepare("
+                        SELECT fe.festival_id FROM festival_events fe
+                        WHERE fe.event_id = ? AND fe.included_in_pass = 1
+                        LIMIT 1
+                    ");
+                    $fePassStmt->execute([$eventId]);
+                    $feFestivalId = $fePassStmt->fetchColumn();
+                    if ($feFestivalId) {
+                        // Check if rider has a pass in this order or already paid
+                        foreach ($items as $otherItem) {
+                            if (($otherItem['type'] ?? '') === 'festival_pass'
+                                && intval($otherItem['festival_id']) === intval($feFestivalId)
+                                && intval($otherItem['rider_id']) === $riderId) {
+                                $eventPassDiscount = true;
+                                break;
+                            }
+                        }
+                        if (!$eventPassDiscount) {
+                            $paidPassStmt = $pdo->prepare("
+                                SELECT id FROM festival_passes
+                                WHERE festival_id = ? AND rider_id = ? AND status != 'cancelled' AND payment_status = 'paid'
+                            ");
+                            $paidPassStmt->execute([$feFestivalId, $riderId]);
+                            if ($paidPassStmt->fetch()) {
+                                $eventPassDiscount = true;
+                            }
+                        }
+                        if ($eventPassDiscount) {
+                            $finalPrice = 0;
+                        }
+                    }
+                } catch (PDOException $e) {
+                    // festival_events table or included_in_pass column doesn't exist yet
+                }
+
                 // Skapa event_registration
                 $regStmt = $pdo->prepare("
                     INSERT INTO event_registrations (
@@ -631,14 +669,51 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                     }
                 }
 
-                // Skapa festival_activity_registration
-                $regStmt = $pdo->prepare("
-                    INSERT INTO festival_activity_registrations (
-                        activity_id, rider_id, order_id,
-                        status, payment_status, registered_at
-                    ) VALUES (?, ?, ?, 'pending', 'unpaid', NOW())
-                ");
-                $regStmt->execute([$activityId, $riderId, $orderId]);
+                // Skapa festival_activity_registration (with optional slot_id)
+                $slotId = !empty($item['slot_id']) ? intval($item['slot_id']) : null;
+
+                // Check slot capacity if slot specified
+                if ($slotId) {
+                    try {
+                        $slotCapStmt = $pdo->prepare("
+                            SELECT s.max_participants,
+                                (SELECT COUNT(*) FROM festival_activity_registrations far WHERE far.slot_id = s.id AND far.status != 'cancelled') as reg_count
+                            FROM festival_activity_slots s WHERE s.id = ? AND s.active = 1
+                        ");
+                        $slotCapStmt->execute([$slotId]);
+                        $slotInfo = $slotCapStmt->fetch(PDO::FETCH_ASSOC);
+                        if ($slotInfo && $slotInfo['max_participants'] && $slotInfo['reg_count'] >= $slotInfo['max_participants']) {
+                            throw new Exception("Tidspasset är fullbokat");
+                        }
+                    } catch (PDOException $e) {
+                        // slot table may not exist yet
+                    }
+                }
+
+                // Check if slot_id column exists
+                $hasSlotCol = false;
+                try {
+                    $pdo->query("SELECT slot_id FROM festival_activity_registrations LIMIT 0");
+                    $hasSlotCol = true;
+                } catch (PDOException $e) {}
+
+                if ($hasSlotCol && $slotId) {
+                    $regStmt = $pdo->prepare("
+                        INSERT INTO festival_activity_registrations (
+                            activity_id, slot_id, rider_id, order_id,
+                            status, payment_status, registered_at
+                        ) VALUES (?, ?, ?, ?, 'pending', 'unpaid', NOW())
+                    ");
+                    $regStmt->execute([$activityId, $slotId, $riderId, $orderId]);
+                } else {
+                    $regStmt = $pdo->prepare("
+                        INSERT INTO festival_activity_registrations (
+                            activity_id, rider_id, order_id,
+                            status, payment_status, registered_at
+                        ) VALUES (?, ?, ?, 'pending', 'unpaid', NOW())
+                    ");
+                    $regStmt->execute([$activityId, $riderId, $orderId]);
+                }
                 $actRegId = $pdo->lastInsertId();
 
                 // Betalningsmottagare från festivalen

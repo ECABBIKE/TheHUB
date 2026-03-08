@@ -69,6 +69,30 @@ if (!$activity) {
     exit;
 }
 
+// Load time slots (if table exists)
+$activitySlots = [];
+$hasSlots = false;
+try {
+    $slotStmt = $pdo->prepare("
+        SELECT s.*,
+            (SELECT COUNT(*) FROM festival_activity_registrations far WHERE far.slot_id = s.id AND far.status != 'cancelled') as reg_count
+        FROM festival_activity_slots s
+        WHERE s.activity_id = ? AND s.active = 1
+        ORDER BY s.date ASC, s.start_time ASC
+    ");
+    $slotStmt->execute([$activityId]);
+    $activitySlots = $slotStmt->fetchAll(PDO::FETCH_ASSOC);
+    $hasSlots = !empty($activitySlots);
+} catch (PDOException $e) {
+    // Table doesn't exist yet
+}
+
+// Group slots by date
+$slotsByDate = [];
+foreach ($activitySlots as $slot) {
+    $slotsByDate[$slot['date']][] = $slot;
+}
+
 // Load participants
 $participants = [];
 $stmt = $pdo->prepare("
@@ -240,8 +264,57 @@ include __DIR__ . '/../../includes/header.php';
             </div>
             <?php endif; ?>
 
-            <!-- CTA: Register -->
-            <?php if (!$spotsFull): ?>
+            <!-- ============ TIME SLOTS or single CTA ============ -->
+            <?php if ($hasSlots): ?>
+            <div class="card">
+                <div class="card-header">
+                    <h3><i data-lucide="clock" style="width: 18px; height: 18px;"></i> Välj tidspass</h3>
+                </div>
+                <div class="card-body" style="padding: 0;">
+                    <?php foreach ($slotsByDate as $slotDate => $slots):
+                        $slotTs = strtotime($slotDate);
+                        $dayLabel = $weekdays[date('w', $slotTs)] . ' ' . date('j', $slotTs) . ' ' . $months[date('n', $slotTs) - 1];
+                    ?>
+                    <div class="slot-date-group">
+                        <div class="slot-date-header"><?= $dayLabel ?></div>
+                        <?php foreach ($slots as $slot):
+                            $slotFull = $slot['max_participants'] && $slot['reg_count'] >= $slot['max_participants'];
+                            $spotsLeft = $slot['max_participants'] ? ($slot['max_participants'] - $slot['reg_count']) : null;
+                        ?>
+                        <div class="slot-row <?= $slotFull ? 'slot-row--full' : '' ?>">
+                            <div class="slot-time">
+                                <span class="slot-time-value"><?= substr($slot['start_time'], 0, 5) ?><?= $slot['end_time'] ? ' – ' . substr($slot['end_time'], 0, 5) : '' ?></span>
+                                <span class="slot-spots">
+                                    <?php if ($slotFull): ?>
+                                        <span style="color: var(--color-warning);">Fullbokat</span>
+                                    <?php elseif ($spotsLeft !== null): ?>
+                                        <?= $spotsLeft ?> platser kvar
+                                    <?php else: ?>
+                                        <?= (int)$slot['reg_count'] ?> anmälda
+                                    <?php endif; ?>
+                                </span>
+                            </div>
+                            <div class="slot-action">
+                                <?php if ($slotFull): ?>
+                                <span class="badge badge-warning" style="font-size: 0.75rem;">Fullbokat</span>
+                                <?php elseif (hub_is_logged_in()): ?>
+                                <button class="btn btn-primary slot-add-btn" onclick="addSlotToCart(<?= (int)$slot['id'] ?>, '<?= htmlspecialchars($slotDate) ?>', '<?= substr($slot['start_time'], 0, 5) ?>')">
+                                    <i data-lucide="shopping-cart" style="width: 14px; height: 14px;"></i> Välj
+                                </button>
+                                <?php else: ?>
+                                <a href="/login?return=<?= urlencode('/festival/' . $festivalId . '/aktivitet/' . $activityId) ?>" class="btn btn-primary slot-add-btn">
+                                    <i data-lucide="log-in" style="width: 14px; height: 14px;"></i> Logga in
+                                </a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php elseif (!$spotsFull): ?>
+            <!-- No slots: single CTA -->
             <div class="card">
                 <div class="card-body" style="text-align: center; padding: var(--space-lg);">
                     <?php if (hub_is_logged_in()): ?>
@@ -255,7 +328,7 @@ include __DIR__ . '/../../includes/header.php';
                     <?php endif; ?>
                 </div>
             </div>
-            <?php elseif ($spotsFull): ?>
+            <?php else: ?>
             <div class="card">
                 <div class="card-body" style="text-align: center; padding: var(--space-lg);">
                     <span class="badge badge-warning" style="font-size: 0.9rem; padding: 8px 16px;">Fullbokat</span>
@@ -342,8 +415,46 @@ const currentActivity = {
     id: <?= (int)$activity['id'] ?>,
     name: <?= json_encode($activity['name'], JSON_UNESCAPED_UNICODE) ?>,
     price: <?= (float)$activity['price'] ?>,
-    included_in_pass: <?= $activity['included_in_pass'] ? 'true' : 'false' ?>
+    included_in_pass: <?= $activity['included_in_pass'] ? 'true' : 'false' ?>,
+    has_slots: <?= $hasSlots ? 'true' : 'false' ?>
 };
+
+function addSlotToCart(slotId, slotDate, slotTime) {
+    if (!isLoggedIn) return;
+    const riderId = registrableRiders[0] ? registrableRiders[0].id : null;
+    if (!riderId) return;
+    const rider = registrableRiders[0];
+
+    const cart = GlobalCart.getCart();
+    if (cart.some(ci => ci.type === 'festival_activity' && ci.activity_id === currentActivity.id && ci.slot_id === slotId && ci.rider_id === riderId)) {
+        alert('Detta tidspass finns redan i kundvagnen');
+        return;
+    }
+
+    try {
+        GlobalCart.addItem({
+            type: 'festival_activity',
+            activity_id: currentActivity.id,
+            slot_id: slotId,
+            festival_id: festivalInfo.id,
+            rider_id: riderId,
+            rider_name: rider.firstname + ' ' + rider.lastname,
+            activity_name: currentActivity.name + ' (' + slotDate + ' ' + slotTime + ')',
+            festival_name: festivalInfo.name,
+            festival_date: festivalInfo.start_date,
+            price: currentActivity.price,
+            included_in_pass: currentActivity.included_in_pass
+        });
+
+        // Find and update the button
+        event.target.closest('.slot-row').querySelector('.slot-add-btn').innerHTML = '<i data-lucide="check-circle" style="width:14px;height:14px;"></i> Tillagd';
+        event.target.closest('.slot-row').querySelector('.slot-add-btn').disabled = true;
+        event.target.closest('.slot-row').querySelector('.slot-add-btn').style.background = 'var(--color-success)';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    } catch (e) {
+        alert('Kunde inte lägga till: ' + e.message);
+    }
+}
 
 function addActivityToCart(activityId) {
     if (!isLoggedIn) return;
