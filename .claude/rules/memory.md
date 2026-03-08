@@ -15,16 +15,31 @@
 
 ---
 
-## SENASTE FIXAR (2026-03-08, session 51)
+## SENASTE FIXAR (2026-03-08, session 52)
 
-### Festival: Event-sökning + sidkrasch fixad
+### Festival: Kalender-integration med grupperade event
+- **Ny funktion:** Festivaler visas i kalendern som grupperade block (admin-only)
+- **Backend:** `pages/calendar/index.php` laddar festivaler + `festival_events` junction → grupperar kopplade event under festivalens header
+- **Rendering:** `.festival-cal-group` wrapper med `.festival-cal-header` (festivalrad med tent-ikon, festival-badge, statusbadge) och `.festival-cal-sub` (kopplade tävlingsevent med serie/format-badges)
+- **Kronologisk inplacering:** Festivaler injiceras som placeholder-entries i events-arrayen vid `start_date`, sorteras in kronologiskt bland vanliga event
+- **Filter:** "Festival" tillagd som format-filterval (admin-only) - visar bara event kopplade till festivaler
+- **Kopplade event döljs:** Event som tillhör en festival renderas inte som standalone-rader (skippas i vanliga loopen)
+- **CSS:** `.festival-cal-group` har border + gradient-bakgrund på header, `.festival-cal-sub` indenterade sub-rader, `.event-format-badge` ny badge-klass
+- **Mobil:** Edge-to-edge, serie-badge synlig inuti festival-sub-events
+- **Admin-only:** `$isAdmin = !empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin'`
+- **Filer:** `pages/calendar/index.php`, `assets/css/pages/calendar-index.css`
+
+### Festival: Event-sökning + sidkrasch fixad (session 51)
 - **Problem 1:** Kunde inte koppla event till festivaler - sökningen hittade inga event
 - **Orsak:** `/api/search.php` saknade helt stöd för `type=events`. Frontend anropade endpointen korrekt men API:t ignorerade eventförfrågan.
 - **Fix:** Lagt till `type=events` i search.php med sökning på namn, plats och datum. Returnerar id, name, date, location, discipline, series_name.
 - **Problem 2:** Festival-redigeringssidan kunde krascha vid öppning
 - **Orsak:** `venues`-tabellen queryades utan try/catch - om tabellen saknas kraschar sidan tyst.
 - **Fix:** Lagt till try/catch runt venues-queryn med tom array som fallback.
-- **Filer:** `api/search.php`, `admin/festival-edit.php`
+- **Problem 3:** Festival show-sida redirectade tillbaka till listing
+- **Orsak:** `$id` var odefinierad - sidan använde inte `$pageInfo['params']['id']` från routern
+- **Fix:** Använder nu `$pageInfo['params']['id']` + `hub_db()` istället för `config/database.php`
+- **Filer:** `api/search.php`, `admin/festival-edit.php`, `pages/festival/show.php`, `pages/festival/index.php`
 
 ---
 
