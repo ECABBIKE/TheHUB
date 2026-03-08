@@ -85,97 +85,72 @@ try {
     error_log("Calendar index database error: " . $e->getMessage());
 }
 
-// Load festivals for admins only - merge into calendar
+// Load festivals for admins only - group linked events under festival header
 $isAdmin = !empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin';
-if ($isAdmin && $filterFormat !== 'festival') {
-    // Don't load festivals when filtering by a specific discipline (except 'festival')
-    $loadFestivals = empty($filterFormat) || $filterFormat === '';
-    if ($loadFestivals && empty($filterSeries)) {
-        try {
-            $festStmt = $pdo->query("
-                SELECT f.id, f.name, f.start_date, f.end_date, f.location, f.status,
-                    f.short_description,
-                    (SELECT COUNT(*) FROM festival_events fe WHERE fe.festival_id = f.id) as event_count,
-                    (SELECT COUNT(*) FROM festival_activities fa WHERE fa.festival_id = f.id AND fa.active = 1) as activity_count
-                FROM festivals f
-                WHERE f.active = 1 AND f.start_date >= CURDATE()
-                ORDER BY f.start_date ASC
-            ");
-            foreach ($festStmt->fetchAll(PDO::FETCH_ASSOC) as $fest) {
-                $events[] = [
-                    '_is_festival' => true,
-                    'id' => $fest['id'],
-                    'name' => $fest['name'],
-                    'date' => $fest['start_date'],
-                    'end_date' => $fest['end_date'],
-                    'location' => $fest['location'],
-                    'event_type' => 'festival',
-                    'formats' => '',
-                    'discipline' => null,
-                    'series_name' => null,
-                    'series_id' => null,
-                    'series_logo' => null,
-                    'series_accent' => null,
-                    'event_logo' => null,
-                    'venue_name' => null,
-                    'venue_city' => null,
-                    'is_championship' => 0,
-                    'registration_count' => 0,
-                    'max_participants' => null,
-                    'registration_deadline' => null,
-                    '_festival_status' => $fest['status'],
-                    '_festival_event_count' => $fest['event_count'],
-                    '_festival_activity_count' => $fest['activity_count'],
-                ];
-            }
-            // Re-sort by date after merging
-            usort($events, fn($a, $b) => strcmp($a['date'], $b['date']));
-        } catch (PDOException $e) {
-            // festivals table might not exist yet
-        }
-    }
-} elseif ($isAdmin && $filterFormat === 'festival') {
-    // Festival filter selected - show ONLY festivals
-    $events = [];
+$festivalsByEventId = []; // event_id => festival data
+$festivalsById = []; // festival_id => festival data with linked events
+if ($isAdmin) {
     try {
+        // Load all upcoming festivals
         $festStmt = $pdo->query("
             SELECT f.id, f.name, f.start_date, f.end_date, f.location, f.status,
                 f.short_description,
-                (SELECT COUNT(*) FROM festival_events fe WHERE fe.festival_id = f.id) as event_count,
                 (SELECT COUNT(*) FROM festival_activities fa WHERE fa.festival_id = f.id AND fa.active = 1) as activity_count
             FROM festivals f
             WHERE f.active = 1 AND f.start_date >= CURDATE()
             ORDER BY f.start_date ASC
         ");
-        foreach ($festStmt->fetchAll(PDO::FETCH_ASSOC) as $fest) {
-            $events[] = [
-                '_is_festival' => true,
-                'id' => $fest['id'],
-                'name' => $fest['name'],
-                'date' => $fest['start_date'],
-                'end_date' => $fest['end_date'],
-                'location' => $fest['location'],
-                'event_type' => 'festival',
-                'formats' => '',
-                'discipline' => null,
-                'series_name' => null,
-                'series_id' => null,
-                'series_logo' => null,
-                'series_accent' => null,
-                'event_logo' => null,
-                'venue_name' => null,
-                'venue_city' => null,
-                'is_championship' => 0,
-                'registration_count' => 0,
-                'max_participants' => null,
-                'registration_deadline' => null,
-                '_festival_status' => $fest['status'],
-                '_festival_event_count' => $fest['event_count'],
-                '_festival_activity_count' => $fest['activity_count'],
-            ];
+        $allFestivals = $festStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Load festival-event links
+        foreach ($allFestivals as $fest) {
+            $fest['_linked_events'] = [];
+            $festivalsById[$fest['id']] = $fest;
+
+            $linkStmt = $pdo->prepare("SELECT event_id FROM festival_events WHERE festival_id = ?");
+            $linkStmt->execute([$fest['id']]);
+            foreach ($linkStmt->fetchAll(PDO::FETCH_COLUMN) as $eventId) {
+                $festivalsByEventId[(int)$eventId] = (int)$fest['id'];
+            }
         }
-    } catch (PDOException $e) {}
+    } catch (PDOException $e) {
+        // festivals table might not exist yet
+    }
 }
+
+// If festival filter is active, only keep events linked to a festival
+if ($isAdmin && $filterFormat === 'festival') {
+    $events = array_filter($events, fn($e) => isset($festivalsByEventId[(int)$e['id']]));
+    $events = array_values($events);
+}
+
+// Assign linked events to their festival, track which events to skip as standalone
+$festivalEventIds = [];
+foreach ($events as $event) {
+    $eid = (int)$event['id'];
+    if (isset($festivalsByEventId[$eid])) {
+        $fid = $festivalsByEventId[$eid];
+        if (isset($festivalsById[$fid])) {
+            $festivalsById[$fid]['_linked_events'][] = $event;
+            $festivalEventIds[$eid] = $fid;
+        }
+    }
+}
+
+// For each festival with linked events, inject a festival placeholder into the events array
+// at the date position of the festival's start_date
+foreach ($festivalsById as $fid => $fest) {
+    if (empty($fest['_linked_events'])) continue;
+    $events[] = [
+        '_is_festival' => true,
+        '_festival_id' => $fid,
+        'id' => $fid,
+        'date' => $fest['start_date'],
+        'end_date' => $fest['end_date'],
+    ];
+}
+// Re-sort by date
+usort($events, fn($a, $b) => strcmp($a['date'], $b['date']));
 
 // Format display names
 $formatNames = [
@@ -288,6 +263,10 @@ if (!function_exists('getDeadlineInfo')) {
                 <div class="event-list">
                     <?php foreach ($monthEvents as $event):
                         $isFestival = !empty($event['_is_festival']);
+
+                        // Skip events that belong to a festival (rendered inside festival block)
+                        if (!$isFestival && isset($festivalEventIds[(int)$event['id']])) continue;
+
                         $eventDate = strtotime($event['date']);
                         $eventEndDate = !empty($event['end_date']) ? strtotime($event['end_date']) : null;
 
@@ -309,8 +288,10 @@ if (!function_exists('getDeadlineInfo')) {
                         }
 
                         if ($isFestival) {
-                            // Festival row
-                            $festStatus = $event['_festival_status'] ?? 'draft';
+                            // Festival group block with linked events underneath
+                            $fest = $festivalsById[$event['_festival_id']] ?? null;
+                            if (!$fest || empty($fest['_linked_events'])) continue;
+                            $festStatus = $fest['status'] ?? 'draft';
                             $statusBadge = match($festStatus) {
                                 'draft' => '<span class="badge badge-warning" style="font-size:0.65rem;">Utkast</span>',
                                 'published' => '',
@@ -319,34 +300,84 @@ if (!function_exists('getDeadlineInfo')) {
                                 default => ''
                             };
                         ?>
-                        <a href="/festival/<?= $event['id'] ?>" class="event-row" style="--event-accent: var(--color-accent)">
-                            <div class="event-accent-bar"></div>
-                            <div class="event-logo event-logo-placeholder">
-                                <i data-lucide="tent"></i>
-                            </div>
-                            <span class="event-date-inline">
-                                <strong><?= $dateFormatted ?></strong>
-                                <span class="event-day-name"><?= $dayName ?></span>
-                            </span>
-                            <?= $statusBadge ?>
-                            <span class="event-festival-badge" title="Festival">
-                                <i data-lucide="sparkles"></i>
-                                Festival
-                            </span>
-                            <h3 class="event-title"><?= htmlspecialchars($event['name']) ?></h3>
-                            <?php if ($event['location']): ?>
-                            <span class="event-location-inline">
-                                <i data-lucide="map-pin"></i>
-                                <?= htmlspecialchars($event['location']) ?>
-                            </span>
-                            <?php endif; ?>
-                            <span class="event-registrations">
-                                <?= $event['_festival_event_count'] ?> tävlingar · <?= $event['_festival_activity_count'] ?> aktiviteter
-                            </span>
-                            <div class="event-arrow">
-                                <i data-lucide="chevron-right"></i>
-                            </div>
-                        </a>
+                        <div class="festival-cal-group">
+                            <!-- Festival header -->
+                            <a href="/festival/<?= $fest['id'] ?>" class="event-row festival-cal-header" style="--event-accent: var(--color-accent)">
+                                <div class="event-accent-bar"></div>
+                                <div class="event-logo event-logo-placeholder">
+                                    <i data-lucide="tent"></i>
+                                </div>
+                                <span class="event-date-inline">
+                                    <strong><?= $dateFormatted ?></strong>
+                                    <span class="event-day-name"><?= $dayName ?></span>
+                                </span>
+                                <?= $statusBadge ?>
+                                <span class="event-festival-badge" title="Festival">
+                                    <i data-lucide="sparkles"></i>
+                                    Festival
+                                </span>
+                                <h3 class="event-title"><?= htmlspecialchars($fest['name']) ?></h3>
+                                <?php if ($fest['location']): ?>
+                                <span class="event-location-inline">
+                                    <i data-lucide="map-pin"></i>
+                                    <?= htmlspecialchars($fest['location']) ?>
+                                </span>
+                                <?php endif; ?>
+                                <span class="event-registrations">
+                                    <?= count($fest['_linked_events']) ?> tävlingar<?php if ($fest['activity_count'] > 0): ?> · <?= $fest['activity_count'] ?> aktiviteter<?php endif; ?>
+                                </span>
+                                <div class="event-arrow">
+                                    <i data-lucide="chevron-right"></i>
+                                </div>
+                            </a>
+                            <!-- Linked competition events -->
+                            <?php foreach ($fest['_linked_events'] as $le):
+                                $leDate = strtotime($le['date']);
+                                $leDateStr = date('j', $leDate) . ' ' . hub_month_short($leDate);
+                                $leDayName = hub_day_short($leDate);
+                                $leLocation = $le['venue_city'] ?: $le['location'];
+                                $leAccent = $le['series_accent'] ?: '#61CE70';
+                                $leLogo = !empty($le['event_logo']) ? $le['event_logo'] : ($le['series_logo'] ?? '');
+                                $leLogoAlt = !empty($le['event_logo']) ? $le['name'] : ($le['series_name'] ?? $le['name']);
+                                $leDeadline = getDeadlineInfo($le['registration_deadline']);
+                            ?>
+                            <a href="/calendar/<?= $le['id'] ?>" class="event-row festival-cal-sub" style="--event-accent: <?= htmlspecialchars($leAccent) ?>">
+                                <div class="event-accent-bar"></div>
+                                <?php if ($leLogo): ?>
+                                <div class="event-logo">
+                                    <img src="<?= htmlspecialchars($leLogo) ?>" alt="<?= htmlspecialchars($leLogoAlt) ?>">
+                                </div>
+                                <?php else: ?>
+                                <div class="event-logo event-logo-placeholder">
+                                    <i data-lucide="calendar"></i>
+                                </div>
+                                <?php endif; ?>
+                                <span class="event-date-inline">
+                                    <strong><?= $leDateStr ?></strong>
+                                    <span class="event-day-name"><?= $leDayName ?></span>
+                                </span>
+                                <?php if ($le['series_name']): ?>
+                                <span class="event-series-badge"><?= htmlspecialchars($le['series_name']) ?></span>
+                                <?php endif; ?>
+                                <?php if ($le['discipline']): ?>
+                                <span class="event-format-badge"><?= htmlspecialchars($formatNames[$le['discipline']] ?? $le['discipline']) ?></span>
+                                <?php endif; ?>
+                                <h3 class="event-title"><?= htmlspecialchars($le['name']) ?></h3>
+                                <?php if ($le['registration_count'] > 0 || !empty($le['max_participants'])): ?>
+                                <span class="event-registrations"><?= $le['registration_count'] ?><?php if (!empty($le['max_participants'])): ?>/<?= (int)$le['max_participants'] ?><?php endif; ?> anmälda</span>
+                                <?php endif; ?>
+                                <?php if ($leDeadline && $leDeadline['days'] >= 0): ?>
+                                <span class="event-deadline <?= $leDeadline['class'] ?>">
+                                    <i data-lucide="clock"></i>
+                                    <?= $leDeadline['text'] ?>
+                                </span>
+                                <?php endif; ?>
+                                <div class="event-arrow">
+                                    <i data-lucide="chevron-right"></i>
+                                </div>
+                            </a>
+                            <?php endforeach; ?>
+                        </div>
 
                         <?php } else {
                             // Regular event row
