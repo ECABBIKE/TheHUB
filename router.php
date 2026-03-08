@@ -195,6 +195,18 @@ function hub_get_current_page(): array {
             ];
         }
 
+        // Special: /festival/{id}/aktivitet/{activityId}
+        if ($section === 'festival' && isset($segments[1]) && is_numeric($segments[1])
+            && isset($segments[2]) && $segments[2] === 'aktivitet' && isset($segments[3]) && is_numeric($segments[3])) {
+            return [
+                'page' => 'festival-single-activity',
+                'section' => 'festival',
+                'subpage' => 'aktivitet',
+                'params' => ['id' => $segments[1], 'activity_id' => $segments[3]],
+                'file' => HUB_ROOT . '/pages/festival/single-activity.php'
+            ];
+        }
+
         // If second segment is numeric, it's an ID
         if (isset($segments[1]) && is_numeric($segments[1])) {
             $id = $segments[1];
