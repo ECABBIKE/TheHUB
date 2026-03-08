@@ -85,23 +85,96 @@ try {
     error_log("Calendar index database error: " . $e->getMessage());
 }
 
-// Load festivals for admins only
-$festivals = [];
+// Load festivals for admins only - merge into calendar
 $isAdmin = !empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin';
-if ($isAdmin) {
+if ($isAdmin && $filterFormat !== 'festival') {
+    // Don't load festivals when filtering by a specific discipline (except 'festival')
+    $loadFestivals = empty($filterFormat) || $filterFormat === '';
+    if ($loadFestivals && empty($filterSeries)) {
+        try {
+            $festStmt = $pdo->query("
+                SELECT f.id, f.name, f.start_date, f.end_date, f.location, f.status,
+                    f.short_description,
+                    (SELECT COUNT(*) FROM festival_events fe WHERE fe.festival_id = f.id) as event_count,
+                    (SELECT COUNT(*) FROM festival_activities fa WHERE fa.festival_id = f.id AND fa.active = 1) as activity_count
+                FROM festivals f
+                WHERE f.active = 1 AND f.start_date >= CURDATE()
+                ORDER BY f.start_date ASC
+            ");
+            foreach ($festStmt->fetchAll(PDO::FETCH_ASSOC) as $fest) {
+                $events[] = [
+                    '_is_festival' => true,
+                    'id' => $fest['id'],
+                    'name' => $fest['name'],
+                    'date' => $fest['start_date'],
+                    'end_date' => $fest['end_date'],
+                    'location' => $fest['location'],
+                    'event_type' => 'festival',
+                    'formats' => '',
+                    'discipline' => null,
+                    'series_name' => null,
+                    'series_id' => null,
+                    'series_logo' => null,
+                    'series_accent' => null,
+                    'event_logo' => null,
+                    'venue_name' => null,
+                    'venue_city' => null,
+                    'is_championship' => 0,
+                    'registration_count' => 0,
+                    'max_participants' => null,
+                    'registration_deadline' => null,
+                    '_festival_status' => $fest['status'],
+                    '_festival_event_count' => $fest['event_count'],
+                    '_festival_activity_count' => $fest['activity_count'],
+                ];
+            }
+            // Re-sort by date after merging
+            usort($events, fn($a, $b) => strcmp($a['date'], $b['date']));
+        } catch (PDOException $e) {
+            // festivals table might not exist yet
+        }
+    }
+} elseif ($isAdmin && $filterFormat === 'festival') {
+    // Festival filter selected - show ONLY festivals
+    $events = [];
     try {
         $festStmt = $pdo->query("
-            SELECT f.*,
+            SELECT f.id, f.name, f.start_date, f.end_date, f.location, f.status,
+                f.short_description,
                 (SELECT COUNT(*) FROM festival_events fe WHERE fe.festival_id = f.id) as event_count,
                 (SELECT COUNT(*) FROM festival_activities fa WHERE fa.festival_id = f.id AND fa.active = 1) as activity_count
             FROM festivals f
             WHERE f.active = 1 AND f.start_date >= CURDATE()
             ORDER BY f.start_date ASC
         ");
-        $festivals = $festStmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        // festivals table might not exist yet
-    }
+        foreach ($festStmt->fetchAll(PDO::FETCH_ASSOC) as $fest) {
+            $events[] = [
+                '_is_festival' => true,
+                'id' => $fest['id'],
+                'name' => $fest['name'],
+                'date' => $fest['start_date'],
+                'end_date' => $fest['end_date'],
+                'location' => $fest['location'],
+                'event_type' => 'festival',
+                'formats' => '',
+                'discipline' => null,
+                'series_name' => null,
+                'series_id' => null,
+                'series_logo' => null,
+                'series_accent' => null,
+                'event_logo' => null,
+                'venue_name' => null,
+                'venue_city' => null,
+                'is_championship' => 0,
+                'registration_count' => 0,
+                'max_participants' => null,
+                'registration_deadline' => null,
+                '_festival_status' => $fest['status'],
+                '_festival_event_count' => $fest['event_count'],
+                '_festival_activity_count' => $fest['activity_count'],
+            ];
+        }
+    } catch (PDOException $e) {}
 }
 
 // Format display names
@@ -189,65 +262,12 @@ if (!function_exists('getDeadlineInfo')) {
                     <?= htmlspecialchars($formatNames[$format['discipline']] ?? $format['discipline']) ?>
                 </option>
             <?php endforeach; ?>
+            <?php if ($isAdmin): ?>
+                <option value="festival" <?= $filterFormat === 'festival' ? 'selected' : '' ?>>Festival</option>
+            <?php endif; ?>
         </select>
     </div>
 </div>
-
-<?php if (!empty($festivals)): ?>
-<!-- Festivals (admin only) -->
-<div class="calendar-month-section" style="margin-bottom: var(--space-lg);">
-    <div class="calendar-month-divider">
-        <span class="calendar-month-label" style="color: var(--color-accent);"><i data-lucide="tent" style="width: 14px; height: 14px; vertical-align: -2px;"></i> Festivaler</span>
-        <span class="calendar-month-line"></span>
-        <span class="calendar-month-count"><?= count($festivals) ?> st</span>
-    </div>
-    <div class="event-list">
-        <?php foreach ($festivals as $fest):
-            $fDate = strtotime($fest['start_date']);
-            $fEndDate = !empty($fest['end_date']) ? strtotime($fest['end_date']) : null;
-            if ($fEndDate && $fEndDate > $fDate) {
-                $fDateStr = date('j', $fDate) . '-' . date('j', $fEndDate) . ' ' . hub_month_short($fDate);
-                $fDayName = hub_day_short($fDate) . '-' . hub_day_short($fEndDate);
-            } else {
-                $fDateStr = date('j', $fDate) . ' ' . hub_month_short($fDate);
-                $fDayName = hub_day_short($fDate);
-            }
-            $statusBadge = match($fest['status']) {
-                'draft' => '<span class="badge badge-warning" style="font-size:0.65rem;">Utkast</span>',
-                'published' => '<span class="badge badge-success" style="font-size:0.65rem;">Publicerad</span>',
-                'completed' => '<span class="badge" style="font-size:0.65rem;">Avslutad</span>',
-                'cancelled' => '<span class="badge badge-danger" style="font-size:0.65rem;">Inställd</span>',
-                default => ''
-            };
-        ?>
-        <a href="/festival/<?= $fest['id'] ?>" class="event-row" style="--event-accent: var(--color-accent)">
-            <div class="event-accent-bar"></div>
-            <div class="event-logo event-logo-placeholder">
-                <i data-lucide="tent"></i>
-            </div>
-            <span class="event-date-inline">
-                <strong><?= $fDateStr ?></strong>
-                <span class="event-day-name"><?= $fDayName ?></span>
-            </span>
-            <?= $statusBadge ?>
-            <h3 class="event-title"><?= htmlspecialchars($fest['name']) ?></h3>
-            <?php if ($fest['location']): ?>
-            <span class="event-location-inline">
-                <i data-lucide="map-pin"></i>
-                <?= htmlspecialchars($fest['location']) ?>
-            </span>
-            <?php endif; ?>
-            <span class="event-registrations">
-                <?= $fest['event_count'] ?> tävlingar · <?= $fest['activity_count'] ?> aktiviteter
-            </span>
-            <div class="event-arrow">
-                <i data-lucide="chevron-right"></i>
-            </div>
-        </a>
-        <?php endforeach; ?>
-    </div>
-</div>
-<?php endif; ?>
 
 <!-- Events List -->
 <div class="calendar-events">
@@ -266,8 +286,8 @@ if (!function_exists('getDeadlineInfo')) {
                     <span class="calendar-month-count"><?= count($monthEvents) ?> event</span>
                 </div>
                 <div class="event-list">
-                    <?php foreach ($monthEvents as $event): ?>
-                        <?php
+                    <?php foreach ($monthEvents as $event):
+                        $isFestival = !empty($event['_is_festival']);
                         $eventDate = strtotime($event['date']);
                         $eventEndDate = !empty($event['end_date']) ? strtotime($event['end_date']) : null;
 
@@ -288,13 +308,54 @@ if (!function_exists('getDeadlineInfo')) {
                             $dayName = hub_day_short($eventDate);
                         }
 
-                        $deadlineInfo = getDeadlineInfo($event['registration_deadline']);
-                        $location = $event['venue_city'] ?: $event['location'];
-                        $accentColor = $event['series_accent'] ?: '#61CE70';
-                        // Use event logo if available, otherwise fall back to series logo
-                        $displayLogo = !empty($event['event_logo']) ? $event['event_logo'] : ($event['series_logo'] ?? '');
-                        $logoAlt = !empty($event['event_logo']) ? $event['name'] : ($event['series_name'] ?? $event['name']);
-                        $isMultiFormat = !empty($event['formats']) && strpos($event['formats'], ',') !== false;
+                        if ($isFestival) {
+                            // Festival row
+                            $festStatus = $event['_festival_status'] ?? 'draft';
+                            $statusBadge = match($festStatus) {
+                                'draft' => '<span class="badge badge-warning" style="font-size:0.65rem;">Utkast</span>',
+                                'published' => '',
+                                'completed' => '<span class="badge" style="font-size:0.65rem;">Avslutad</span>',
+                                'cancelled' => '<span class="badge badge-danger" style="font-size:0.65rem;">Inställd</span>',
+                                default => ''
+                            };
+                        ?>
+                        <a href="/festival/<?= $event['id'] ?>" class="event-row" style="--event-accent: var(--color-accent)">
+                            <div class="event-accent-bar"></div>
+                            <div class="event-logo event-logo-placeholder">
+                                <i data-lucide="tent"></i>
+                            </div>
+                            <span class="event-date-inline">
+                                <strong><?= $dateFormatted ?></strong>
+                                <span class="event-day-name"><?= $dayName ?></span>
+                            </span>
+                            <?= $statusBadge ?>
+                            <span class="event-festival-badge" title="Festival">
+                                <i data-lucide="sparkles"></i>
+                                Festival
+                            </span>
+                            <h3 class="event-title"><?= htmlspecialchars($event['name']) ?></h3>
+                            <?php if ($event['location']): ?>
+                            <span class="event-location-inline">
+                                <i data-lucide="map-pin"></i>
+                                <?= htmlspecialchars($event['location']) ?>
+                            </span>
+                            <?php endif; ?>
+                            <span class="event-registrations">
+                                <?= $event['_festival_event_count'] ?> tävlingar · <?= $event['_festival_activity_count'] ?> aktiviteter
+                            </span>
+                            <div class="event-arrow">
+                                <i data-lucide="chevron-right"></i>
+                            </div>
+                        </a>
+
+                        <?php } else {
+                            // Regular event row
+                            $deadlineInfo = getDeadlineInfo($event['registration_deadline']);
+                            $location = $event['venue_city'] ?: $event['location'];
+                            $accentColor = $event['series_accent'] ?: '#61CE70';
+                            $displayLogo = !empty($event['event_logo']) ? $event['event_logo'] : ($event['series_logo'] ?? '');
+                            $logoAlt = !empty($event['event_logo']) ? $event['name'] : ($event['series_name'] ?? $event['name']);
+                            $isMultiFormat = !empty($event['formats']) && strpos($event['formats'], ',') !== false;
                         ?>
                         <a href="/calendar/<?= $event['id'] ?>" class="event-row" style="--event-accent: <?= htmlspecialchars($accentColor) ?>">
                             <div class="event-accent-bar"></div>
@@ -357,6 +418,7 @@ if (!function_exists('getDeadlineInfo')) {
                                 <i data-lucide="chevron-right"></i>
                             </div>
                         </a>
+                        <?php } ?>
                     <?php endforeach; ?>
                 </div>
             </div>
