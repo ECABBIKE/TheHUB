@@ -169,6 +169,10 @@ function hub_get_current_page(): array {
             'index' => '/pages/feedback.php',
             'view' => '/pages/feedback/view.php'
         ],
+        'festival' => [
+            'index' => '/pages/festival/index.php',
+            'show' => '/pages/festival/show.php'
+        ],
         'cart' => [
             'index' => '/pages/cart.php'
         ]
@@ -188,7 +192,8 @@ function hub_get_current_page(): array {
                 'ranking' => 'riders',
                 'register' => 'series',  // /register/5 -> /register/series/5
                 'news' => 'show',  // /news/slug -> /pages/news/show.php
-                'photographer' => 'show'  // /photographer/123 -> show.php
+                'photographer' => 'show',  // /photographer/123 -> show.php
+                'festival' => 'show'  // /festival/5 -> show.php
             ];
             $subpage = $detailPages[$section] ?? 'index';
         } elseif (isset($segments[1]) && !is_numeric($segments[1])) {

@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-03-05
+> Senast uppdaterad: 2026-03-08
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -28,6 +28,7 @@
 | UCI ID-synkning | KLAR | Deltagare kan verifiera och synka sin licens via UCI ID i profilen | 100% |
 | TheHUB Promotion | KLAR | Riktade e-postkampanjer med filter på kön, ålder, region | 100% |
 | Klubb/Destination-admin | KLAR | Klubb- och destination-admins kan redigera via profil, multipla roller | 100% |
+| Festival-system | PAGAENDE | Festivaler som paraply over tavlingsevent + egna aktiviteter (clinics, rides). Fas 1: grundstruktur. | 30% |
 
 ---
 

@@ -116,6 +116,13 @@ $ADMIN_TABS = [
                 'icon' => 'shield-check',
                 'url' => '/admin/registration-rules.php',
                 'pages' => ['registration-rules.php']
+            ],
+            [
+                'id' => 'festivals',
+                'label' => 'Festivaler',
+                'icon' => 'tent',
+                'url' => '/admin/festivals.php',
+                'pages' => ['festivals.php', 'festival-edit.php']
             ]
         ]
     ],

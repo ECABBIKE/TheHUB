@@ -1,6 +1,6 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-03-07
+> Senast uppdaterad: 2026-03-08
 
 ---
 
@@ -12,6 +12,45 @@
 - Flytta INTE saker mellan menygrupper utan godkännande
 - Skapa INTE nya menygrupper i admin-tabs-config.php utan godkännande
 - Om en ny sida behöver nås: lägg den under befintlig grupp i `pages`-arrayen, och länka från relevant dashboard/grid
+
+---
+
+## SENASTE IMPLEMENTATION (2026-03-08, session 50)
+
+### Festival-system: Grundstruktur (Fas 1 - dolt bakom admin)
+- **Ny funktion:** Festivaler som hybrid-entitet: paraply över befintliga tävlingsevent + egna aktiviteter (clinics, grouprides, föreläsningar, workshops)
+- **Databasmodell:** 6 nya tabeller via migration 085:
+  - `festivals` - Huvudtabell med namn, datum, plats, pass-inställningar, status (draft/published/completed/cancelled)
+  - `festival_events` - Junction-tabell som kopplar befintliga tävlingsevent till festival (many-to-many)
+  - `festival_activities` - Egna aktiviteter: clinic, lecture, groupride, workshop, social, other. Har pris, max deltagare, tid, instruktör.
+  - `festival_activity_registrations` - Anmälningar till aktiviteter (koppling till orders + riders)
+  - `festival_passes` - Sålda festivalpass med unik pass_code
+  - `festival_sponsors` - Sponsorer per festival med placement
+- **Nya kolumner:** `events.festival_id` (convenience-cache, samma mönster som series_id) + `orders.festival_id`
+- **Admin-sidor:**
+  - `/admin/festivals.php` - Lista alla festivaler med kort-layout, stats, skapa/redigera
+  - `/admin/festival-edit.php` - Redigerare med 4 flikar: Grundinfo, Tävlingsevent (sök+koppla), Aktiviteter (CRUD), Festivalpass (inställningar+stats)
+  - Registrerad i admin-tabs under Serier-gruppen som "Festivaler" (ikon: tent)
+  - Registrerad i unified-layout.php pageMap
+- **Publika sidor:**
+  - `/festival` → `pages/festival/index.php` - Lista alla publicerade festivaler som kort
+  - `/festival/{id}` → `pages/festival/show.php` - Festivalsida med hero, program per dag, sidebar med pass-CTA + info
+  - Programvyn: Tidslinje per dag med tävlingsevent (cyan vänsterborder, länk till /event/{id}) + aktiviteter (typfärgad ikon, pris, instruktör)
+  - Sidebar: Festivalpass-kort med pris + inkluderade aktiviteter, info-kort med plats/datum/kontakt, om festivalen
+- **CSS:** `assets/css/pages/festival.css` - Komplett responsiv design med hero, programlista, sidebar, kort, mobil edge-to-edge
+- **Routing:** `/festival` och `/festival/{id}` tillagda i router.php (sectionRoutes + detailPages)
+- **Anmälningsmodell:** Festivalpass + à la carte. Pass ger tillgång till alla `included_in_pass`-aktiviteter. Tävlingsanmälningar INGÅR INTE i pass (separata ordrar).
+- **Behörighet:** Enbart admin just nu (requireAdmin). Promotor-stöd planerat.
+- **Status:** Grundstruktur klar. Checkout-integration (GlobalCart + order-manager) ej implementerad ännu.
+- **VIKTIGT:** Kör migration 085 via `/admin/migrations.php`
+- **Filer:** `Tools/migrations/085_festivals.sql`, `admin/festivals.php`, `admin/festival-edit.php`, `pages/festival/show.php`, `pages/festival/index.php`, `assets/css/pages/festival.css`, `router.php`, `includes/config/admin-tabs-config.php`, `admin/components/unified-layout.php`, `admin/migrations.php`
+
+### Festival-arkitektur (viktigt för framtida sessioner)
+- **Dual-path (som serier):** `festival_events` junction = sanningskälla, `events.festival_id` = convenience-cache
+- **Ett event kan tillhöra BÅDE en serie OCH en festival:** T.ex. GravityDH Vallåsen tillhör "GravityDH 2026" (serie) OCH "Götaland Gravity Festival" (festival)
+- **Aktiviteter ≠ events:** Har ingen results-tabell, inga klasser, inget timing-API. Enkel anmälningsmodell.
+- **Festivalpass:** Köps som order-item (type: 'festival_pass'). Ger automatisk registrering till `included_in_pass`-aktiviteter. Tävlingsanmälningar separata.
+- **Nästa steg:** Checkout-integration, event-sida festival-badge, promotor-stöd, kalender-integration
 
 ---
 
