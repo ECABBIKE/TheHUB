@@ -15,6 +15,19 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-08, session 51)
+
+### Festival: Event-sökning + sidkrasch fixad
+- **Problem 1:** Kunde inte koppla event till festivaler - sökningen hittade inga event
+- **Orsak:** `/api/search.php` saknade helt stöd för `type=events`. Frontend anropade endpointen korrekt men API:t ignorerade eventförfrågan.
+- **Fix:** Lagt till `type=events` i search.php med sökning på namn, plats och datum. Returnerar id, name, date, location, discipline, series_name.
+- **Problem 2:** Festival-redigeringssidan kunde krascha vid öppning
+- **Orsak:** `venues`-tabellen queryades utan try/catch - om tabellen saknas kraschar sidan tyst.
+- **Fix:** Lagt till try/catch runt venues-queryn med tom array som fallback.
+- **Filer:** `api/search.php`, `admin/festival-edit.php`
+
+---
+
 ## SENASTE IMPLEMENTATION (2026-03-08, session 50)
 
 ### Festival-system: Grundstruktur (Fas 1 - dolt bakom admin)

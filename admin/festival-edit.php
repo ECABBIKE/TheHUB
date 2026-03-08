@@ -240,7 +240,11 @@ if (!$isNew && $id > 0) {
 }
 
 // Venues for dropdown
-$venues = $pdo->query("SELECT id, name FROM venues WHERE active = 1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $venues = $pdo->query("SELECT id, name FROM venues WHERE active = 1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $venues = [];
+}
 
 // ============================================================
 // PAGE CONFIG
