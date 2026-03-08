@@ -119,15 +119,19 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
             $checkStmt->execute([$orderReference]);
         }
 
-        // Hämta första event_id och series_id
+        // Hämta första event_id, series_id och festival_id
         $firstEventId = null;
         $firstSeriesId = null;
+        $firstFestivalId = null;
         foreach ($items as $item) {
             if (($item['type'] ?? 'event') === 'event' && !empty($item['event_id'])) {
                 if ($firstEventId === null) $firstEventId = intval($item['event_id']);
             }
             if (!empty($item['series_id'])) {
                 if ($firstSeriesId === null) $firstSeriesId = intval($item['series_id']);
+            }
+            if (!empty($item['festival_id'])) {
+                if ($firstFestivalId === null) $firstFestivalId = intval($item['festival_id']);
             }
         }
 
@@ -156,31 +160,38 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
             }
         }
 
-        // Check if series_id column exists (migration 051)
+        // Check if series_id and festival_id columns exist
         $hasSeriesIdCol = _hub_column_exists($pdo, 'orders', 'series_id');
+        $hasFestivalIdCol = _hub_column_exists($pdo, 'orders', 'festival_id');
 
         if ($hasSeriesIdCol) {
+            $festivalCol = $hasFestivalIdCol ? ', festival_id' : '';
+            $festivalVal = $hasFestivalIdCol ? ', ?' : '';
             $orderStmt = $pdo->prepare("
                 INSERT INTO orders (
                     order_number, rider_id, customer_email, customer_name,
-                    event_id, series_id, subtotal, discount, total_amount, currency,
+                    event_id, series_id{$festivalCol}, subtotal, discount, total_amount, currency,
                     payment_method, payment_status,
                     expires_at, created_at
                 ) VALUES (
                     ?, ?, ?, ?,
-                    ?, ?, 0, 0, 0, 'SEK',
+                    ?, ?{$festivalVal}, 0, 0, 0, 'SEK',
                     'card', 'pending',
                     DATE_ADD(NOW(), INTERVAL 24 HOUR), NOW()
                 )
             ");
-            $orderStmt->execute([
+            $params = [
                 $orderReference,
                 $validRiderId,
                 $buyerData['email'],
                 $buyerData['name'],
                 $firstEventId,
                 $firstSeriesId
-            ]);
+            ];
+            if ($hasFestivalIdCol) {
+                $params[] = $firstFestivalId;
+            }
+            $orderStmt->execute($params);
         } else {
             $orderStmt = $pdo->prepare("
                 INSERT INTO orders (
@@ -547,6 +558,198 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                     'class_name' => $className,
                     'price' => $finalPrice,
                     'discount' => $discountAmount
+                ];
+
+            } elseif ($itemType === 'festival_activity') {
+                $activityId = intval($item['activity_id']);
+                $festivalId = intval($item['festival_id']);
+
+                // Hämta aktivitetsinfo
+                $actStmt = $pdo->prepare("
+                    SELECT fa.*, f.name as festival_name, f.payment_recipient_id as festival_recipient_id
+                    FROM festival_activities fa
+                    JOIN festivals f ON fa.festival_id = f.id
+                    WHERE fa.id = ? AND fa.festival_id = ?
+                ");
+                $actStmt->execute([$activityId, $festivalId]);
+                $activity = $actStmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$activity) {
+                    throw new Exception("Aktiviteten hittades inte");
+                }
+
+                // Kolla max deltagare
+                if (!empty($activity['max_participants']) && $activity['max_participants'] > 0) {
+                    $countStmt = $pdo->prepare("
+                        SELECT COUNT(*) FROM festival_activity_registrations
+                        WHERE activity_id = ? AND status != 'cancelled'
+                    ");
+                    $countStmt->execute([$activityId]);
+                    $currentCount = $countStmt->fetchColumn();
+
+                    if ($currentCount >= $activity['max_participants']) {
+                        throw new Exception("{$activity['name']} är fullbokad ({$activity['max_participants']} platser)");
+                    }
+                }
+
+                // Kolla om redan anmäld
+                $checkActStmt = $pdo->prepare("
+                    SELECT id FROM festival_activity_registrations
+                    WHERE activity_id = ? AND rider_id = ? AND status != 'cancelled'
+                ");
+                $checkActStmt->execute([$activityId, $riderId]);
+                if ($checkActStmt->fetch()) {
+                    throw new Exception("{$rider['firstname']} {$rider['lastname']} är redan anmäld till {$activity['name']}");
+                }
+
+                $finalPrice = floatval($activity['price'] ?? 0);
+
+                // Kolla om aktiviteten ingår i festivalpass och om åkaren har pass
+                $passDiscount = false;
+                if (!empty($activity['included_in_pass'])) {
+                    // Kolla om åkaren redan har ett pass i varukorgen
+                    foreach ($items as $otherItem) {
+                        if (($otherItem['type'] ?? '') === 'festival_pass'
+                            && intval($otherItem['festival_id']) === $festivalId
+                            && intval($otherItem['rider_id']) === $riderId) {
+                            $passDiscount = true;
+                            $finalPrice = 0;
+                            break;
+                        }
+                    }
+                    // Kolla om åkaren redan har ett betalt pass
+                    if (!$passDiscount) {
+                        $passCheckStmt = $pdo->prepare("
+                            SELECT id FROM festival_passes
+                            WHERE festival_id = ? AND rider_id = ? AND status != 'cancelled' AND payment_status = 'paid'
+                        ");
+                        $passCheckStmt->execute([$festivalId, $riderId]);
+                        if ($passCheckStmt->fetch()) {
+                            $passDiscount = true;
+                            $finalPrice = 0;
+                        }
+                    }
+                }
+
+                // Skapa festival_activity_registration
+                $regStmt = $pdo->prepare("
+                    INSERT INTO festival_activity_registrations (
+                        activity_id, rider_id, order_id,
+                        status, payment_status, registered_at
+                    ) VALUES (?, ?, ?, 'pending', 'unpaid', NOW())
+                ");
+                $regStmt->execute([$activityId, $riderId, $orderId]);
+                $actRegId = $pdo->lastInsertId();
+
+                // Betalningsmottagare från festivalen
+                $recipientId = $activity['festival_recipient_id'] ?? null;
+
+                // Skapa order_item
+                $description = "{$rider['firstname']} {$rider['lastname']} - {$activity['festival_name']} - {$activity['name']}";
+                if ($passDiscount) {
+                    $description .= ' (ingår i festivalpass)';
+                }
+                $itemStmt = $pdo->prepare("
+                    INSERT INTO order_items (
+                        order_id, item_type, activity_registration_id,
+                        description, unit_price, quantity, total_price,
+                        payment_recipient_id
+                    ) VALUES (?, 'festival_activity', ?, ?, ?, 1, ?, ?)
+                ");
+                $itemStmt->execute([$orderId, $actRegId, $description, $finalPrice, $finalPrice, $recipientId]);
+
+                $subtotal += $finalPrice;
+
+                $registrations[] = [
+                    'type' => 'festival_activity',
+                    'registration_id' => $actRegId,
+                    'rider_id' => $riderId,
+                    'rider_name' => "{$rider['firstname']} {$rider['lastname']}",
+                    'activity_name' => $activity['name'],
+                    'festival_name' => $activity['festival_name'],
+                    'price' => $finalPrice,
+                    'pass_discount' => $passDiscount
+                ];
+
+            } elseif ($itemType === 'festival_pass') {
+                $festivalId = intval($item['festival_id']);
+
+                // Hämta festivalinfo
+                $festStmt = $pdo->prepare("
+                    SELECT f.*, f.payment_recipient_id as festival_recipient_id
+                    FROM festivals f
+                    WHERE f.id = ? AND f.pass_enabled = 1
+                ");
+                $festStmt->execute([$festivalId]);
+                $festival = $festStmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$festival) {
+                    throw new Exception("Festivalen hittades inte eller festivalpass är inte aktiverat");
+                }
+
+                // Kolla max antal pass
+                if (!empty($festival['pass_max_quantity']) && $festival['pass_max_quantity'] > 0) {
+                    $countStmt = $pdo->prepare("
+                        SELECT COUNT(*) FROM festival_passes
+                        WHERE festival_id = ? AND status != 'cancelled'
+                    ");
+                    $countStmt->execute([$festivalId]);
+                    if ($countStmt->fetchColumn() >= $festival['pass_max_quantity']) {
+                        throw new Exception("Alla festivalpass är slutsålda");
+                    }
+                }
+
+                // Kolla om redan har pass
+                $checkPassStmt = $pdo->prepare("
+                    SELECT id FROM festival_passes
+                    WHERE festival_id = ? AND rider_id = ? AND status != 'cancelled'
+                ");
+                $checkPassStmt->execute([$festivalId, $riderId]);
+                if ($checkPassStmt->fetch()) {
+                    throw new Exception("{$rider['firstname']} {$rider['lastname']} har redan ett festivalpass");
+                }
+
+                $finalPrice = floatval($festival['pass_price'] ?? 0);
+
+                // Generera unik passkod
+                $passCode = strtoupper(substr($festival['name'], 0, 3)) . '-' . str_pad(random_int(100, 9999), 4, '0', STR_PAD_LEFT);
+
+                // Skapa festival_pass
+                $passStmt = $pdo->prepare("
+                    INSERT INTO festival_passes (
+                        festival_id, rider_id, order_id,
+                        pass_code, status, payment_status, created_at
+                    ) VALUES (?, ?, ?, ?, 'pending', 'unpaid', NOW())
+                ");
+                $passStmt->execute([$festivalId, $riderId, $orderId, $passCode]);
+                $passId = $pdo->lastInsertId();
+
+                // Betalningsmottagare från festivalen
+                $recipientId = $festival['festival_recipient_id'] ?? null;
+
+                // Skapa order_item
+                $passName = $festival['pass_name'] ?: 'Festivalpass';
+                $description = "{$rider['firstname']} {$rider['lastname']} - {$festival['name']} - {$passName}";
+                $itemStmt = $pdo->prepare("
+                    INSERT INTO order_items (
+                        order_id, item_type, festival_pass_id,
+                        description, unit_price, quantity, total_price,
+                        payment_recipient_id
+                    ) VALUES (?, 'festival_pass', ?, ?, ?, 1, ?, ?)
+                ");
+                $itemStmt->execute([$orderId, $passId, $description, $finalPrice, $finalPrice, $recipientId]);
+
+                $subtotal += $finalPrice;
+
+                $registrations[] = [
+                    'type' => 'festival_pass',
+                    'registration_id' => $passId,
+                    'rider_id' => $riderId,
+                    'rider_name' => "{$rider['firstname']} {$rider['lastname']}",
+                    'festival_name' => $festival['name'],
+                    'pass_name' => $passName,
+                    'pass_code' => $passCode,
+                    'price' => $finalPrice
                 ];
             }
         }

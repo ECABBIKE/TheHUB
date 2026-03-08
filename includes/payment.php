@@ -370,6 +370,30 @@ function markOrderPaid(int $orderId, string $paymentReference = ''): bool {
             error_log("series_registrations update skipped: " . $seriesErr->getMessage());
         }
 
+        // Update linked festival activity registrations
+        try {
+            $stmt = $pdo->prepare("
+                UPDATE festival_activity_registrations
+                SET payment_status = 'paid', status = 'confirmed'
+                WHERE order_id = ?
+            ");
+            $stmt->execute([$orderId]);
+        } catch (\Throwable $festActErr) {
+            error_log("festival_activity_registrations update skipped: " . $festActErr->getMessage());
+        }
+
+        // Update linked festival passes
+        try {
+            $stmt = $pdo->prepare("
+                UPDATE festival_passes
+                SET payment_status = 'paid', status = 'active'
+                WHERE order_id = ?
+            ");
+            $stmt->execute([$orderId]);
+        } catch (\Throwable $festPassErr) {
+            error_log("festival_passes update skipped: " . $festPassErr->getMessage());
+        }
+
         $pdo->commit();
 
         // Generate receipt (non-critical - must not break payment confirmation)

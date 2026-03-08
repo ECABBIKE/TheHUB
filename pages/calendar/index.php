@@ -45,7 +45,7 @@ if ($filterSeries) {
     $params[] = $filterSeries;
 }
 
-if ($filterFormat) {
+if ($filterFormat && $filterFormat !== 'festival') {
     $sql .= " AND e.discipline = ?";
     $params[] = $filterFormat;
 }
@@ -333,8 +333,22 @@ if (!function_exists('getDeadlineInfo')) {
                             <!-- Linked competition events -->
                             <?php foreach ($fest['_linked_events'] as $le):
                                 $leDate = strtotime($le['date']);
-                                $leDateStr = date('j', $leDate) . ' ' . hub_month_short($leDate);
-                                $leDayName = hub_day_short($leDate);
+                                $leEndDate = !empty($le['end_date']) ? strtotime($le['end_date']) : null;
+                                if ($leEndDate && $leEndDate > $leDate) {
+                                    $leStartDay = date('j', $leDate);
+                                    $leEndDay = date('j', $leEndDate);
+                                    $leStartMonth = hub_month_short($leDate);
+                                    $leEndMonth = hub_month_short($leEndDate);
+                                    if ($leStartMonth === $leEndMonth) {
+                                        $leDateStr = $leStartDay . '-' . $leEndDay . ' ' . $leStartMonth;
+                                    } else {
+                                        $leDateStr = $leStartDay . ' ' . $leStartMonth . ' - ' . $leEndDay . ' ' . $leEndMonth;
+                                    }
+                                    $leDayName = hub_day_short($leDate) . '-' . hub_day_short($leEndDate);
+                                } else {
+                                    $leDateStr = date('j', $leDate) . ' ' . hub_month_short($leDate);
+                                    $leDayName = hub_day_short($leDate);
+                                }
                                 $leLocation = $le['venue_city'] ?: $le['location'];
                                 $leAccent = $le['series_accent'] ?: '#61CE70';
                                 $leLogo = !empty($le['event_logo']) ? $le['event_logo'] : ($le['series_logo'] ?? '');

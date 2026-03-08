@@ -12,6 +12,18 @@ if (!defined('HUB_ROOT')) {
 
 $pdo = hub_db();
 
+// Check if festival section is publicly visible
+$isAdmin = !empty($_SESSION['admin_role']) && in_array($_SESSION['admin_role'], ['admin', 'super_admin']);
+$festivalPublic = (site_setting('festival_public_enabled', '0') === '1');
+if (!$festivalPublic && !$isAdmin) {
+    http_response_code(404);
+    $pageTitle = '404';
+    include __DIR__ . '/../../includes/header.php';
+    echo '<main class="container"><div class="card" style="padding: var(--space-2xl); text-align: center;"><h2>Sidan hittades inte</h2><p><a href="/">Tillbaka till startsidan</a></p></div></main>';
+    include __DIR__ . '/../../includes/footer.php';
+    exit;
+}
+
 // Get festival ID from router
 $festivalId = intval($pageInfo['params']['id'] ?? $_GET['id'] ?? 0);
 if ($festivalId <= 0) {
@@ -48,7 +60,6 @@ if (!$festival) {
 }
 
 // Only show published festivals (or draft for admins)
-$isAdmin = !empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin';
 if ($festival['status'] !== 'published' && !$isAdmin) {
     http_response_code(404);
     $pageTitle = 'Festival hittades inte';
@@ -86,6 +97,38 @@ $activities = $pdo->prepare("
 $activities->execute([$festivalId]);
 $activities = $activities->fetchAll(PDO::FETCH_ASSOC);
 
+// Load activity groups (if table exists)
+$activityGroups = [];
+$groupsById = [];
+try {
+    $gStmt = $pdo->prepare("
+        SELECT g.*,
+            (SELECT COUNT(*) FROM festival_activities fa2 WHERE fa2.group_id = g.id AND fa2.active = 1) as activity_count,
+            (SELECT SUM(sub.rc) FROM (SELECT (SELECT COUNT(*) FROM festival_activity_registrations far2 WHERE far2.activity_id = fa3.id AND far2.status != 'cancelled') as rc FROM festival_activities fa3 WHERE fa3.group_id = g.id AND fa3.active = 1) sub) as total_reg_count
+        FROM festival_activity_groups g
+        WHERE g.festival_id = ? AND g.active = 1
+        ORDER BY g.date ASC, g.start_time ASC, g.sort_order ASC
+    ");
+    $gStmt->execute([$festivalId]);
+    $activityGroups = $gStmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($activityGroups as $g) {
+        $groupsById[$g['id']] = $g;
+    }
+} catch (PDOException $e) {
+    // Table doesn't exist yet - groups not available
+}
+
+// Separate grouped vs ungrouped activities
+$ungroupedActivities = [];
+$groupedActivityIds = [];
+foreach ($activities as $a) {
+    if (!empty($a['group_id']) && isset($groupsById[$a['group_id']])) {
+        $groupedActivityIds[] = $a['id'];
+    } else {
+        $ungroupedActivities[] = $a;
+    }
+}
+
 // Load banner
 $bannerUrl = null;
 if ($festival['header_banner_media_id']) {
@@ -110,10 +153,18 @@ if ($festival['pass_enabled']) {
     $passCount = $ps->fetchColumn();
 }
 
-// Group activities by date
+// Group ungrouped activities by date
 $activitiesByDate = [];
-foreach ($activities as $a) {
+foreach ($ungroupedActivities as $a) {
     $activitiesByDate[$a['date']][] = $a;
+}
+
+// Group activity groups by date
+$groupsByDate = [];
+foreach ($activityGroups as $g) {
+    if ($g['date']) {
+        $groupsByDate[$g['date']][] = $g;
+    }
 }
 
 // Group events by date
@@ -122,8 +173,12 @@ foreach ($events as $e) {
     $eventsByDate[$e['date']][] = $e;
 }
 
-// All dates (merged events + activities)
-$allDates = array_unique(array_merge(array_keys($eventsByDate), array_keys($activitiesByDate)));
+// All dates (merged events + activities + groups)
+$allDates = array_unique(array_merge(
+    array_keys($eventsByDate),
+    array_keys($activitiesByDate),
+    array_keys($groupsByDate)
+));
 sort($allDates);
 
 // Date formatting
@@ -228,25 +283,30 @@ include __DIR__ . '/../../includes/header.php';
                 $dayLabel = formatFestivalDate($date);
                 $dayEvents = $eventsByDate[$date] ?? [];
                 $dayActivities = $activitiesByDate[$date] ?? [];
+                $dayGroups = $groupsByDate[$date] ?? [];
+                $totalActivities = count($dayActivities) + count($dayGroups);
             ?>
             <div class="festival-day">
                 <div class="festival-day-header">
                     <div class="festival-day-label"><?= $dayLabel ?></div>
                     <div class="festival-day-count">
                         <?= count($dayEvents) ?> tävling<?= count($dayEvents) !== 1 ? 'ar' : '' ?>
-                        · <?= count($dayActivities) ?> aktivitet<?= count($dayActivities) !== 1 ? 'er' : '' ?>
+                        · <?= $totalActivities ?> aktivitet<?= $totalActivities !== 1 ? 'er' : '' ?>
                     </div>
                 </div>
 
                 <div class="festival-day-items">
                     <?php
-                    // Merge events and activities, sorted by time
+                    // Merge events, ungrouped activities and activity groups, sorted by time
                     $dayItems = [];
                     foreach ($dayEvents as $e) {
                         $dayItems[] = ['type' => 'event', 'time' => '00:00', 'data' => $e];
                     }
                     foreach ($dayActivities as $a) {
                         $dayItems[] = ['type' => 'activity', 'time' => $a['start_time'] ?? '23:59', 'data' => $a];
+                    }
+                    foreach ($dayGroups as $g) {
+                        $dayItems[] = ['type' => 'group', 'time' => $g['start_time'] ?? '23:59', 'data' => $g];
                     }
                     usort($dayItems, fn($a, $b) => strcmp($a['time'], $b['time']));
                     ?>
@@ -292,7 +352,9 @@ include __DIR__ . '/../../includes/header.php';
                             $typeInfo = $actTypes[$a['activity_type']] ?? $actTypes['other'];
                             $spotsFull = $a['max_participants'] && $a['reg_count'] >= $a['max_participants'];
                         ?>
-                        <div class="festival-item festival-item--activity">
+                        <div class="festival-item festival-item--activity" role="button" tabindex="0"
+                             onclick="openActivityModal(<?= $a['id'] ?>)"
+                             onkeydown="if(event.key==='Enter')openActivityModal(<?= $a['id'] ?>)">
                             <div class="festival-item-icon" style="background: <?= $typeInfo['color'] ?>20; color: <?= $typeInfo['color'] ?>;">
                                 <i data-lucide="<?= $typeInfo['icon'] ?>"></i>
                             </div>
@@ -328,8 +390,46 @@ include __DIR__ . '/../../includes/header.php';
                                 <?php if ($spotsFull): ?>
                                 <span class="badge badge-warning" style="font-size: 0.7rem;">Fullbokat</span>
                                 <?php endif; ?>
+                                <i data-lucide="chevron-right" style="width: 16px; height: 16px; color: var(--color-text-muted);"></i>
                             </div>
                         </div>
+                        <?php endif; ?>
+
+                        <?php if ($item['type'] === 'group'):
+                            $g = $item['data'];
+                            $gTypeInfo = $actTypes[$g['activity_type']] ?? $actTypes['other'];
+                            $gActCount = (int)($g['activity_count'] ?? 0);
+                            $gRegCount = (int)($g['total_reg_count'] ?? 0);
+                        ?>
+                        <a href="/festival/<?= $festivalId ?>/activity/<?= $g['id'] ?>" class="festival-item festival-item--group">
+                            <div class="festival-item-icon" style="background: <?= $gTypeInfo['color'] ?>20; color: <?= $gTypeInfo['color'] ?>;">
+                                <i data-lucide="<?= $gTypeInfo['icon'] ?>"></i>
+                            </div>
+                            <div class="festival-item-body">
+                                <div class="festival-item-title">
+                                    <?= htmlspecialchars($g['name']) ?>
+                                </div>
+                                <div class="festival-item-meta">
+                                    <?php if ($g['start_time']): ?>
+                                    <span><i data-lucide="clock" style="width: 12px; height: 12px;"></i> <?= substr($g['start_time'], 0, 5) ?><?= $g['end_time'] ? '–' . substr($g['end_time'], 0, 5) : '' ?></span>
+                                    <?php endif; ?>
+                                    <span class="festival-item-type"><?= $gTypeInfo['label'] ?></span>
+                                    <span class="festival-group-count"><?= $gActCount ?> aktivitet<?= $gActCount !== 1 ? 'er' : '' ?></span>
+                                    <?php if ($g['instructor_name']): ?>
+                                    <span><i data-lucide="user" style="width: 12px; height: 12px;"></i> <?= htmlspecialchars($g['instructor_name']) ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($gRegCount > 0): ?>
+                                    <span><i data-lucide="users" style="width: 12px; height: 12px;"></i> <?= $gRegCount ?> anmälda</span>
+                                    <?php endif; ?>
+                                </div>
+                                <?php if ($g['short_description']): ?>
+                                <p class="festival-item-desc"><?= htmlspecialchars(mb_strimwidth($g['short_description'], 0, 150, '...')) ?></p>
+                                <?php endif; ?>
+                            </div>
+                            <div class="festival-item-action">
+                                <i data-lucide="chevron-right" style="width: 16px; height: 16px; color: var(--color-text-muted);"></i>
+                            </div>
+                        </a>
                         <?php endif; ?>
 
                     <?php endforeach; ?>
@@ -371,10 +471,15 @@ include __DIR__ . '/../../includes/header.php';
                     <div style="font-size: 0.8rem; color: var(--color-text-muted);">+ <?= count($includedActs) - 5 ?> till</div>
                     <?php endif; ?>
                 </div>
-                <!-- TODO: Koppla till GlobalCart när checkout-integration byggs -->
-                <button class="festival-pass-btn" disabled title="Kommer snart">
-                    <i data-lucide="shopping-cart"></i> Köp pass
+                <?php if (hub_is_logged_in()): ?>
+                <button class="festival-pass-btn" id="festivalPassBtn" onclick="addFestivalPassToCart()">
+                    <i data-lucide="shopping-cart"></i> Lägg i kundvagn
                 </button>
+                <?php else: ?>
+                <a href="/login?return=<?= urlencode('/festival/' . $festivalId) ?>" class="festival-pass-btn">
+                    <i data-lucide="log-in"></i> Logga in för att köpa
+                </a>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
 
@@ -439,5 +544,288 @@ include __DIR__ . '/../../includes/header.php';
     </div>
 
 </main>
+
+<!-- Activity Detail Modal -->
+<div class="activity-modal-backdrop" id="activityModalBackdrop" style="display:none;" onclick="closeActivityModal()">
+    <div class="activity-modal" onclick="event.stopPropagation()">
+        <button class="activity-modal-close" onclick="closeActivityModal()" aria-label="Stäng">
+            <i data-lucide="x"></i>
+        </button>
+        <div class="activity-modal-header" id="actModalHeader">
+            <div class="activity-modal-icon" id="actModalIcon"></div>
+            <div>
+                <h2 class="activity-modal-title" id="actModalTitle"></h2>
+                <div class="activity-modal-type" id="actModalType"></div>
+            </div>
+        </div>
+        <div class="activity-modal-body">
+            <div class="activity-modal-info-grid" id="actModalInfoGrid"></div>
+            <div class="activity-modal-desc" id="actModalDesc"></div>
+        </div>
+        <div class="activity-modal-footer" id="actModalFooter"></div>
+    </div>
+</div>
+
+<script>
+// Festival & activity data
+const festivalInfo = {
+    id: <?= (int)$festival['id'] ?>,
+    name: <?= json_encode($festival['name'], JSON_UNESCAPED_UNICODE) ?>,
+    start_date: <?= json_encode($festival['start_date']) ?>,
+    pass_enabled: <?= $festival['pass_enabled'] ? 'true' : 'false' ?>,
+    pass_name: <?= json_encode($festival['pass_name'] ?: 'Festivalpass', JSON_UNESCAPED_UNICODE) ?>,
+    pass_price: <?= (float)($festival['pass_price'] ?? 0) ?>
+};
+
+// Registrable riders (self + family)
+<?php
+$registrableRiders = [];
+if (hub_is_logged_in()) {
+    require_once __DIR__ . '/../../includes/order-manager.php';
+    $registrableRiders = getRegistrableRiders($_SESSION['hub_user_id'] ?? $_SESSION['rider_id'] ?? 0);
+}
+?>
+const registrableRiders = <?= json_encode($registrableRiders, JSON_UNESCAPED_UNICODE) ?>;
+const isLoggedIn = <?= hub_is_logged_in() ? 'true' : 'false' ?>;
+
+const activityData = <?= json_encode(array_map(function($a) use ($actTypes, $festival) {
+    // Note: grouped activities are accessible via their group page, not the modal
+    $typeInfo = $actTypes[$a['activity_type']] ?? $actTypes['other'];
+    return [
+        'id' => (int)$a['id'],
+        'name' => $a['name'],
+        'description' => $a['description'] ?? '',
+        'activity_type' => $a['activity_type'],
+        'type_label' => $typeInfo['label'],
+        'type_icon' => $typeInfo['icon'],
+        'type_color' => $typeInfo['color'],
+        'date' => $a['date'],
+        'start_time' => $a['start_time'] ? substr($a['start_time'], 0, 5) : null,
+        'end_time' => $a['end_time'] ? substr($a['end_time'], 0, 5) : null,
+        'price' => (float)$a['price'],
+        'max_participants' => (int)$a['max_participants'],
+        'reg_count' => (int)$a['reg_count'],
+        'instructor_name' => $a['instructor_name'] ?? '',
+        'location_details' => $a['location_details'] ?? '',
+        'difficulty_level' => $a['difficulty_level'] ?? '',
+        'included_in_pass' => (bool)$a['included_in_pass'],
+        'pass_enabled' => (bool)$festival['pass_enabled'],
+    ];
+}, $activities), JSON_UNESCAPED_UNICODE) ?>;
+
+const activityMap = {};
+activityData.forEach(a => activityMap[a.id] = a);
+
+const diffLabels = {
+    'beginner': 'Nybörjare',
+    'intermediate': 'Medel',
+    'advanced': 'Avancerad',
+    'all_levels': 'Alla nivåer'
+};
+
+const weekdays = ['Söndag','Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag'];
+const months = ['januari','februari','mars','april','maj','juni','juli','augusti','september','oktober','november','december'];
+
+function formatDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return weekdays[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()];
+}
+
+let currentActivityId = null;
+
+function openActivityModal(id) {
+    const a = activityMap[id];
+    if (!a) return;
+    currentActivityId = id;
+
+    const backdrop = document.getElementById('activityModalBackdrop');
+
+    // Icon
+    const iconEl = document.getElementById('actModalIcon');
+    iconEl.style.background = a.type_color + '20';
+    iconEl.style.color = a.type_color;
+    iconEl.innerHTML = '<i data-lucide="' + a.type_icon + '"></i>';
+
+    // Title & type
+    document.getElementById('actModalTitle').textContent = a.name;
+    document.getElementById('actModalType').textContent = a.type_label;
+
+    // Info grid
+    const grid = document.getElementById('actModalInfoGrid');
+    let gridHtml = '';
+
+    gridHtml += '<div class="activity-modal-info-item"><i data-lucide="calendar"></i><div><span class="activity-modal-info-label">Datum</span><span>' + formatDate(a.date) + '</span></div></div>';
+
+    if (a.start_time) {
+        const timeStr = a.start_time + (a.end_time ? ' – ' + a.end_time : '');
+        gridHtml += '<div class="activity-modal-info-item"><i data-lucide="clock"></i><div><span class="activity-modal-info-label">Tid</span><span>' + timeStr + '</span></div></div>';
+    }
+
+    const priceStr = a.price > 0 ? a.price + ' kr' : 'Gratis';
+    let priceExtra = '';
+    if (a.included_in_pass && a.pass_enabled) {
+        priceExtra = '<span class="festival-pass-badge" style="margin-left:6px;"><i data-lucide="ticket" style="width:10px;height:10px;"></i> Ingår i pass</span>';
+    }
+    gridHtml += '<div class="activity-modal-info-item"><i data-lucide="tag"></i><div><span class="activity-modal-info-label">Pris</span><span>' + priceStr + priceExtra + '</span></div></div>';
+
+    if (a.max_participants > 0) {
+        const spotsLeft = a.max_participants - a.reg_count;
+        const spotsStr = a.reg_count + ' / ' + a.max_participants + ' platser' + (spotsLeft <= 3 && spotsLeft > 0 ? ' <strong style="color:var(--color-warning);">(' + spotsLeft + ' kvar)</strong>' : '');
+        gridHtml += '<div class="activity-modal-info-item"><i data-lucide="users"></i><div><span class="activity-modal-info-label">Deltagare</span><span>' + spotsStr + '</span></div></div>';
+    }
+
+    if (a.instructor_name) {
+        gridHtml += '<div class="activity-modal-info-item"><i data-lucide="user"></i><div><span class="activity-modal-info-label">Instruktör</span><span>' + a.instructor_name + '</span></div></div>';
+    }
+
+    if (a.difficulty_level && diffLabels[a.difficulty_level]) {
+        gridHtml += '<div class="activity-modal-info-item"><i data-lucide="signal"></i><div><span class="activity-modal-info-label">Nivå</span><span>' + diffLabels[a.difficulty_level] + '</span></div></div>';
+    }
+
+    if (a.location_details) {
+        gridHtml += '<div class="activity-modal-info-item"><i data-lucide="map-pin"></i><div><span class="activity-modal-info-label">Plats</span><span>' + a.location_details + '</span></div></div>';
+    }
+
+    grid.innerHTML = gridHtml;
+
+    // Description
+    const descEl = document.getElementById('actModalDesc');
+    if (a.description) {
+        descEl.innerHTML = '<p>' + a.description.replace(/\n/g, '<br>') + '</p>';
+        descEl.style.display = '';
+    } else {
+        descEl.style.display = 'none';
+    }
+
+    // Footer / CTA
+    const footer = document.getElementById('actModalFooter');
+    const isFull = a.max_participants > 0 && a.reg_count >= a.max_participants;
+    if (isFull) {
+        footer.innerHTML = '<div class="activity-modal-cta-full"><i data-lucide="circle-x"></i> Fullbokat</div>';
+    } else if (!isLoggedIn) {
+        footer.innerHTML = '<a href="/login?return=' + encodeURIComponent(window.location.pathname) + '" class="activity-modal-cta"><i data-lucide="log-in"></i> Logga in för att anmäla dig</a>';
+    } else {
+        let ctaHtml = '';
+        // Rider selector if multiple riders
+        if (registrableRiders.length > 1) {
+            ctaHtml += '<select id="actRiderSelect" class="activity-modal-rider-select">';
+            registrableRiders.forEach(r => {
+                const label = r.firstname + ' ' + r.lastname + (r.relation === 'child' ? ' (barn)' : '');
+                ctaHtml += '<option value="' + r.id + '">' + label + '</option>';
+            });
+            ctaHtml += '</select>';
+        }
+        ctaHtml += '<button class="activity-modal-cta" onclick="addActivityToCart(' + a.id + ')"><i data-lucide="shopping-cart"></i> Lägg i kundvagn</button>';
+        // Check if already in cart
+        const cart = GlobalCart.getCart();
+        const defaultRider = registrableRiders[0];
+        if (defaultRider) {
+            const inCart = cart.some(ci => ci.type === 'festival_activity' && ci.activity_id === a.id && ci.rider_id === defaultRider.id);
+            if (inCart) {
+                ctaHtml += '<div class="activity-modal-in-cart"><i data-lucide="check-circle"></i> Redan i kundvagnen</div>';
+            }
+        }
+        footer.innerHTML = ctaHtml;
+    }
+
+    backdrop.style.display = 'flex';
+    document.documentElement.classList.add('activity-modal-open');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function addActivityToCart(activityId) {
+    const a = activityMap[activityId];
+    if (!a) return;
+
+    // Get selected rider
+    const selectEl = document.getElementById('actRiderSelect');
+    const riderId = selectEl ? parseInt(selectEl.value) : (registrableRiders[0] ? registrableRiders[0].id : null);
+    if (!riderId) return;
+
+    const rider = registrableRiders.find(r => r.id === riderId);
+    if (!rider) return;
+
+    try {
+        GlobalCart.addItem({
+            type: 'festival_activity',
+            activity_id: a.id,
+            festival_id: festivalInfo.id,
+            rider_id: riderId,
+            rider_name: rider.firstname + ' ' + rider.lastname,
+            activity_name: a.name,
+            festival_name: festivalInfo.name,
+            festival_date: festivalInfo.start_date,
+            price: a.price,
+            included_in_pass: a.included_in_pass
+        });
+
+        // Show success feedback
+        const footer = document.getElementById('actModalFooter');
+        const existingBtn = footer.querySelector('.activity-modal-cta');
+        if (existingBtn) {
+            existingBtn.outerHTML = '<div class="activity-modal-in-cart"><i data-lucide="check-circle"></i> Tillagd i kundvagnen</div>';
+        }
+        // Remove old "already in cart" if any
+        const oldInCart = footer.querySelector('.activity-modal-in-cart:last-child');
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        // Auto-close after short delay
+        setTimeout(() => closeActivityModal(), 1200);
+    } catch (e) {
+        alert('Kunde inte lägga till: ' + e.message);
+    }
+}
+
+function addFestivalPassToCart() {
+    if (!isLoggedIn || !festivalInfo.pass_enabled) return;
+
+    const riderId = registrableRiders[0] ? registrableRiders[0].id : null;
+    if (!riderId) return;
+    const rider = registrableRiders[0];
+
+    // Check if already in cart
+    const cart = GlobalCart.getCart();
+    if (cart.some(ci => ci.type === 'festival_pass' && ci.festival_id === festivalInfo.id && ci.rider_id === riderId)) {
+        alert('Festivalpasset finns redan i kundvagnen');
+        return;
+    }
+
+    try {
+        GlobalCart.addItem({
+            type: 'festival_pass',
+            festival_id: festivalInfo.id,
+            rider_id: riderId,
+            rider_name: rider.firstname + ' ' + rider.lastname,
+            festival_name: festivalInfo.name,
+            festival_date: festivalInfo.start_date,
+            pass_name: festivalInfo.pass_name,
+            price: festivalInfo.pass_price
+        });
+
+        // Update button
+        const btn = document.getElementById('festivalPassBtn');
+        if (btn) {
+            btn.innerHTML = '<i data-lucide="check-circle"></i> Tillagd i kundvagnen';
+            btn.disabled = true;
+            btn.classList.add('btn--success');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    } catch (e) {
+        alert('Kunde inte lägga till: ' + e.message);
+    }
+}
+
+function closeActivityModal() {
+    document.getElementById('activityModalBackdrop').style.display = 'none';
+    document.documentElement.classList.remove('activity-modal-open');
+    currentActivityId = null;
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeActivityModal();
+});
+</script>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>

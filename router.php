@@ -43,6 +43,8 @@ function hub_requires_auth(string $page): bool {
         'news',
         // Feedback
         'feedback',
+        // Festival
+        'festival',
         // Shopping - cart is public, checkout handles its own auth
         'cart', 'checkout',
         // Registration pages (login required but handled in page)
@@ -171,7 +173,8 @@ function hub_get_current_page(): array {
         ],
         'festival' => [
             'index' => '/pages/festival/index.php',
-            'show' => '/pages/festival/show.php'
+            'show' => '/pages/festival/show.php',
+            'activity' => '/pages/festival/activity.php'
         ],
         'cart' => [
             'index' => '/pages/cart.php'
@@ -180,6 +183,18 @@ function hub_get_current_page(): array {
 
     // Check if this is a V1.0 section route
     if (isset($sectionRoutes[$section])) {
+        // Special: /festival/{id}/activity/{groupId}
+        if ($section === 'festival' && isset($segments[1]) && is_numeric($segments[1])
+            && isset($segments[2]) && $segments[2] === 'activity' && isset($segments[3]) && is_numeric($segments[3])) {
+            return [
+                'page' => 'festival-activity',
+                'section' => 'festival',
+                'subpage' => 'activity',
+                'params' => ['id' => $segments[1], 'group_id' => $segments[3]],
+                'file' => HUB_ROOT . '/pages/festival/activity.php'
+            ];
+        }
+
         // If second segment is numeric, it's an ID
         if (isset($segments[1]) && is_numeric($segments[1])) {
             $id = $segments[1];

@@ -15,6 +15,39 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-08, session 54)
+
+### Festival: Aktivitetsgrupper + synlighetskontroll
+- **Ny funktion:** Aktivitetsgrupper (`festival_activity_groups`) - grupper som samlar flera aktiviteter under en klickbar rad på festivalsidan. Varje grupp har en egen detaljsida med delaktiviteter, deltagarlistor och kundvagnsfunktion.
+- **Migration 087:** `festival_activity_groups` tabell + `festival_activities.group_id` FK
+- **Routing:** `/festival/{id}/activity/{groupId}` → `pages/festival/activity.php` (special 4-segment route i router.php)
+- **Publik aktivitetsgrupp-sida:** `pages/festival/activity.php` - breadcrumb, grupphuvud (typ-badge, titel, meta), beskrivning, instruktörinfo, aktivitetslista med expanderbara deltagarlistor (`<details>`), sidebar med pass-CTA och festivalinfo
+- **Festival show.php uppdaterad:** Grupperar aktiviteter i grouped vs ungrouped. Grupper renderas som klickbara `<a>` rader med chevron-right ikon, aktivitetsantal, registreringsantal
+- **Admin festival-edit.php:** Ny "Grupper"-flik med CRUD (skapa, redigera, radera grupper). Gruppval-dropdown i aktivitetsformuläret. POST-handlers: save_group, delete_group, assign_activity_group
+- **CSS:** Nya klasser i festival.css: `.festival-breadcrumb`, `.activity-group-header`, `.activity-group-body`, `.activity-list-item`, `.activity-participants`, `.festival-item--group`
+- **Synlighetskontroll:** `site_setting('festival_public_enabled')` toggle i `/admin/public-settings.php`. Default: avstängd (admin-only). Alla tre publika festivalsidor (index, show, activity) kollar inställningen - visar 404 för icke-admin om festivalen inte är publikt aktiverad.
+- **VIKTIGT:** Festival ska ALDRIG ha egen ikon i navigation - ligger under Serier-gruppen i admin-tabs
+- **VIKTIGT:** Kör migration 087 via `/admin/migrations.php`
+- **Filer:** `Tools/migrations/087_festival_activity_groups.sql`, `pages/festival/activity.php`, `pages/festival/show.php`, `pages/festival/index.php`, `admin/festival-edit.php`, `admin/public-settings.php`, `admin/migrations.php`, `assets/css/pages/festival.css`, `router.php`
+
+## SENASTE FIXAR (2026-03-08, session 53)
+
+### Festival: Checkout-integration (backend klar, frontend pågår)
+- **Ny funktion:** Festival-aktiviteter och festivalpass kan nu läggas i kundvagnen och processas via checkout
+- **GlobalCart.js utökad:** Stödjer `festival_activity` och `festival_pass` item-typer med egen validering och deduplicering. `removeFestivalItem()` ny metod. `getItemsByEvent()` grupperar festival-items under `festival_`-prefix.
+- **order-manager.php utökad:** `createMultiRiderOrder()` har nya branches för `festival_activity` (skapar `festival_activity_registrations`, kollar max deltagare, kollar pass-rabatt) och `festival_pass` (skapar `festival_passes` med unik pass_code). Betalningsmottagare hämtas från `festivals.payment_recipient_id`. `orders.festival_id` sätts vid skapande.
+- **payment.php utökad:** `markOrderPaid()` uppdaterar nu `festival_activity_registrations` (status=confirmed, payment_status=paid) och `festival_passes` (status=active, payment_status=paid).
+- **Migration 086:** `order_items.activity_registration_id`, `order_items.festival_pass_id`, `item_type` konverterad till VARCHAR(30) (från ENUM), index på festival-tabeller.
+- **Festival show.php:** Pass-knappen i sidebar kopplad till `addFestivalPassToCart()`. Aktivitetsmodalen har rider-väljare och `addActivityToCart()` som lägger i GlobalCart.
+- **PÅGÅENDE BESLUT:** Användaren vill att aktiviteter ska ha EGNA SIDOR (som event) med deltagarlistor, istället för popup-modaler. Nästa steg: skapa `/festival/{id}/activity/{activityId}` route med egen sida.
+- **VIKTIGT:** Kör migration 086 via `/admin/migrations.php`
+- **Filer:** `Tools/migrations/086_festival_checkout.sql`, `assets/js/global-cart.js`, `includes/order-manager.php`, `includes/payment.php`, `pages/festival/show.php`, `admin/migrations.php`
+
+### Festival: Pass-rabatt arkitektur
+- **Pass-rabatt i order-manager:** Om en aktivitet har `included_in_pass = 1` OCH åkaren har ett betalt festivalpass ELLER ett festival_pass-item i samma order → priset sätts till 0 kr
+- **Dubbel kontroll:** Kollar först andra items i samma order (cart), sedan betalt pass i databasen
+- **Betalningsmottagare:** Hämtas från `festivals.payment_recipient_id` för ALLA festival-items. Olika event under festivalen kan ha olika mottagare via sina respektive `events.payment_recipient_id` (hanteras i event-registreringsflödet, inte festival-flödet)
+
 ## SENASTE FIXAR (2026-03-08, session 52)
 
 ### Festival: Kalender-integration med grupperade event

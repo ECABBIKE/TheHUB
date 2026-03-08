@@ -15,6 +15,9 @@ $currentSettings = [
     'min_results_to_show' => (int) site_setting('min_results_to_show', '1'),
 ];
 
+// Load festival visibility setting
+$festivalPublicEnabled = (site_setting('festival_public_enabled', '0') === '1');
+
 // Load sponsor settings from database
 $sponsorPublicEnabled = false;
 $hideEmptyForAdmin = false;
@@ -60,6 +63,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
          $messageType = 'success';
      } catch (Exception $e) {
          $message = 'Kunde inte spara inställning: ' . $e->getMessage();
+         $messageType = 'error';
+     }
+ } elseif ($action === 'save_festival_visibility') {
+     $enabled = isset($_POST['festival_public_enabled']) ? '1' : '0';
+     $saved = save_site_setting('festival_public_enabled', $enabled, 'Show festival section to all visitors (1) or admin only (0)');
+     if ($saved) {
+         $festivalPublicEnabled = ($enabled === '1');
+         $message = 'Festivalinställningar sparade!';
+         $messageType = 'success';
+     } else {
+         $message = 'Kunde inte spara inställning.';
          $messageType = 'error';
      }
  } elseif ($action === 'save_settings') {
@@ -364,6 +378,59 @@ include __DIR__ . '/components/unified-layout.php';
     Öppna Sponsorhantering
    </a>
   </div>
+ </div>
+
+ <!-- Festival Visibility Settings -->
+ <div class="card mt-lg">
+  <div class="card-header">
+   <h2 class="">
+    <i data-lucide="tent"></i>
+    Synlighet för Festivaler
+   </h2>
+  </div>
+  <form method="POST" class="card-body">
+   <?= csrf_field() ?>
+   <input type="hidden" name="action" value="save_festival_visibility">
+
+   <div class="mb-lg">
+    <p class="text-secondary mb-md">
+     Styr om festival-sektionen (festivallistan, festivalsidor och aktivitetssidor) ska vara synlig för alla besökare eller enbart för administratörer.
+    </p>
+
+    <div class="alert alert--<?= $festivalPublicEnabled ? 'success' : 'warning' ?> mb-md">
+     <i data-lucide="<?= $festivalPublicEnabled ? 'eye' : 'eye-off' ?>"></i>
+     <strong>Nuvarande status:</strong>
+     <?php if ($festivalPublicEnabled): ?>
+      Festival-sektionen är <strong>synlig för alla besökare</strong>
+     <?php else: ?>
+      Festival-sektionen är <strong>enbart synlig för administratörer</strong>
+     <?php endif; ?>
+    </div>
+   </div>
+
+   <div class="mb-lg">
+    <label class="gs-toggle-label">
+     <input
+      type="checkbox"
+      name="festival_public_enabled"
+      class="gs-toggle"
+      <?= $festivalPublicEnabled ? 'checked' : '' ?>
+     >
+     <span class="gs-toggle-slider"></span>
+     <span class="gs-toggle-text">Visa festivaler för alla besökare</span>
+    </label>
+    <small class="text-muted d-block mt-xs">
+     När denna är avstängd visas festival-sidor enbart för inloggade administratörer. Använd detta under uppbyggnad av festivaler.
+    </small>
+   </div>
+
+   <div class="flex gs-justify-end gap-md gs-pt-md border-top">
+    <button type="submit" class="btn btn--primary">
+     <i data-lucide="save"></i>
+     Spara Synlighet
+    </button>
+   </div>
+  </form>
  </div>
 </div>
 

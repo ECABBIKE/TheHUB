@@ -28,7 +28,7 @@
 | UCI ID-synkning | KLAR | Deltagare kan verifiera och synka sin licens via UCI ID i profilen | 100% |
 | TheHUB Promotion | KLAR | Riktade e-postkampanjer med filter på kön, ålder, region | 100% |
 | Klubb/Destination-admin | KLAR | Klubb- och destination-admins kan redigera via profil, multipla roller | 100% |
-| Festival-system | PAGAENDE | Festivaler som paraply over tavlingsevent + egna aktiviteter (clinics, rides). Fas 1: grundstruktur. | 30% |
+| Festival-system | PAGAENDE | Festivaler som paraply over tavlingsevent + egna aktiviteter (clinics, rides). Fas 1: grundstruktur, checkout, grupper. | 45% |
 
 ---
 
@@ -1795,6 +1795,33 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 ### 2026-01-13
 - **Analytics Platform startat**
 - **Steg 0-7 KLAR pa en dag**
+
+### 2026-03-08 (Festival: Aktivitetsgrupper + synlighetskontroll)
+- **Branch:** claude/festival-events-refactor-pJ2ry
+
+- **Ny funktion: Aktivitetsgrupper**
+  - Grupper som samlar flera aktiviteter under en klickbar rad
+  - Egen detaljsida med deltagarlistor per aktivitet
+  - Admin CRUD i festival-edit.php (ny "Grupper"-flik)
+  - Migration 087: festival_activity_groups tabell + group_id FK
+
+- **Ny funktion: Festival synlighetskontroll**
+  - Toggle i /admin/public-settings.php
+  - Festival-sektionen dold för vanliga besökare (default)
+  - Admin/super_admin ser alltid festivaler
+
+- **Nya filer:**
+  - `Tools/migrations/087_festival_activity_groups.sql`
+  - `pages/festival/activity.php` - Publik aktivitetsgrupp-sida
+
+- **Ändrade filer:**
+  - `pages/festival/show.php` - Grupp-rader i programmet
+  - `pages/festival/index.php` - Synlighetskontroll
+  - `admin/festival-edit.php` - Grupper-flik + CRUD
+  - `admin/public-settings.php` - Festival-toggle
+  - `admin/migrations.php` - Migration 087 registrerad
+  - `assets/css/pages/festival.css` - Grupp-stilar
+  - `router.php` - /festival/{id}/activity/{groupId} route
 
 ---
 
