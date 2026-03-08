@@ -140,6 +140,56 @@ try {
         }
     }
 
+    // Search events
+    if ($type === 'events') {
+        $words = preg_split('/\s+/', $query);
+        $conditions = [];
+        $params = [];
+
+        if (count($words) >= 2) {
+            // Multi-word: match name AND location, or full query in name
+            $conditions[] = "(e.name LIKE ? AND e.location LIKE ?)";
+            $params[] = "%{$words[0]}%";
+            $params[] = "%{$words[count($words)-1]}%";
+            $conditions[] = "e.name LIKE ?";
+            $params[] = "%{$query}%";
+            $conditions[] = "e.location LIKE ?";
+            $params[] = "%{$query}%";
+        } else {
+            $conditions[] = "e.name LIKE ?";
+            $params[] = "%{$query}%";
+            $conditions[] = "e.location LIKE ?";
+            $params[] = "%{$query}%";
+            $conditions[] = "e.date LIKE ?";
+            $params[] = "%{$query}%";
+        }
+
+        $where = implode(' OR ', $conditions);
+        $params[] = $limit;
+
+        $stmt = $pdo->prepare("
+            SELECT e.id, e.name, e.date, e.location, e.discipline,
+                   (SELECT s.name FROM series_events se JOIN series s ON se.series_id = s.id WHERE se.event_id = e.id LIMIT 1) as series_name
+            FROM events e
+            WHERE e.active = 1 AND ({$where})
+            ORDER BY e.date DESC
+            LIMIT ?
+        ");
+        $stmt->execute($params);
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $results[] = [
+                'id' => (int)$row['id'],
+                'type' => 'event',
+                'name' => $row['name'],
+                'date' => $row['date'],
+                'location' => $row['location'] ?? '',
+                'discipline' => $row['discipline'] ?? '',
+                'series_name' => $row['series_name'] ?? ''
+            ];
+        }
+    }
+
     // Search clubs
     if ($type === 'all' || $type === 'clubs') {
         $remainingLimit = $limit - count($results);
