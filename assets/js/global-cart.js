@@ -33,24 +33,53 @@ const GlobalCart = (function() {
     function addItem(item) {
         const cart = getCart();
 
-        // Validate required fields
-        if (!item.type || !item.event_id || !item.rider_id || !item.class_id) {
-            throw new Error('Invalid cart item: missing required fields');
-        }
-
-        // Check if item already exists (same event + rider + class)
-        const existingIndex = cart.findIndex(i =>
-            i.event_id === item.event_id &&
-            i.rider_id === item.rider_id &&
-            i.class_id === item.class_id
-        );
-
-        if (existingIndex >= 0) {
-            // Update existing item
-            cart[existingIndex] = item;
+        // Validate required fields based on type
+        if (item.type === 'festival_activity') {
+            if (!item.activity_id || !item.rider_id || !item.festival_id) {
+                throw new Error('Invalid festival activity item: missing required fields');
+            }
+            // Dedup: same activity + rider
+            const existingIndex = cart.findIndex(i =>
+                i.type === 'festival_activity' &&
+                i.activity_id === item.activity_id &&
+                i.rider_id === item.rider_id
+            );
+            if (existingIndex >= 0) {
+                cart[existingIndex] = item;
+            } else {
+                cart.push(item);
+            }
+        } else if (item.type === 'festival_pass') {
+            if (!item.festival_id || !item.rider_id) {
+                throw new Error('Invalid festival pass item: missing required fields');
+            }
+            // Dedup: same festival + rider
+            const existingIndex = cart.findIndex(i =>
+                i.type === 'festival_pass' &&
+                i.festival_id === item.festival_id &&
+                i.rider_id === item.rider_id
+            );
+            if (existingIndex >= 0) {
+                cart[existingIndex] = item;
+            } else {
+                cart.push(item);
+            }
         } else {
-            // Add new item
-            cart.push(item);
+            // Event/series registration - original validation
+            if (!item.type || !item.event_id || !item.rider_id || !item.class_id) {
+                throw new Error('Invalid cart item: missing required fields');
+            }
+            // Check if item already exists (same event + rider + class)
+            const existingIndex = cart.findIndex(i =>
+                i.event_id === item.event_id &&
+                i.rider_id === item.rider_id &&
+                i.class_id === item.class_id
+            );
+            if (existingIndex >= 0) {
+                cart[existingIndex] = item;
+            } else {
+                cart.push(item);
+            }
         }
 
         saveCart(cart);
@@ -63,6 +92,22 @@ const GlobalCart = (function() {
         cart = cart.filter(item =>
             !(item.event_id === eventId && item.rider_id === riderId && item.class_id === classId)
         );
+        saveCart(cart);
+        return cart;
+    }
+
+    // Remove festival item from cart
+    function removeFestivalItem(type, id, riderId) {
+        let cart = getCart();
+        if (type === 'festival_activity') {
+            cart = cart.filter(item =>
+                !(item.type === 'festival_activity' && item.activity_id === id && item.rider_id === riderId)
+            );
+        } else if (type === 'festival_pass') {
+            cart = cart.filter(item =>
+                !(item.type === 'festival_pass' && item.festival_id === id && item.rider_id === riderId)
+            );
+        }
         saveCart(cart);
         return cart;
     }
@@ -82,21 +127,37 @@ const GlobalCart = (function() {
         return getCart().reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
     }
 
-    // Group items by event
+    // Group items by event (or festival for festival items)
     function getItemsByEvent() {
         const cart = getCart();
         const grouped = {};
 
         cart.forEach(item => {
-            if (!grouped[item.event_id]) {
-                grouped[item.event_id] = {
-                    event_id: item.event_id,
-                    event_name: item.event_name,
-                    event_date: item.event_date,
-                    items: []
-                };
+            // Festival items group by festival_id with 'festival_' prefix
+            if (item.type === 'festival_activity' || item.type === 'festival_pass') {
+                const key = 'festival_' + item.festival_id;
+                if (!grouped[key]) {
+                    grouped[key] = {
+                        event_id: key,
+                        event_name: item.festival_name || 'Festival',
+                        event_date: item.festival_date || '',
+                        is_festival: true,
+                        festival_id: item.festival_id,
+                        items: []
+                    };
+                }
+                grouped[key].items.push(item);
+            } else {
+                if (!grouped[item.event_id]) {
+                    grouped[item.event_id] = {
+                        event_id: item.event_id,
+                        event_name: item.event_name,
+                        event_date: item.event_date,
+                        items: []
+                    };
+                }
+                grouped[item.event_id].items.push(item);
             }
-            grouped[item.event_id].items.push(item);
         });
 
         return Object.values(grouped);
@@ -140,6 +201,7 @@ const GlobalCart = (function() {
         getCart,
         addItem,
         removeItem,
+        removeFestivalItem,
         clearCart,
         getItemCount,
         getTotalPrice,

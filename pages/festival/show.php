@@ -374,10 +374,15 @@ include __DIR__ . '/../../includes/header.php';
                     <div style="font-size: 0.8rem; color: var(--color-text-muted);">+ <?= count($includedActs) - 5 ?> till</div>
                     <?php endif; ?>
                 </div>
-                <!-- TODO: Koppla till GlobalCart när checkout-integration byggs -->
-                <button class="festival-pass-btn" disabled title="Kommer snart">
-                    <i data-lucide="shopping-cart"></i> Köp pass
+                <?php if (hub_is_logged_in()): ?>
+                <button class="festival-pass-btn" id="festivalPassBtn" onclick="addFestivalPassToCart()">
+                    <i data-lucide="shopping-cart"></i> Lägg i kundvagn
                 </button>
+                <?php else: ?>
+                <a href="/login?return=<?= urlencode('/festival/' . $festivalId) ?>" class="festival-pass-btn">
+                    <i data-lucide="log-in"></i> Logga in för att köpa
+                </a>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
 
@@ -465,7 +470,27 @@ include __DIR__ . '/../../includes/header.php';
 </div>
 
 <script>
-// Activity data for modal
+// Festival & activity data
+const festivalInfo = {
+    id: <?= (int)$festival['id'] ?>,
+    name: <?= json_encode($festival['name'], JSON_UNESCAPED_UNICODE) ?>,
+    start_date: <?= json_encode($festival['start_date']) ?>,
+    pass_enabled: <?= $festival['pass_enabled'] ? 'true' : 'false' ?>,
+    pass_name: <?= json_encode($festival['pass_name'] ?: 'Festivalpass', JSON_UNESCAPED_UNICODE) ?>,
+    pass_price: <?= (float)($festival['pass_price'] ?? 0) ?>
+};
+
+// Registrable riders (self + family)
+<?php
+$registrableRiders = [];
+if (hub_is_logged_in()) {
+    require_once __DIR__ . '/../../includes/order-manager.php';
+    $registrableRiders = getRegistrableRiders($_SESSION['hub_user_id'] ?? $_SESSION['rider_id'] ?? 0);
+}
+?>
+const registrableRiders = <?= json_encode($registrableRiders, JSON_UNESCAPED_UNICODE) ?>;
+const isLoggedIn = <?= hub_is_logged_in() ? 'true' : 'false' ?>;
+
 const activityData = <?= json_encode(array_map(function($a) use ($actTypes, $festival) {
     $typeInfo = $actTypes[$a['activity_type']] ?? $actTypes['other'];
     return [
@@ -508,9 +533,12 @@ function formatDate(dateStr) {
     return weekdays[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()];
 }
 
+let currentActivityId = null;
+
 function openActivityModal(id) {
     const a = activityMap[id];
     if (!a) return;
+    currentActivityId = id;
 
     const backdrop = document.getElementById('activityModalBackdrop');
 
@@ -528,16 +556,13 @@ function openActivityModal(id) {
     const grid = document.getElementById('actModalInfoGrid');
     let gridHtml = '';
 
-    // Date
     gridHtml += '<div class="activity-modal-info-item"><i data-lucide="calendar"></i><div><span class="activity-modal-info-label">Datum</span><span>' + formatDate(a.date) + '</span></div></div>';
 
-    // Time
     if (a.start_time) {
         const timeStr = a.start_time + (a.end_time ? ' – ' + a.end_time : '');
         gridHtml += '<div class="activity-modal-info-item"><i data-lucide="clock"></i><div><span class="activity-modal-info-label">Tid</span><span>' + timeStr + '</span></div></div>';
     }
 
-    // Price
     const priceStr = a.price > 0 ? a.price + ' kr' : 'Gratis';
     let priceExtra = '';
     if (a.included_in_pass && a.pass_enabled) {
@@ -545,24 +570,20 @@ function openActivityModal(id) {
     }
     gridHtml += '<div class="activity-modal-info-item"><i data-lucide="tag"></i><div><span class="activity-modal-info-label">Pris</span><span>' + priceStr + priceExtra + '</span></div></div>';
 
-    // Spots
     if (a.max_participants > 0) {
         const spotsLeft = a.max_participants - a.reg_count;
         const spotsStr = a.reg_count + ' / ' + a.max_participants + ' platser' + (spotsLeft <= 3 && spotsLeft > 0 ? ' <strong style="color:var(--color-warning);">(' + spotsLeft + ' kvar)</strong>' : '');
         gridHtml += '<div class="activity-modal-info-item"><i data-lucide="users"></i><div><span class="activity-modal-info-label">Deltagare</span><span>' + spotsStr + '</span></div></div>';
     }
 
-    // Instructor
     if (a.instructor_name) {
         gridHtml += '<div class="activity-modal-info-item"><i data-lucide="user"></i><div><span class="activity-modal-info-label">Instruktör</span><span>' + a.instructor_name + '</span></div></div>';
     }
 
-    // Difficulty
     if (a.difficulty_level && diffLabels[a.difficulty_level]) {
         gridHtml += '<div class="activity-modal-info-item"><i data-lucide="signal"></i><div><span class="activity-modal-info-label">Nivå</span><span>' + diffLabels[a.difficulty_level] + '</span></div></div>';
     }
 
-    // Location details
     if (a.location_details) {
         gridHtml += '<div class="activity-modal-info-item"><i data-lucide="map-pin"></i><div><span class="activity-modal-info-label">Plats</span><span>' + a.location_details + '</span></div></div>';
     }
@@ -583,20 +604,125 @@ function openActivityModal(id) {
     const isFull = a.max_participants > 0 && a.reg_count >= a.max_participants;
     if (isFull) {
         footer.innerHTML = '<div class="activity-modal-cta-full"><i data-lucide="circle-x"></i> Fullbokat</div>';
+    } else if (!isLoggedIn) {
+        footer.innerHTML = '<a href="/login?return=' + encodeURIComponent(window.location.pathname) + '" class="activity-modal-cta"><i data-lucide="log-in"></i> Logga in för att anmäla dig</a>';
     } else {
-        footer.innerHTML = '<button class="activity-modal-cta" disabled title="Kommer snart"><i data-lucide="shopping-cart"></i> Anmäl dig</button>';
+        let ctaHtml = '';
+        // Rider selector if multiple riders
+        if (registrableRiders.length > 1) {
+            ctaHtml += '<select id="actRiderSelect" class="activity-modal-rider-select">';
+            registrableRiders.forEach(r => {
+                const label = r.firstname + ' ' + r.lastname + (r.relation === 'child' ? ' (barn)' : '');
+                ctaHtml += '<option value="' + r.id + '">' + label + '</option>';
+            });
+            ctaHtml += '</select>';
+        }
+        ctaHtml += '<button class="activity-modal-cta" onclick="addActivityToCart(' + a.id + ')"><i data-lucide="shopping-cart"></i> Lägg i kundvagn</button>';
+        // Check if already in cart
+        const cart = GlobalCart.getCart();
+        const defaultRider = registrableRiders[0];
+        if (defaultRider) {
+            const inCart = cart.some(ci => ci.type === 'festival_activity' && ci.activity_id === a.id && ci.rider_id === defaultRider.id);
+            if (inCart) {
+                ctaHtml += '<div class="activity-modal-in-cart"><i data-lucide="check-circle"></i> Redan i kundvagnen</div>';
+            }
+        }
+        footer.innerHTML = ctaHtml;
     }
 
     backdrop.style.display = 'flex';
     document.documentElement.classList.add('activity-modal-open');
 
-    // Re-init lucide icons in modal
     if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function addActivityToCart(activityId) {
+    const a = activityMap[activityId];
+    if (!a) return;
+
+    // Get selected rider
+    const selectEl = document.getElementById('actRiderSelect');
+    const riderId = selectEl ? parseInt(selectEl.value) : (registrableRiders[0] ? registrableRiders[0].id : null);
+    if (!riderId) return;
+
+    const rider = registrableRiders.find(r => r.id === riderId);
+    if (!rider) return;
+
+    try {
+        GlobalCart.addItem({
+            type: 'festival_activity',
+            activity_id: a.id,
+            festival_id: festivalInfo.id,
+            rider_id: riderId,
+            rider_name: rider.firstname + ' ' + rider.lastname,
+            activity_name: a.name,
+            festival_name: festivalInfo.name,
+            festival_date: festivalInfo.start_date,
+            price: a.price,
+            included_in_pass: a.included_in_pass
+        });
+
+        // Show success feedback
+        const footer = document.getElementById('actModalFooter');
+        const existingBtn = footer.querySelector('.activity-modal-cta');
+        if (existingBtn) {
+            existingBtn.outerHTML = '<div class="activity-modal-in-cart"><i data-lucide="check-circle"></i> Tillagd i kundvagnen</div>';
+        }
+        // Remove old "already in cart" if any
+        const oldInCart = footer.querySelector('.activity-modal-in-cart:last-child');
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        // Auto-close after short delay
+        setTimeout(() => closeActivityModal(), 1200);
+    } catch (e) {
+        alert('Kunde inte lägga till: ' + e.message);
+    }
+}
+
+function addFestivalPassToCart() {
+    if (!isLoggedIn || !festivalInfo.pass_enabled) return;
+
+    const riderId = registrableRiders[0] ? registrableRiders[0].id : null;
+    if (!riderId) return;
+    const rider = registrableRiders[0];
+
+    // Check if already in cart
+    const cart = GlobalCart.getCart();
+    if (cart.some(ci => ci.type === 'festival_pass' && ci.festival_id === festivalInfo.id && ci.rider_id === riderId)) {
+        alert('Festivalpasset finns redan i kundvagnen');
+        return;
+    }
+
+    try {
+        GlobalCart.addItem({
+            type: 'festival_pass',
+            festival_id: festivalInfo.id,
+            rider_id: riderId,
+            rider_name: rider.firstname + ' ' + rider.lastname,
+            festival_name: festivalInfo.name,
+            festival_date: festivalInfo.start_date,
+            pass_name: festivalInfo.pass_name,
+            price: festivalInfo.pass_price
+        });
+
+        // Update button
+        const btn = document.getElementById('festivalPassBtn');
+        if (btn) {
+            btn.innerHTML = '<i data-lucide="check-circle"></i> Tillagd i kundvagnen';
+            btn.disabled = true;
+            btn.classList.add('btn--success');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    } catch (e) {
+        alert('Kunde inte lägga till: ' + e.message);
+    }
 }
 
 function closeActivityModal() {
     document.getElementById('activityModalBackdrop').style.display = 'none';
     document.documentElement.classList.remove('activity-modal-open');
+    currentActivityId = null;
 }
 
 document.addEventListener('keydown', function(e) {
