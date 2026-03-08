@@ -86,7 +86,7 @@ try {
 }
 
 // Load festivals for admins only - group linked events under festival header
-$isAdmin = !empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin';
+$isAdmin = !empty($_SESSION['admin_role']) && in_array($_SESSION['admin_role'], ['admin', 'super_admin']);
 $festivalsByEventId = []; // event_id => festival data
 $festivalsById = []; // festival_id => festival data with linked events
 if ($isAdmin) {
