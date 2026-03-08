@@ -45,7 +45,7 @@ if ($filterSeries) {
     $params[] = $filterSeries;
 }
 
-if ($filterFormat) {
+if ($filterFormat && $filterFormat !== 'festival') {
     $sql .= " AND e.discipline = ?";
     $params[] = $filterFormat;
 }
