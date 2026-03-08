@@ -3,7 +3,14 @@
  * Publik festival-lista - /festival
  * Visar alla publicerade festivaler
  */
-require_once __DIR__ . '/../../config/database.php';
+
+// Prevent direct access
+if (!defined('HUB_ROOT')) {
+    header('Location: /');
+    exit;
+}
+
+$pdo = hub_db();
 
 // Check table exists
 $tableExists = false;

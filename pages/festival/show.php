@@ -3,10 +3,17 @@
  * Publik festivalsida - /festival/{id}
  * Visar festival med hero, program, tävlingsevent, aktiviteter och sponsorer
  */
-require_once __DIR__ . '/../../config/database.php';
+
+// Prevent direct access
+if (!defined('HUB_ROOT')) {
+    header('Location: /festival');
+    exit;
+}
+
+$pdo = hub_db();
 
 // Get festival ID from router
-$festivalId = intval($id ?? $_GET['id'] ?? 0);
+$festivalId = intval($pageInfo['params']['id'] ?? $_GET['id'] ?? 0);
 if ($festivalId <= 0) {
     header('Location: /festival');
     exit;
