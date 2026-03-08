@@ -288,6 +288,10 @@ $migrationChecks = [
     '084_winback_response_email_links.sql' => [
         'columns' => ['winback_campaigns.response_email_info_url']
     ],
+    '085_festivals.sql' => [
+        'tables' => ['festivals', 'festival_events', 'festival_activities', 'festival_activity_registrations', 'festival_passes', 'festival_sponsors'],
+        'columns' => ['events.festival_id', 'orders.festival_id']
+    ],
 ];
 
 // ============================================================================

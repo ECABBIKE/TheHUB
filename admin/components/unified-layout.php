@@ -76,7 +76,9 @@ if (!isset($current_admin_page)) {
         'club-admins' => 'users',
         'my-clubs' => 'users',
         'my-club-edit' => 'users',
-        'venue-admins' => 'users'
+        'venue-admins' => 'users',
+        'festivals' => 'festivals',
+        'festival-edit' => 'festivals'
     );
     $current_admin_page = isset($pageMap[$scriptName]) ? $pageMap[$scriptName] : $scriptName;
 }
