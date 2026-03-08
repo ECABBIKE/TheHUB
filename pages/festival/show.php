@@ -48,7 +48,7 @@ if (!$festival) {
 }
 
 // Only show published festivals (or draft for admins)
-$isAdmin = !empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin';
+$isAdmin = !empty($_SESSION['admin_role']) && in_array($_SESSION['admin_role'], ['admin', 'super_admin']);
 if ($festival['status'] !== 'published' && !$isAdmin) {
     http_response_code(404);
     $pageTitle = 'Festival hittades inte';
@@ -292,7 +292,9 @@ include __DIR__ . '/../../includes/header.php';
                             $typeInfo = $actTypes[$a['activity_type']] ?? $actTypes['other'];
                             $spotsFull = $a['max_participants'] && $a['reg_count'] >= $a['max_participants'];
                         ?>
-                        <div class="festival-item festival-item--activity">
+                        <div class="festival-item festival-item--activity" role="button" tabindex="0"
+                             onclick="openActivityModal(<?= $a['id'] ?>)"
+                             onkeydown="if(event.key==='Enter')openActivityModal(<?= $a['id'] ?>)">
                             <div class="festival-item-icon" style="background: <?= $typeInfo['color'] ?>20; color: <?= $typeInfo['color'] ?>;">
                                 <i data-lucide="<?= $typeInfo['icon'] ?>"></i>
                             </div>
@@ -328,6 +330,7 @@ include __DIR__ . '/../../includes/header.php';
                                 <?php if ($spotsFull): ?>
                                 <span class="badge badge-warning" style="font-size: 0.7rem;">Fullbokat</span>
                                 <?php endif; ?>
+                                <i data-lucide="chevron-right" style="width: 16px; height: 16px; color: var(--color-text-muted);"></i>
                             </div>
                         </div>
                         <?php endif; ?>
@@ -439,5 +442,166 @@ include __DIR__ . '/../../includes/header.php';
     </div>
 
 </main>
+
+<!-- Activity Detail Modal -->
+<div class="activity-modal-backdrop" id="activityModalBackdrop" style="display:none;" onclick="closeActivityModal()">
+    <div class="activity-modal" onclick="event.stopPropagation()">
+        <button class="activity-modal-close" onclick="closeActivityModal()" aria-label="Stäng">
+            <i data-lucide="x"></i>
+        </button>
+        <div class="activity-modal-header" id="actModalHeader">
+            <div class="activity-modal-icon" id="actModalIcon"></div>
+            <div>
+                <h2 class="activity-modal-title" id="actModalTitle"></h2>
+                <div class="activity-modal-type" id="actModalType"></div>
+            </div>
+        </div>
+        <div class="activity-modal-body">
+            <div class="activity-modal-info-grid" id="actModalInfoGrid"></div>
+            <div class="activity-modal-desc" id="actModalDesc"></div>
+        </div>
+        <div class="activity-modal-footer" id="actModalFooter"></div>
+    </div>
+</div>
+
+<script>
+// Activity data for modal
+const activityData = <?= json_encode(array_map(function($a) use ($actTypes, $festival) {
+    $typeInfo = $actTypes[$a['activity_type']] ?? $actTypes['other'];
+    return [
+        'id' => (int)$a['id'],
+        'name' => $a['name'],
+        'description' => $a['description'] ?? '',
+        'activity_type' => $a['activity_type'],
+        'type_label' => $typeInfo['label'],
+        'type_icon' => $typeInfo['icon'],
+        'type_color' => $typeInfo['color'],
+        'date' => $a['date'],
+        'start_time' => $a['start_time'] ? substr($a['start_time'], 0, 5) : null,
+        'end_time' => $a['end_time'] ? substr($a['end_time'], 0, 5) : null,
+        'price' => (float)$a['price'],
+        'max_participants' => (int)$a['max_participants'],
+        'reg_count' => (int)$a['reg_count'],
+        'instructor_name' => $a['instructor_name'] ?? '',
+        'location_details' => $a['location_details'] ?? '',
+        'difficulty_level' => $a['difficulty_level'] ?? '',
+        'included_in_pass' => (bool)$a['included_in_pass'],
+        'pass_enabled' => (bool)$festival['pass_enabled'],
+    ];
+}, $activities), JSON_UNESCAPED_UNICODE) ?>;
+
+const activityMap = {};
+activityData.forEach(a => activityMap[a.id] = a);
+
+const diffLabels = {
+    'beginner': 'Nybörjare',
+    'intermediate': 'Medel',
+    'advanced': 'Avancerad',
+    'all_levels': 'Alla nivåer'
+};
+
+const weekdays = ['Söndag','Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag'];
+const months = ['januari','februari','mars','april','maj','juni','juli','augusti','september','oktober','november','december'];
+
+function formatDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return weekdays[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()];
+}
+
+function openActivityModal(id) {
+    const a = activityMap[id];
+    if (!a) return;
+
+    const backdrop = document.getElementById('activityModalBackdrop');
+
+    // Icon
+    const iconEl = document.getElementById('actModalIcon');
+    iconEl.style.background = a.type_color + '20';
+    iconEl.style.color = a.type_color;
+    iconEl.innerHTML = '<i data-lucide="' + a.type_icon + '"></i>';
+
+    // Title & type
+    document.getElementById('actModalTitle').textContent = a.name;
+    document.getElementById('actModalType').textContent = a.type_label;
+
+    // Info grid
+    const grid = document.getElementById('actModalInfoGrid');
+    let gridHtml = '';
+
+    // Date
+    gridHtml += '<div class="activity-modal-info-item"><i data-lucide="calendar"></i><div><span class="activity-modal-info-label">Datum</span><span>' + formatDate(a.date) + '</span></div></div>';
+
+    // Time
+    if (a.start_time) {
+        const timeStr = a.start_time + (a.end_time ? ' – ' + a.end_time : '');
+        gridHtml += '<div class="activity-modal-info-item"><i data-lucide="clock"></i><div><span class="activity-modal-info-label">Tid</span><span>' + timeStr + '</span></div></div>';
+    }
+
+    // Price
+    const priceStr = a.price > 0 ? a.price + ' kr' : 'Gratis';
+    let priceExtra = '';
+    if (a.included_in_pass && a.pass_enabled) {
+        priceExtra = '<span class="festival-pass-badge" style="margin-left:6px;"><i data-lucide="ticket" style="width:10px;height:10px;"></i> Ingår i pass</span>';
+    }
+    gridHtml += '<div class="activity-modal-info-item"><i data-lucide="tag"></i><div><span class="activity-modal-info-label">Pris</span><span>' + priceStr + priceExtra + '</span></div></div>';
+
+    // Spots
+    if (a.max_participants > 0) {
+        const spotsLeft = a.max_participants - a.reg_count;
+        const spotsStr = a.reg_count + ' / ' + a.max_participants + ' platser' + (spotsLeft <= 3 && spotsLeft > 0 ? ' <strong style="color:var(--color-warning);">(' + spotsLeft + ' kvar)</strong>' : '');
+        gridHtml += '<div class="activity-modal-info-item"><i data-lucide="users"></i><div><span class="activity-modal-info-label">Deltagare</span><span>' + spotsStr + '</span></div></div>';
+    }
+
+    // Instructor
+    if (a.instructor_name) {
+        gridHtml += '<div class="activity-modal-info-item"><i data-lucide="user"></i><div><span class="activity-modal-info-label">Instruktör</span><span>' + a.instructor_name + '</span></div></div>';
+    }
+
+    // Difficulty
+    if (a.difficulty_level && diffLabels[a.difficulty_level]) {
+        gridHtml += '<div class="activity-modal-info-item"><i data-lucide="signal"></i><div><span class="activity-modal-info-label">Nivå</span><span>' + diffLabels[a.difficulty_level] + '</span></div></div>';
+    }
+
+    // Location details
+    if (a.location_details) {
+        gridHtml += '<div class="activity-modal-info-item"><i data-lucide="map-pin"></i><div><span class="activity-modal-info-label">Plats</span><span>' + a.location_details + '</span></div></div>';
+    }
+
+    grid.innerHTML = gridHtml;
+
+    // Description
+    const descEl = document.getElementById('actModalDesc');
+    if (a.description) {
+        descEl.innerHTML = '<p>' + a.description.replace(/\n/g, '<br>') + '</p>';
+        descEl.style.display = '';
+    } else {
+        descEl.style.display = 'none';
+    }
+
+    // Footer / CTA
+    const footer = document.getElementById('actModalFooter');
+    const isFull = a.max_participants > 0 && a.reg_count >= a.max_participants;
+    if (isFull) {
+        footer.innerHTML = '<div class="activity-modal-cta-full"><i data-lucide="circle-x"></i> Fullbokat</div>';
+    } else {
+        footer.innerHTML = '<button class="activity-modal-cta" disabled title="Kommer snart"><i data-lucide="shopping-cart"></i> Anmäl dig</button>';
+    }
+
+    backdrop.style.display = 'flex';
+    document.documentElement.classList.add('activity-modal-open');
+
+    // Re-init lucide icons in modal
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeActivityModal() {
+    document.getElementById('activityModalBackdrop').style.display = 'none';
+    document.documentElement.classList.remove('activity-modal-open');
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeActivityModal();
+});
+</script>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
