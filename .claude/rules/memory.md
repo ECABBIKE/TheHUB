@@ -17,6 +17,12 @@
 
 ## SENASTE FIXAR (2026-03-09, session 65)
 
+### Festival: 3 fixar — passkort, klasser, instruktörssök
+- **Passkort show.php (4→3 items):** Gruppdetekteringen använde `$activityGroups` array som ibland saknade `pass_included_count`. Bytt till separat enkel SQL-query direkt mot `festival_activity_groups WHERE pass_included_count > 0`. Fallback via activities' `included_in_pass` om kolumnen inte finns.
+- **"Inga klasser tillgängliga" → "Klass väljs vid anmälan":** Tävlingsevent i passbokning kan sakna klasser (inte konfigurerade ännu). Meddelandet ändrat till mer hjälpsamt: "Klass väljs vid anmälan till tävlingen" med info-ikon.
+- **Instruktörssök i festival-edit.php:** Sökningen returnerade inga resultat. Orsak: JS läste `data.riders` men `/api/search.php` returnerar `data.results`. Fix: `data.results || data.riders || []`.
+- **Filer:** `pages/festival/show.php`, `pages/festival/pass.php`, `admin/festival-edit.php`
+
 ### Festival: Passbokningssida — lägg till flera deltagare utan sidladdning
 - **Ändrat UX-flöde:** Efter att ett festivalpass lagts i kundvagnen visas nu en toast-notis (grön balk överst, auto-döljs efter 5s) istället för att hela sidan ersätts med ett success-meddelande. Formuläret återställs automatiskt: rider nollställs, steg 2–3 låses igen, alla selects återställs. Användaren kan direkt söka och lägga till nästa deltagare.
 - **Toast-notis:** Fixed position top-center, visar passnamn + deltagarnamn + länk till kundvagnen.

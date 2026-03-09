@@ -1955,7 +1955,7 @@ if (file_exists($formatToolbar)) include $formatToolbar;
                 fetch('/api/search.php?type=riders&filter=all&q=' + encodeURIComponent(q))
                     .then(r => r.json())
                     .then(data => {
-                        const riders = data.riders || [];
+                        const riders = data.results || data.riders || [];
                         if (riders.length === 0) {
                             resultsDiv.style.display = 'none';
                             return;
