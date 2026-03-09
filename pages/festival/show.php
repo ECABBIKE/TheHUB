@@ -18,10 +18,8 @@ $festivalPublic = (site_setting('festival_public_enabled', '0') === '1');
 if (!$festivalPublic && !$isAdmin) {
     http_response_code(404);
     $pageTitle = '404';
-    include __DIR__ . '/../../includes/header.php';
-    echo '<main class="container"><div class="card" style="padding: var(--space-2xl); text-align: center;"><h2>Sidan hittades inte</h2><p><a href="/">Tillbaka till startsidan</a></p></div></main>';
-    include __DIR__ . '/../../includes/footer.php';
-    exit;
+    echo '<div class="card" style="padding: var(--space-2xl); text-align: center;"><h2>Sidan hittades inte</h2><p><a href="/">Tillbaka till startsidan</a></p></div>';
+    return;
 }
 
 // Get festival ID from router
@@ -53,20 +51,16 @@ $festival = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$festival) {
     http_response_code(404);
     $pageTitle = 'Festival hittades inte';
-    include __DIR__ . '/../../includes/header.php';
-    echo '<main class="container"><div class="card" style="padding: var(--space-2xl); text-align: center;"><h2>Festival hittades inte</h2><p><a href="/festival">Visa alla festivaler</a></p></div></main>';
-    include __DIR__ . '/../../includes/footer.php';
-    exit;
+    echo '<div class="card" style="padding: var(--space-2xl); text-align: center;"><h2>Festival hittades inte</h2><p><a href="/festival">Visa alla festivaler</a></p></div>';
+    return;
 }
 
 // Only show published festivals (or draft for admins)
 if ($festival['status'] !== 'published' && !$isAdmin) {
     http_response_code(404);
     $pageTitle = 'Festival hittades inte';
-    include __DIR__ . '/../../includes/header.php';
-    echo '<main class="container"><div class="card" style="padding: var(--space-2xl); text-align: center;"><h2>Festivalen är inte publicerad ännu</h2><p><a href="/festival">Visa alla festivaler</a></p></div></main>';
-    include __DIR__ . '/../../includes/footer.php';
-    exit;
+    echo '<div class="card" style="padding: var(--space-2xl); text-align: center;"><h2>Festivalen är inte publicerad ännu</h2><p><a href="/festival">Visa alla festivaler</a></p></div>';
+    return;
 }
 
 // Load linked competition events (include included_in_pass from festival_events)
@@ -270,7 +264,6 @@ if ($festival['end_date'] && $festival['end_date'] !== $festival['start_date']) 
 $dateStr .= ' ' . $months[date('n', strtotime($festival['start_date'])) - 1] . ' ' . date('Y', strtotime($festival['start_date']));
 
 $pageTitle = $festival['name'];
-include __DIR__ . '/../../includes/header.php';
 ?>
 
 <link rel="stylesheet" href="/assets/css/pages/festival.css?v=<?= filemtime(HUB_ROOT . '/assets/css/pages/festival.css') ?>">
