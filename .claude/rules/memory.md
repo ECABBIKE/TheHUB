@@ -15,15 +15,30 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-09, session 62)
+
+### Festival: Bokningssida för festivalpass + sökmodal fullskärmsfix
+- **Ny sida:** `pages/festival/pass.php` — dedikerad bokningssida för festivalpass (ersätter popup-modal)
+  - 3-stegs flöde: 1) Sök och välj deltagare, 2) Välj tidspass/klasser, 3) Sammanfattning + lägg i kundvagn
+  - Steg 2-3 låsta (opacity + pointer-events) tills deltagare valts
+  - Success-meddelande med länkar till festival och kundvagn efter tillägg
+  - Mobilanpassad: edge-to-edge kort, 16px font på inputs (förhindrar iOS zoom), 44px min-height touch targets
+- **Ny route:** `/festival/{id}/pass` i router.php
+- **Borttagen passmodal:** Hela pass-konfigurationsmodalen (HTML + CSS + JS, ~300 rader) borttagen från show.php
+- **Passknappen:** Ändrad från `<button onclick="openPassConfigModal()">` till `<a href="/festival/{id}/pass">` på show.php, activity.php och single-activity.php
+- **Sökmodal fixad:** `components/festival-rider-search.php` omskriven med fullskärmsöverlägg (z-index 2000000), `visualViewport` API för tangentbordshantering, `lightbox-open` klass som döljer all navigation
+- **Borttagen pass-relaterad data:** `passActivitySlots` och `passEventClasses` queries borttagna från show.php (flyttade till pass.php)
+- **Filer:** `pages/festival/pass.php` (ny), `components/festival-rider-search.php` (omskriven), `pages/festival/show.php`, `pages/festival/activity.php`, `pages/festival/single-activity.php`, `router.php`
+
 ## SENASTE FIXAR (2026-03-09, session 61)
 
 ### Festival: Rider-sökning ersätter inloggningskrav — vem som helst kan anmäla
 - **Grundproblem:** Alla festival-köpknappar krävde inloggning + använde `getRegistrableRiders()` för att hitta deltagare kopplade till kontot. Om inga riders var kopplade → knapparna gjorde ingenting. Plattformens USP (anmäla deltagare utan eget konto) fungerade inte alls på festivalsidor.
-- **Ny komponent:** `components/festival-rider-search.php` — delad sökmodal (bottom-sheet mobil, centrerad desktop). Söker via `/api/orders.php?action=search_riders` (samma API som event-sidan). Visar namn, födelseår, klubb. Ingen inloggning krävs.
+- **Ny komponent:** `components/festival-rider-search.php` — delad sökmodal (fullskärm mobil, centrerad desktop). Söker via `/api/orders.php?action=search_riders` (samma API som event-sidan). Visar namn, födelseår, klubb. Ingen inloggning krävs.
 - **Nytt flöde:**
   - Klicka på köpknapp → sökmodal öppnas → sök deltagare → välj → läggs i kundvagn
   - Kan anmäla FLERA deltagare till samma aktivitet/tidspass (knappen förblir aktiv)
-  - Festivalpass: sök deltagare → pass-konfigurationsmodal öppnas med vald deltagare
+  - Festivalpass: länk till bokningssida `/festival/{id}/pass`
 - **Borttagna login-krav:** Alla `hub_is_logged_in()` PHP-villkor runt köpknappar borttagna. Alla "Logga in"-länkar ersatta med vanliga knappar. `registrableRiders`-arrayen och `isLoggedIn`-flaggan borttagna från JS.
 - **Aktiviteter vs tävlingar:** Aktiviteter har INGEN licenskontroll (till skillnad från tävlingsklasser). Enkel sök → välj → lägg i kundvagn.
 - **order-manager.php INSERT-fix:** Alla 4 INSERT-grenar för `festival_activity_registrations` inkluderar nu `first_name`, `last_name`, `email` (NOT NULL-kolumner). Utan dessa kraschade checkout med SQL-fel.
@@ -36,6 +51,7 @@
 - **Rider-objekt från sökning:** `{ id, firstname, lastname, birth_year, club_name, ... }`
 - **Callback-mönster:** `openFestivalRiderSearch(callback)` → callback(rider) vid val
 - **Flera deltagare:** Knappar förblir aktiva (inte disabled) efter val — kan anmäla fler
+- **Festivalpass:** Dedikerad bokningssida `/festival/{id}/pass` (inte popup)
 
 ## SENASTE FIXAR (2026-03-09, session 60)
 

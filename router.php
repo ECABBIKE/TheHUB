@@ -183,6 +183,18 @@ function hub_get_current_page(): array {
 
     // Check if this is a V1.0 section route
     if (isset($sectionRoutes[$section])) {
+        // Special: /festival/{id}/pass
+        if ($section === 'festival' && isset($segments[1]) && is_numeric($segments[1])
+            && isset($segments[2]) && $segments[2] === 'pass' && !isset($segments[3])) {
+            return [
+                'page' => 'festival-pass',
+                'section' => 'festival',
+                'subpage' => 'pass',
+                'params' => ['id' => $segments[1]],
+                'file' => HUB_ROOT . '/pages/festival/pass.php'
+            ];
+        }
+
         // Special: /festival/{id}/activity/{groupId}
         if ($section === 'festival' && isset($segments[1]) && is_numeric($segments[1])
             && isset($segments[2]) && $segments[2] === 'activity' && isset($segments[3]) && is_numeric($segments[3])) {
