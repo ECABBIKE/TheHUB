@@ -454,10 +454,11 @@ activityData.forEach(a => activityMap[a.id] = a);
 
 function addActivityToCart(activityId) {
     const a = activityMap[activityId];
-    if (!a || !isLoggedIn) return;
+    if (!a) { alert('Aktiviteten hittades inte.'); return; }
+    if (!isLoggedIn) { alert('Du måste vara inloggad för att anmäla dig.'); return; }
 
     const riderId = registrableRiders[0] ? registrableRiders[0].id : null;
-    if (!riderId) return;
+    if (!riderId) { alert('Inga deltagare kopplade till ditt konto. Gå till din profil och lägg till en deltagare.'); return; }
     const rider = registrableRiders[0];
 
     // Check if already in cart
@@ -497,10 +498,11 @@ function addActivityToCart(activityId) {
 }
 
 function addFestivalPassToCart() {
-    if (!isLoggedIn || !festivalInfo.pass_enabled) return;
+    if (!isLoggedIn) { alert('Du måste vara inloggad för att köpa festivalpass.'); return; }
+    if (!festivalInfo.pass_enabled) { alert('Festivalpass är inte aktiverat för denna festival.'); return; }
 
     const riderId = registrableRiders[0] ? registrableRiders[0].id : null;
-    if (!riderId) return;
+    if (!riderId) { alert('Inga deltagare kopplade till ditt konto. Gå till din profil och lägg till en deltagare.'); return; }
     const rider = registrableRiders[0];
 
     const cart = GlobalCart.getCart();
