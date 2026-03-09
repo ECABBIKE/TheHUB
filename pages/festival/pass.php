@@ -192,15 +192,54 @@ $pageTitle = $passName . ' — ' . $festival['name'];
         </a>
     </nav>
 
-    <!-- Header -->
-    <div style="margin-bottom: var(--space-lg);">
-        <h1 style="font-family: var(--font-heading); font-size: 1.5rem; margin: 0 0 var(--space-xs);">
-            <i data-lucide="ticket" style="width: 24px; height: 24px; color: var(--color-accent); vertical-align: -4px;"></i>
-            <?= htmlspecialchars($passName) ?>
-        </h1>
-        <?php if ($festival['pass_description']): ?>
-        <p style="color: var(--color-text-secondary); margin: 0; font-size: 0.9rem;"><?= htmlspecialchars($festival['pass_description']) ?></p>
-        <?php endif; ?>
+    <!-- Pass info-kort -->
+    <div class="card" style="margin-bottom: var(--space-lg); border: 1px solid var(--color-accent); border-left: 4px solid var(--color-accent);">
+        <div class="card-body" style="padding: var(--space-lg);">
+            <div style="display: flex; align-items: flex-start; gap: var(--space-md);">
+                <div style="flex-shrink: 0; width: 48px; height: 48px; border-radius: var(--radius-md); background: var(--color-accent-light); display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="ticket" style="width: 24px; height: 24px; color: var(--color-accent);"></i>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                    <h1 style="font-family: var(--font-heading); font-size: 1.35rem; margin: 0 0 var(--space-2xs);">
+                        <?= htmlspecialchars($passName) ?>
+                    </h1>
+                    <?php if ($festival['pass_description']): ?>
+                    <p style="color: var(--color-text-secondary); margin: 0 0 var(--space-sm); font-size: 0.9rem;"><?= htmlspecialchars($festival['pass_description']) ?></p>
+                    <?php endif; ?>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-accent); font-family: var(--font-heading);">
+                        <?= $festival['pass_price'] ? number_format($festival['pass_price'], 0) . ' kr' : 'Gratis' ?>
+                    </div>
+                </div>
+            </div>
+
+            <?php
+            // Build list of what's included
+            $passIncludes = [];
+            foreach ($passGroups as $grp) {
+                $grpPc = intval($grp['pass_included_count'] ?? 0);
+                $grpActCount = count($grp['activities'] ?? []);
+                if ($grpPc > 0 && $grpActCount > 0) {
+                    $passIncludes[] = ($grpPc > 1 ? $grpPc . 'x ' : '') . htmlspecialchars($grp['name']) . ($grpActCount > $grpPc ? ' (välj ' . $grpPc . ' av ' . $grpActCount . ')' : '');
+                }
+            }
+            foreach ($includedActivities as $ia) {
+                $iaPc = max(1, intval($ia['pass_included_count'] ?? 1));
+                $passIncludes[] = ($iaPc > 1 ? $iaPc . 'x ' : '') . htmlspecialchars($ia['name']);
+            }
+            foreach ($includedEvents as $ie) {
+                $passIncludes[] = 'Startavgift ' . htmlspecialchars($ie['name']);
+            }
+            if (!empty($passIncludes)): ?>
+            <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+                <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); margin-bottom: var(--space-xs);">Ingår i passet</div>
+                <ul style="margin: 0; padding-left: var(--space-md); font-size: 0.85rem; color: var(--color-text-secondary); line-height: 1.6;">
+                    <?php foreach ($passIncludes as $pi): ?>
+                    <li><?= $pi ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+            <?php endif; ?>
+        </div>
     </div>
 
     <!-- Steg 1: Sök deltagare -->
@@ -346,7 +385,7 @@ $pageTitle = $passName . ' — ' . $festival['name'];
                             data-has-slots="<?= !empty($gaSlots) ? '1' : '0' ?>"
                             data-price="<?= (float)$ga['price'] ?>">
                             <?= htmlspecialchars($ga['name']) ?>
-                            <?php if ($ga['price'] > 0): ?> (<?= number_format($ga['price'], 0) ?> kr à la carte)<?php endif; ?>
+                            <?php if ($ga['price'] > 0): ?> (<?= number_format($ga['price'], 0) ?> kr)<?php endif; ?>
                         </option>
                         <?php endforeach; ?>
                     </select>

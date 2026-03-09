@@ -15,6 +15,15 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-09, session 64)
+
+### Festival: Passbokningssida UX + Skapa ny deltagare
+- **Pass info-kort:** Nytt infokort överst på passbokningssidan (`pass.php`) som visar passnamn, pris, och lista över vad som ingår (grupper, aktiviteter, tävlingar). Löser problemet att "Sök deltagare" stod för högt upp — nu finns kontext och prisinformation ovanför söksteget.
+- **Skapa ny deltagare:** `components/festival-rider-search.php` utökad med komplett "Skapa ny deltagare"-formulär (samma fält som event-sidan: förnamn, efternamn, e-post, telefon, födelseår, kön, nationalitet, klubb med typeahead, nödkontakt). Länken "Skapa ny deltagare" visas under sökfältet + i "inga resultat"-vyn. Formuläret öppnas i samma fullskärmsmodal. Skapar rider via `/api/orders.php?action=create_rider` och returnerar till callback.
+- **Sökfält uppdaterat:** Placeholder ändrad till "Skriv namn eller UCI ID..." (matchar event-sidans sökmodal).
+- **Felhantering:** Stödjer `email_exists_active` (logga in-länk), `email_exists_inactive` (sök istället), `name_duplicate` (tillbaka till sök) — samma mönster som event.php.
+- **Filer:** `pages/festival/pass.php`, `components/festival-rider-search.php`
+
 ## SENASTE FIXAR (2026-03-09, session 63)
 
 ### Festival: Gruppbaserat passinnehåll + säkerhetsfix + flerdag-aktiviteter
