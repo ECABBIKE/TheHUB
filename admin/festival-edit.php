@@ -270,6 +270,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // ── Save activity slot ──
+    if ($action === 'save_slot' && $id > 0) {
+        $slotActId = intval($_POST['slot_activity_id'] ?? 0);
+        $slotId = intval($_POST['slot_id'] ?? 0);
+        $slotData = [
+            'activity_id' => $slotActId,
+            'date' => $_POST['slot_date'] ?? null,
+            'start_time' => $_POST['slot_start_time'] ?? null,
+            'end_time' => !empty($_POST['slot_end_time']) ? $_POST['slot_end_time'] : null,
+            'max_participants' => !empty($_POST['slot_max']) ? intval($_POST['slot_max']) : null,
+        ];
+
+        if (empty($slotData['date']) || empty($slotData['start_time'])) {
+            $_SESSION['flash_message'] = 'Datum och starttid krävs för tidspass';
+            $_SESSION['flash_type'] = 'error';
+        } else {
+            try {
+                if ($slotId > 0) {
+                    $sets = [];
+                    $vals = [];
+                    foreach ($slotData as $col => $val) {
+                        $sets[] = "$col = ?";
+                        $vals[] = $val;
+                    }
+                    $vals[] = $slotId;
+                    $pdo->prepare("UPDATE festival_activity_slots SET " . implode(', ', $sets) . " WHERE id = ?")->execute($vals);
+                    $_SESSION['flash_message'] = 'Tidspass uppdaterat';
+                } else {
+                    $cols = implode(', ', array_keys($slotData));
+                    $placeholders = implode(', ', array_fill(0, count($slotData), '?'));
+                    $pdo->prepare("INSERT INTO festival_activity_slots ($cols) VALUES ($placeholders)")->execute(array_values($slotData));
+                    $_SESSION['flash_message'] = 'Tidspass skapat';
+                }
+                $_SESSION['flash_type'] = 'success';
+            } catch (PDOException $e) {
+                $_SESSION['flash_message'] = 'Fel: ' . $e->getMessage();
+                $_SESSION['flash_type'] = 'error';
+            }
+        }
+        header("Location: /admin/festival-edit.php?id=$id&tab=activities&edit_act=$slotActId#slots-section");
+        exit;
+    }
+
+    // ── Delete activity slot ──
+    if ($action === 'delete_slot' && $id > 0) {
+        $slotId = intval($_POST['slot_id'] ?? 0);
+        $slotActId = intval($_POST['slot_activity_id'] ?? 0);
+        try {
+            $pdo->prepare("DELETE FROM festival_activity_slots WHERE id = ?")->execute([$slotId]);
+            $_SESSION['flash_message'] = 'Tidspass raderat';
+            $_SESSION['flash_type'] = 'success';
+        } catch (PDOException $e) {
+            $_SESSION['flash_message'] = 'Fel: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'error';
+        }
+        header("Location: /admin/festival-edit.php?id=$id&tab=activities&edit_act=$slotActId#slots-section");
+        exit;
+    }
+
+    // ── Toggle event included_in_pass ──
+    if ($action === 'toggle_event_pass' && $id > 0) {
+        $eventId = intval($_POST['event_id'] ?? 0);
+        $included = isset($_POST['included_in_pass']) ? 1 : 0;
+        try {
+            $pdo->prepare("UPDATE festival_events SET included_in_pass = ? WHERE festival_id = ? AND event_id = ?")->execute([$included, $id, $eventId]);
+            $_SESSION['flash_message'] = $included ? 'Tävling ingår nu i festivalpass' : 'Tävling borttagen från festivalpass';
+            $_SESSION['flash_type'] = 'success';
+        } catch (PDOException $e) {
+            $_SESSION['flash_message'] = 'Fel: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'error';
+        }
+        header("Location: /admin/festival-edit.php?id=$id&tab=events");
+        exit;
+    }
+
     // ── Save pass settings ──
     if ($action === 'save_pass' && $id > 0) {
         $pdo->prepare("UPDATE festivals SET pass_enabled = ?, pass_name = ?, pass_description = ?, pass_price = ?, pass_max_quantity = ? WHERE id = ?")->execute([
@@ -306,11 +381,18 @@ if (!$isNew && $id > 0) {
         exit;
     }
 
-    // Load linked events
+    // Load linked events (with included_in_pass if column exists)
+    $feIncludedCol = '';
+    try {
+        $pdo->query("SELECT included_in_pass FROM festival_events LIMIT 0");
+        $feIncludedCol = ', fe.included_in_pass';
+    } catch (PDOException $e) {}
+
     $festivalEvents = $pdo->prepare("
         SELECT e.id, e.name, e.date, e.end_date, e.location, e.discipline,
             s.name as series_name,
             (SELECT COUNT(*) FROM event_registrations er WHERE er.event_id = e.id AND er.status != 'cancelled') as reg_count
+            $feIncludedCol
         FROM festival_events fe
         JOIN events e ON fe.event_id = e.id
         LEFT JOIN series_events se ON se.event_id = e.id
@@ -326,6 +408,25 @@ if (!$isNew && $id > 0) {
     $actStmt = $pdo->prepare("SELECT * FROM festival_activities WHERE festival_id = ? ORDER BY date ASC, start_time ASC, sort_order ASC");
     $actStmt->execute([$id]);
     $activities = $actStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Load activity slots (indexed by activity_id)
+    $activitySlots = [];
+    try {
+        $slotStmt = $pdo->prepare("
+            SELECT s.*,
+                (SELECT COUNT(*) FROM festival_activity_registrations far WHERE far.slot_id = s.id AND far.status != 'cancelled') as reg_count
+            FROM festival_activity_slots s
+            JOIN festival_activities fa ON s.activity_id = fa.id
+            WHERE fa.festival_id = ? AND s.active = 1
+            ORDER BY s.date ASC, s.start_time ASC
+        ");
+        $slotStmt->execute([$id]);
+        foreach ($slotStmt->fetchAll(PDO::FETCH_ASSOC) as $slot) {
+            $activitySlots[$slot['activity_id']][] = $slot;
+        }
+    } catch (PDOException $e) {
+        // Table doesn't exist yet
+    }
 
     // Load activity groups
     $activityGroups = [];
@@ -787,13 +888,25 @@ endif;
                         </div>
                     </div>
                 </div>
-                <form method="post" style="margin: 0;" onsubmit="return confirm('Ta bort detta event från festivalen?')">
-                    <input type="hidden" name="action" value="remove_event">
-                    <input type="hidden" name="event_id" value="<?= $fe['id'] ?>">
-                    <button type="submit" class="btn-admin btn-admin-danger" style="padding: 4px 8px;" title="Ta bort">
-                        <i data-lucide="x" style="width: 14px; height: 14px;"></i>
-                    </button>
-                </form>
+                <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                    <?php if ($feIncludedCol): ?>
+                    <form method="post" style="margin: 0;" title="Ingår i festivalpass">
+                        <input type="hidden" name="action" value="toggle_event_pass">
+                        <input type="hidden" name="event_id" value="<?= $fe['id'] ?>">
+                        <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 0.75rem; color: var(--color-text-muted); white-space: nowrap;">
+                            <input type="checkbox" name="included_in_pass" <?= ($fe['included_in_pass'] ?? 0) ? 'checked' : '' ?> onchange="this.form.submit()">
+                            <i data-lucide="ticket" style="width: 12px; height: 12px;"></i> I pass
+                        </label>
+                    </form>
+                    <?php endif; ?>
+                    <form method="post" style="margin: 0;" onsubmit="return confirm('Ta bort detta event från festivalen?')">
+                        <input type="hidden" name="action" value="remove_event">
+                        <input type="hidden" name="event_id" value="<?= $fe['id'] ?>">
+                        <button type="submit" class="btn-admin btn-admin-danger" style="padding: 4px 8px;" title="Ta bort">
+                            <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+                        </button>
+                    </form>
+                </div>
             </div>
             <?php endforeach; ?>
         <?php endif; ?>
@@ -1072,6 +1185,9 @@ endif;
             <?php if ($act['max_participants']): ?>
             <span><i data-lucide="users"></i> Max <?= $act['max_participants'] ?></span>
             <?php endif; ?>
+            <?php if (!empty($activitySlots[$act['id']])): ?>
+            <span style="color: var(--color-accent);"><i data-lucide="clock"></i> <?= count($activitySlots[$act['id']]) ?> tidspass</span>
+            <?php endif; ?>
             <?php if ($act['location_detail']): ?>
             <span><i data-lucide="map-pin"></i> <?= htmlspecialchars($act['location_detail']) ?></span>
             <?php endif; ?>
@@ -1204,6 +1320,112 @@ endif;
     </div>
 </div>
 
+<!-- ── Tidspass för vald aktivitet ── -->
+<?php if ($editAct): ?>
+<?php
+    $editActSlots = $activitySlots[$editAct['id']] ?? [];
+    $editSlot = null;
+    $editSlotId = intval($_GET['edit_slot'] ?? 0);
+    if ($editSlotId > 0) {
+        foreach ($editActSlots as $s) {
+            if ($s['id'] == $editSlotId) { $editSlot = $s; break; }
+        }
+    }
+?>
+<div class="admin-card" id="slots-section" style="margin-top: var(--space-md);">
+    <div class="admin-card-header">
+        <h3><i data-lucide="clock" style="width: 18px; height: 18px;"></i> Tidspass för <?= htmlspecialchars($editAct['name']) ?></h3>
+    </div>
+    <div class="admin-card-body">
+        <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: var(--space-md);">
+            Skapa flera tidspass istället för att kopiera aktiviteten. Deltagare väljer ett tidspass vid anmälan.
+        </p>
+
+        <!-- Befintliga tidspass -->
+        <?php if (!empty($editActSlots)): ?>
+        <div style="margin-bottom: var(--space-md);">
+            <?php
+            $months = ['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
+            $weekdays = ['Sön','Mån','Tis','Ons','Tor','Fre','Lör'];
+            foreach ($editActSlots as $slot):
+                $slotTs = strtotime($slot['date']);
+                $slotDateStr = $weekdays[date('w', $slotTs)] . ' ' . date('j', $slotTs) . ' ' . $months[date('n', $slotTs) - 1];
+                $slotFull = $slot['max_participants'] && $slot['reg_count'] >= $slot['max_participants'];
+            ?>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm); margin-bottom: var(--space-2xs); <?= $slotFull ? 'opacity: 0.6;' : '' ?>">
+                <div style="display: flex; align-items: center; gap: var(--space-sm); font-size: 0.85rem;">
+                    <span style="font-weight: 600;"><?= $slotDateStr ?></span>
+                    <span style="color: var(--color-accent);"><?= substr($slot['start_time'], 0, 5) ?><?= $slot['end_time'] ? ' – ' . substr($slot['end_time'], 0, 5) : '' ?></span>
+                    <span style="color: var(--color-text-muted);">
+                        <?= (int)$slot['reg_count'] ?><?= $slot['max_participants'] ? '/' . $slot['max_participants'] : '' ?> anmälda
+                    </span>
+                    <?php if ($slotFull): ?>
+                    <span class="badge badge-warning" style="font-size: 0.65rem;">Fullbokat</span>
+                    <?php endif; ?>
+                </div>
+                <div style="display: flex; gap: var(--space-2xs);">
+                    <a href="?id=<?= $id ?>&tab=activities&edit_act=<?= $editAct['id'] ?>&edit_slot=<?= $slot['id'] ?>#slots-section" class="btn-admin btn-admin-secondary" style="padding: 3px 6px;">
+                        <i data-lucide="pencil" style="width: 12px; height: 12px;"></i>
+                    </a>
+                    <form method="post" style="margin:0;" onsubmit="return confirm('Radera detta tidspass?')">
+                        <input type="hidden" name="action" value="delete_slot">
+                        <input type="hidden" name="slot_id" value="<?= $slot['id'] ?>">
+                        <input type="hidden" name="slot_activity_id" value="<?= $editAct['id'] ?>">
+                        <button type="submit" class="btn-admin btn-admin-danger" style="padding: 3px 6px;">
+                            <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+        <!-- Formulär: Nytt/redigera tidspass -->
+        <form method="post" style="border-top: 1px solid var(--color-border); padding-top: var(--space-md);">
+            <input type="hidden" name="action" value="save_slot">
+            <input type="hidden" name="slot_activity_id" value="<?= $editAct['id'] ?>">
+            <?php if ($editSlot): ?>
+            <input type="hidden" name="slot_id" value="<?= $editSlot['id'] ?>">
+            <?php endif; ?>
+
+            <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: var(--space-xs);">
+                <?= $editSlot ? 'Redigera tidspass' : 'Lägg till tidspass' ?>
+            </div>
+
+            <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+                <div class="form-group">
+                    <label>Datum *</label>
+                    <input type="date" name="slot_date" value="<?= htmlspecialchars($editSlot['date'] ?? $editAct['date'] ?? $festival['start_date'] ?? '') ?>" required>
+                </div>
+                <div class="form-group">
+                    <label>Starttid *</label>
+                    <input type="time" name="slot_start_time" value="<?= htmlspecialchars($editSlot['start_time'] ?? '') ?>" required>
+                </div>
+                <div class="form-group">
+                    <label>Sluttid</label>
+                    <input type="time" name="slot_end_time" value="<?= htmlspecialchars($editSlot['end_time'] ?? '') ?>">
+                </div>
+                <div class="form-group">
+                    <label>Max deltagare</label>
+                    <input type="number" name="slot_max" value="<?= $editSlot['max_participants'] ?? $editAct['max_participants'] ?? '' ?>" min="1" placeholder="Obegränsat">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: var(--space-xs);">
+                <button type="submit" class="btn-admin btn-admin-primary" style="padding: 6px 14px; font-size: 0.85rem;">
+                    <i data-lucide="<?= $editSlot ? 'save' : 'plus' ?>" style="width: 14px; height: 14px;"></i>
+                    <?= $editSlot ? 'Uppdatera' : 'Lägg till' ?>
+                </button>
+                <?php if ($editSlot): ?>
+                <a href="?id=<?= $id ?>&tab=activities&edit_act=<?= $editAct['id'] ?>#slots-section" class="btn-admin btn-admin-secondary" style="padding: 6px 14px; font-size: 0.85rem;">Avbryt</a>
+                <?php endif; ?>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php endif; ?>
 
 <!-- ============================================================ -->
@@ -1296,6 +1518,28 @@ endif;
                 <label>Beskrivning av vad passet innehåller</label>
                 <textarea name="pass_description" rows="3" data-format-toolbar><?= htmlspecialchars($festival['pass_description'] ?? '') ?></textarea>
             </div>
+
+            <!-- Events included in pass -->
+            <?php
+                $passEvents = array_filter($festivalEvents, function($fe) { return !empty($fe['included_in_pass']); });
+            ?>
+            <?php if (!empty($passEvents)): ?>
+            <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+                <h4 style="margin-bottom: var(--space-sm); color: var(--color-text-secondary);">Tävlingar som ingår i passet:</h4>
+                <div style="display: flex; flex-direction: column; gap: var(--space-2xs);">
+                    <?php foreach ($passEvents as $pe): ?>
+                    <div style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-2xs) 0;">
+                        <i data-lucide="check-circle" style="width: 16px; height: 16px; color: var(--color-success);"></i>
+                        <span style="color: var(--color-text-primary);"><?= htmlspecialchars($pe['name']) ?></span>
+                        <span style="font-size: 0.8rem; color: var(--color-text-muted);"><?= date('j M', strtotime($pe['date'])) ?></span>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: var(--space-sm);">
+                    Ändra under <a href="?id=<?= $id ?>&tab=events">Tävlingsevent</a>-fliken (kryssrutan "I pass").
+                </p>
+            </div>
+            <?php endif; ?>
 
             <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
                 <h4 style="margin-bottom: var(--space-sm); color: var(--color-text-secondary);">Aktiviteter som ingår i passet:</h4>

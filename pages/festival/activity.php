@@ -123,6 +123,26 @@ foreach ($participants as $p) {
     $participantsByActivity[$p['activity_id']][] = $p;
 }
 
+// Load slots for activities in this group
+$slotsByActivity = [];
+if (!empty($activities)) {
+    try {
+        $actIds = array_column($activities, 'id');
+        $slotPlaceholders = implode(',', array_fill(0, count($actIds), '?'));
+        $slotStmt = $pdo->prepare("
+            SELECT s.*,
+                (SELECT COUNT(*) FROM festival_activity_registrations far WHERE far.slot_id = s.id AND far.status != 'cancelled') as reg_count
+            FROM festival_activity_slots s
+            WHERE s.activity_id IN ($slotPlaceholders) AND s.active = 1
+            ORDER BY s.date ASC, s.start_time ASC
+        ");
+        $slotStmt->execute($actIds);
+        foreach ($slotStmt->fetchAll(PDO::FETCH_ASSOC) as $slot) {
+            $slotsByActivity[$slot['activity_id']][] = $slot;
+        }
+    } catch (PDOException $e) {}
+}
+
 // Activity type config
 $actTypes = [
     'clinic' => ['label' => 'Clinic', 'icon' => 'bike', 'color' => 'var(--series-enduro)'],
@@ -256,6 +276,7 @@ include __DIR__ . '/../../includes/header.php';
                         $actParticipants = $participantsByActivity[$act['id']] ?? [];
                     ?>
                     <div class="activity-list-item">
+                        <?php $actSlots = $slotsByActivity[$act['id']] ?? []; $hasActSlots = !empty($actSlots); ?>
                         <div class="activity-list-item-header">
                             <div class="activity-list-item-icon" style="background: <?= $aType['color'] ?>20; color: <?= $aType['color'] ?>;">
                                 <i data-lucide="<?= $aType['icon'] ?>"></i>
@@ -263,7 +284,9 @@ include __DIR__ . '/../../includes/header.php';
                             <div class="activity-list-item-info">
                                 <div class="activity-list-item-title"><?= htmlspecialchars($act['name']) ?></div>
                                 <div class="activity-list-item-meta">
-                                    <?php if ($act['start_time']): ?>
+                                    <?php if ($hasActSlots): ?>
+                                    <span><i data-lucide="calendar" style="width: 12px; height: 12px;"></i> <?= count($actSlots) ?> tidspass</span>
+                                    <?php elseif ($act['start_time']): ?>
                                     <span><i data-lucide="clock" style="width: 12px; height: 12px;"></i> <?= substr($act['start_time'], 0, 5) ?><?= $act['end_time'] ? '–' . substr($act['end_time'], 0, 5) : '' ?></span>
                                     <?php endif; ?>
                                     <?php if ($act['price'] > 0): ?>
@@ -271,14 +294,20 @@ include __DIR__ . '/../../includes/header.php';
                                     <?php else: ?>
                                     <span style="color: var(--color-success);"><i data-lucide="tag" style="width: 12px; height: 12px;"></i> Gratis</span>
                                     <?php endif; ?>
+                                    <?php if (!$hasActSlots): ?>
                                     <span><i data-lucide="users" style="width: 12px; height: 12px;"></i> <?= $act['reg_count'] ?><?= $act['max_participants'] ? '/' . $act['max_participants'] : '' ?></span>
+                                    <?php endif; ?>
                                     <?php if ($act['included_in_pass'] && $festival['pass_enabled']): ?>
                                     <span class="festival-pass-badge"><i data-lucide="ticket" style="width: 10px; height: 10px;"></i> Pass</span>
                                     <?php endif; ?>
                                 </div>
                             </div>
                             <div class="activity-list-item-action">
-                                <?php if ($spotsFull): ?>
+                                <?php if ($hasActSlots): ?>
+                                <a href="/festival/<?= $festivalId ?>/aktivitet/<?= $act['id'] ?>" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">
+                                    <i data-lucide="calendar-clock" style="width: 14px; height: 14px;"></i> Välj pass
+                                </a>
+                                <?php elseif ($spotsFull): ?>
                                 <span class="badge badge-warning">Fullbokat</span>
                                 <?php elseif (hub_is_logged_in()): ?>
                                 <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="addActivityToCart(<?= $act['id'] ?>)">

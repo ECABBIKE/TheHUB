@@ -299,6 +299,10 @@ $migrationChecks = [
         'tables' => ['festival_activity_groups'],
         'columns' => ['festival_activities.group_id']
     ],
+    '088_festival_activity_slots.sql' => [
+        'tables' => ['festival_activity_slots'],
+        'columns' => ['festival_activity_registrations.slot_id', 'festival_events.included_in_pass']
+    ],
 ];
 
 // ============================================================================
