@@ -818,9 +818,8 @@ function loadEventClassesForRider(rider) {
         sel.innerHTML = '<option value="">Laddar klasser...</option>';
         sel.disabled = true;
 
-        // Remove old license badge
-        const oldBadge = container.querySelector('.pass-license-badge');
-        if (oldBadge) oldBadge.remove();
+        // Remove old license badge and commitment checkbox
+        container.querySelectorAll('.pass-license-badge, .pass-license-commitment').forEach(el => el.remove());
 
         fetch('/api/orders.php?action=event_classes&event_id=' + eventId + '&rider_id=' + rider.id)
             .then(r => r.json())
@@ -838,7 +837,7 @@ function loadEventClassesForRider(rider) {
                     data.classes.forEach(cls => {
                         const opt = document.createElement('option');
                         opt.value = cls.class_id;
-                        opt.textContent = cls.name + (cls.current_price > 0 ? '' : '');
+                        opt.textContent = cls.name;
                         sel.appendChild(opt);
                     });
                     sel.disabled = false;
@@ -862,6 +861,19 @@ function loadEventClassesForRider(rider) {
                     if (badgeHtml) {
                         container.insertAdjacentHTML('beforeend', badgeHtml);
                     }
+                }
+
+                // Show license commitment checkbox if required
+                if (data.requires_license_commitment) {
+                    container.dataset.requiresCommitment = '1';
+                    const commitHtml = '<div class="pass-license-commitment" style="margin-top: var(--space-xs); background: var(--color-bg-surface); border: 2px solid var(--color-warning); border-radius: var(--radius-sm); padding: var(--space-sm);">' +
+                        '<label style="display: flex; gap: var(--space-xs); cursor: pointer; align-items: flex-start;">' +
+                        '<input type="checkbox" class="pass-license-commitment-cb" data-event-id="' + eventId + '" style="margin-top: 2px; width: 18px; height: 18px; flex-shrink: 0; cursor: pointer;">' +
+                        '<span style="flex: 1; font-size: 0.8rem; line-height: 1.4; color: var(--color-text-secondary);">Jag förbinder mig att skaffa en giltig licens innan tävlingen för att kunna starta</span>' +
+                        '</label></div>';
+                    container.insertAdjacentHTML('beforeend', commitHtml);
+                } else {
+                    container.dataset.requiresCommitment = '0';
                 }
 
                 if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -953,8 +965,8 @@ function resetPassForm() {
         sel.disabled = true;
     });
 
-    // Remove license badges
-    document.querySelectorAll('.pass-license-badge').forEach(el => el.remove());
+    // Remove license badges and commitment checkboxes
+    document.querySelectorAll('.pass-license-badge, .pass-license-commitment').forEach(el => el.remove());
 
     // Hide dynamic slot containers
     document.querySelectorAll('.pass-group-slot-container').forEach(el => {
@@ -1141,15 +1153,37 @@ function addPassToCart() {
         return;
     }
 
-    // 5. Add event classes
+    // 5. Check license commitments before adding events
+    let commitmentMissing = false;
+    document.querySelectorAll('.pass-event-class-container').forEach(container => {
+        const sel = container.querySelector('.pass-class-select');
+        const classId = parseInt(sel.value);
+        if (!classId) return; // No class selected — skip
+        if (container.dataset.requiresCommitment === '1') {
+            const cb = container.querySelector('.pass-license-commitment-cb');
+            if (!cb || !cb.checked) {
+                commitmentMissing = true;
+                const commitDiv = container.querySelector('.pass-license-commitment');
+                if (commitDiv) commitDiv.style.borderColor = 'var(--color-error)';
+            }
+        }
+    });
+    if (commitmentMissing) {
+        alert('Du måste bekräfta att du skaffar licens för att starta i tävlingen.');
+        return;
+    }
+
+    // 5b. Add event classes
     document.querySelectorAll('.pass-class-select').forEach(sel => {
         const classId = parseInt(sel.value);
         if (!classId) return;
         const eventId = parseInt(sel.dataset.eventId);
         const eventName = sel.dataset.eventName;
         const className = sel.options[sel.selectedIndex].textContent.trim();
+        const container = sel.closest('.pass-event-class-container');
+        const needsCommitment = container && container.dataset.requiresCommitment === '1';
         try {
-            GlobalCart.addItem({
+            const item = {
                 type: 'event',
                 event_id: eventId,
                 class_id: classId,
@@ -1160,7 +1194,9 @@ function addPassToCart() {
                 price: 0,
                 festival_pass_event: true,
                 festival_id: festivalInfo.id
-            });
+            };
+            if (needsCommitment) item.license_commitment = true;
+            GlobalCart.addItem(item);
         } catch (e) { /* skip */ }
     });
 
