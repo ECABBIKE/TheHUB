@@ -26,6 +26,13 @@
 - **Könsnormalisering:** Klasser använder 'K' för kvinnor, riders 'F' — JS normaliserar K→F.
 - **Filer:** `Tools/migrations/092_festival_activity_gender_age_filter.sql`, `admin/festival-edit.php`, `pages/festival/pass.php`, `pages/festival/show.php`, `pages/festival/single-activity.php`
 
+### Festival: Dynamisk klassladdning för tävlingar i festivalpass
+- **Problem:** Tävlingsevent i passbokningssidan visade "Klass väljs vid anmälan till tävlingen" istället för en klassväljare. Klasser laddades statiskt från PHP men var ofta tomma.
+- **Fix:** Bytt till dynamisk AJAX-baserad klassladdning. Efter att rider valts i steg 1 anropas `/api/orders.php?action=event_classes` per inkluderat event. Klasserna filtreras automatiskt baserat på riderns kön/ålder via `getEligibleClassesForEvent()`.
+- **Flöde:** Dropdown visar "Välj deltagare först" (disabled) → rider väljs → "Laddar klasser..." → klasser visas. Vid reset återställs till "Välj deltagare först".
+- **Felhantering:** Hanterar `incomplete_profile` error, tom klasslista, och nätverksfel.
+- **Filer:** `pages/festival/pass.php`
+
 ### Festival: Produkter (merchandise, mat) med storlekar och moms
 - **Ny funktion:** Festivaler kan ha produkter (kepsar, strumpor, tröjor, mat) som säljs separat eller inkluderas i festivalpass. Stödjer storlekar (S/M/L/XL/"Ej aktuellt") och konfigurerbara momssatser (6%/12%/25%).
 - **Migration 093:** `festival_products` (namn, typ, pris, moms, storlekar, passinkludering), `festival_product_sizes` (storlek, lager), `festival_product_orders` (beställningar med rider/order-koppling), `order_items.product_order_id`.
