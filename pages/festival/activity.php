@@ -211,7 +211,13 @@ include __DIR__ . '/../../includes/header.php';
                 <span><i data-lucide="clock"></i> <?= substr($group['start_time'], 0, 5) ?><?= $group['end_time'] ? ' – ' . substr($group['end_time'], 0, 5) : '' ?></span>
                 <?php endif; ?>
                 <?php if ($group['instructor_name']): ?>
-                <span><i data-lucide="user"></i> <?= htmlspecialchars($group['instructor_name']) ?></span>
+                <span><i data-lucide="user"></i>
+                <?php if (!empty($group['instructor_rider_id'])): ?>
+                    <a href="/rider/<?= intval($group['instructor_rider_id']) ?>" class="rider-link"><?= htmlspecialchars($group['instructor_name']) ?></a>
+                <?php else: ?>
+                    <?= htmlspecialchars($group['instructor_name']) ?>
+                <?php endif; ?>
+                </span>
                 <?php endif; ?>
                 <?php if ($group['location_detail']): ?>
                 <span><i data-lucide="map-pin"></i> <?= htmlspecialchars($group['location_detail']) ?></span>
@@ -247,7 +253,7 @@ include __DIR__ . '/../../includes/header.php';
             <?php if ($group['instructor_name'] && $group['instructor_info']): ?>
             <div class="card">
                 <div class="card-header">
-                    <h3><i data-lucide="user" style="width: 18px; height: 18px;"></i> Om <?= htmlspecialchars($group['instructor_name']) ?></h3>
+                    <h3><i data-lucide="user" style="width: 18px; height: 18px;"></i> Om <?php if (!empty($group['instructor_rider_id'])): ?><a href="/rider/<?= intval($group['instructor_rider_id']) ?>" class="rider-link"><?= htmlspecialchars($group['instructor_name']) ?></a><?php else: ?><?= htmlspecialchars($group['instructor_name']) ?><?php endif; ?></h3>
                 </div>
                 <div class="card-body">
                     <div class="festival-description">

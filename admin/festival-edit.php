@@ -51,6 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'venue_coordinates' => trim($_POST['venue_coordinates'] ?? ''),
             'venue_map_url' => trim($_POST['venue_map_url'] ?? ''),
             'status' => $_POST['status'] ?? 'draft',
+            'header_banner_media_id' => !empty($_POST['header_banner_media_id']) ? intval($_POST['header_banner_media_id']) : null,
+            'logo_media_id' => !empty($_POST['logo_media_id']) ? intval($_POST['logo_media_id']) : null,
         ];
 
         if (empty($data['name'])) {
@@ -138,6 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'location_detail' => trim($_POST['act_location'] ?? ''),
             'instructor_name' => trim($_POST['act_instructor'] ?? ''),
             'instructor_info' => trim($_POST['act_instructor_info'] ?? ''),
+            'instructor_rider_id' => !empty($_POST['act_instructor_rider_id']) ? intval($_POST['act_instructor_rider_id']) : null,
             'price' => floatval($_POST['act_price'] ?? 0),
             'max_participants' => !empty($_POST['act_max']) ? intval($_POST['act_max']) : null,
             'included_in_pass' => isset($_POST['act_included_in_pass']) ? 1 : 0,
@@ -204,6 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'location_detail' => trim($_POST['grp_location'] ?? ''),
             'instructor_name' => trim($_POST['grp_instructor'] ?? ''),
             'instructor_info' => trim($_POST['grp_instructor_info'] ?? ''),
+            'instructor_rider_id' => !empty($_POST['grp_instructor_rider_id']) ? intval($_POST['grp_instructor_rider_id']) : null,
         ];
 
         if (empty($groupData['name'])) {
@@ -380,6 +384,28 @@ if (!$isNew && $id > 0) {
         header('Location: /admin/festivals.php');
         exit;
     }
+
+    // Load media URLs for banner/logo preview
+    $festivalBannerUrl = null;
+    $festivalLogoUrl = null;
+    if (!empty($festival['header_banner_media_id'])) {
+        $mStmt = $pdo->prepare("SELECT url, original_filename FROM media WHERE id = ?");
+        $mStmt->execute([$festival['header_banner_media_id']]);
+        $bMedia = $mStmt->fetch(PDO::FETCH_ASSOC);
+        if ($bMedia) { $festivalBannerUrl = $bMedia['url']; $festivalBannerName = $bMedia['original_filename']; }
+    }
+    if (!empty($festival['logo_media_id'])) {
+        $mStmt = $pdo->prepare("SELECT url, original_filename FROM media WHERE id = ?");
+        $mStmt->execute([$festival['logo_media_id']]);
+        $lMedia = $mStmt->fetch(PDO::FETCH_ASSOC);
+        if ($lMedia) { $festivalLogoUrl = $lMedia['url']; $festivalLogoName = $lMedia['original_filename']; }
+    }
+
+    // Load all media for picker
+    $allMedia = [];
+    try {
+        $allMedia = $pdo->query("SELECT id, url, original_filename, folder FROM media ORDER BY created_at DESC LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {}
 
     // Load linked events (with included_in_pass if column exists)
     $feIncludedCol = '';
@@ -827,6 +853,49 @@ endif;
                 </div>
             </div>
 
+            <!-- Bilder -->
+            <?php if (!$isNew): ?>
+            <div class="form-subsection">
+                <div class="form-subsection-label"><i data-lucide="image"></i> Bilder</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Omslagsbild (banner)</label>
+                        <select name="header_banner_media_id" onchange="previewFestivalMedia(this, 'banner-preview')">
+                            <option value="">-- Ingen --</option>
+                            <?php foreach ($allMedia as $m): ?>
+                            <option value="<?= $m['id'] ?>" data-url="<?= htmlspecialchars($m['url']) ?>" <?= ($festival['header_banner_media_id'] ?? '') == $m['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($m['original_filename']) ?> (<?= htmlspecialchars($m['folder'] ?? '') ?>)
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div id="banner-preview" style="margin-top: var(--space-xs);">
+                            <?php if ($festivalBannerUrl): ?>
+                            <img src="<?= htmlspecialchars($festivalBannerUrl) ?>" alt="Banner" style="max-height: 80px; border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
+                            <?php endif; ?>
+                        </div>
+                        <small class="form-help">Rekommenderat: 1200×400 px eller liknande (3:1). Visas som bakgrundsbild i hero-sektionen. Ladda upp via <a href="/admin/media.php" target="_blank">Mediabiblioteket</a>.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Logotyp</label>
+                        <select name="logo_media_id" onchange="previewFestivalMedia(this, 'logo-preview')">
+                            <option value="">-- Ingen --</option>
+                            <?php foreach ($allMedia as $m): ?>
+                            <option value="<?= $m['id'] ?>" data-url="<?= htmlspecialchars($m['url']) ?>" <?= ($festival['logo_media_id'] ?? '') == $m['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($m['original_filename']) ?> (<?= htmlspecialchars($m['folder'] ?? '') ?>)
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div id="logo-preview" style="margin-top: var(--space-xs);">
+                            <?php if ($festivalLogoUrl): ?>
+                            <img src="<?= htmlspecialchars($festivalLogoUrl) ?>" alt="Logo" style="max-height: 60px; border-radius: var(--radius-sm);">
+                            <?php endif; ?>
+                        </div>
+                        <small class="form-help">Visas ovanför festivalnamnet i hero-sektionen.</small>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Status -->
             <div class="form-subsection">
                 <div class="form-subsection-label"><i data-lucide="toggle-left"></i> Status</div>
@@ -1100,7 +1169,25 @@ endif;
             <div class="form-row">
                 <div class="form-group">
                     <label>Instruktör / Ledare</label>
-                    <input type="text" name="grp_instructor" value="<?= htmlspecialchars($editGrp['instructor_name'] ?? '') ?>" placeholder="Namn">
+                    <div class="instructor-search-wrap" style="position: relative;">
+                        <input type="text" name="grp_instructor" id="grp_instructor_input"
+                            value="<?= htmlspecialchars($editGrp['instructor_name'] ?? '') ?>"
+                            placeholder="Sök deltagare eller skriv namn..."
+                            autocomplete="off">
+                        <input type="hidden" name="grp_instructor_rider_id" id="grp_instructor_rider_id"
+                            value="<?= intval($editGrp['instructor_rider_id'] ?? 0) ?>">
+                        <div class="instructor-search-results" id="grp_instructor_results" style="display:none;"></div>
+                        <?php if (!empty($editGrp['instructor_rider_id'])): ?>
+                        <div class="instructor-linked" id="grp_instructor_linked">
+                            <a href="/rider/<?= intval($editGrp['instructor_rider_id']) ?>" target="_blank" style="color: var(--color-accent); font-size: 0.8rem;">
+                                <i data-lucide="external-link" style="width: 12px; height: 12px;"></i> Visa profil
+                            </a>
+                            <button type="button" onclick="unlinkInstructor('grp')" style="background:none; border:none; color: var(--color-text-muted); cursor:pointer; font-size: 0.8rem; padding: 0; margin-left: var(--space-xs);">
+                                <i data-lucide="x" style="width: 12px; height: 12px;"></i> Ta bort koppling
+                            </button>
+                        </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Plats (inom festivalen)</label>
@@ -1255,6 +1342,16 @@ endif;
             </div>
             <?php endif; ?>
 
+            <?php
+                $editActHasSlots = !empty($activitySlots[$editAct['id'] ?? 0]);
+            ?>
+            <?php if ($editActHasSlots): ?>
+            <div class="alert alert-info" style="margin-bottom: var(--space-md); font-size: 0.85rem;">
+                <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                Datum och tider styrs av tidspass (se nedan). Aktivitetens egna datum/tid används inte när tidspass finns.
+            </div>
+            <input type="hidden" name="act_date" value="<?= htmlspecialchars($editAct['date'] ?? $festival['start_date'] ?? '') ?>">
+            <?php else: ?>
             <div class="form-row-3">
                 <div class="form-group">
                     <label>Datum *</label>
@@ -1269,11 +1366,30 @@ endif;
                     <input type="time" name="act_end_time" value="<?= htmlspecialchars($editAct['end_time'] ?? '') ?>">
                 </div>
             </div>
+            <?php endif; ?>
 
             <div class="form-row">
                 <div class="form-group">
                     <label>Instruktör / Ledare</label>
-                    <input type="text" name="act_instructor" value="<?= htmlspecialchars($editAct['instructor_name'] ?? '') ?>" placeholder="Namn">
+                    <div class="instructor-search-wrap" style="position: relative;">
+                        <input type="text" name="act_instructor" id="act_instructor_input"
+                            value="<?= htmlspecialchars($editAct['instructor_name'] ?? '') ?>"
+                            placeholder="Sök deltagare eller skriv namn..."
+                            autocomplete="off">
+                        <input type="hidden" name="act_instructor_rider_id" id="act_instructor_rider_id"
+                            value="<?= intval($editAct['instructor_rider_id'] ?? 0) ?>">
+                        <div class="instructor-search-results" id="act_instructor_results" style="display:none;"></div>
+                        <?php if (!empty($editAct['instructor_rider_id'])): ?>
+                        <div class="instructor-linked" id="act_instructor_linked">
+                            <a href="/rider/<?= intval($editAct['instructor_rider_id']) ?>" target="_blank" style="color: var(--color-accent); font-size: 0.8rem;">
+                                <i data-lucide="external-link" style="width: 12px; height: 12px;"></i> Visa profil
+                            </a>
+                            <button type="button" onclick="unlinkInstructor('act')" style="background:none; border:none; color: var(--color-text-muted); cursor:pointer; font-size: 0.8rem; padding: 0; margin-left: var(--space-xs);">
+                                <i data-lucide="x" style="width: 12px; height: 12px;"></i> Ta bort koppling
+                            </button>
+                        </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Plats (inom festivalen)</label>
@@ -1581,10 +1697,153 @@ endif;
 
 <?php endif; ?>
 
+<script>
+function previewFestivalMedia(select, previewId) {
+    var el = document.getElementById(previewId);
+    var opt = select.options[select.selectedIndex];
+    var url = opt ? opt.getAttribute('data-url') : null;
+    if (url) {
+        el.innerHTML = '<img src="' + url + '" alt="" style="max-height: 80px; border-radius: var(--radius-sm); border: 1px solid var(--color-border);">';
+    } else {
+        el.innerHTML = '';
+    }
+}
+</script>
+
 <?php
 // Include format toolbar if available
 $formatToolbar = __DIR__ . '/components/format-toolbar.php';
 if (file_exists($formatToolbar)) include $formatToolbar;
 ?>
+
+<style>
+.instructor-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.instructor-search-results .search-item {
+    padding: var(--space-xs) var(--space-sm);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--color-border);
+}
+.instructor-search-results .search-item:last-child { border-bottom: none; }
+.instructor-search-results .search-item:hover {
+    background: var(--color-bg-hover);
+}
+.instructor-search-results .search-item .si-name {
+    color: var(--color-text-primary);
+    font-weight: 500;
+}
+.instructor-search-results .search-item .si-club {
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+}
+.instructor-linked {
+    margin-top: var(--space-2xs);
+    display: flex;
+    align-items: center;
+}
+</style>
+
+<script>
+(function(){
+    function initInstructorSearch(prefix) {
+        const input = document.getElementById(prefix + '_instructor_input');
+        const hiddenId = document.getElementById(prefix + '_instructor_rider_id');
+        const resultsDiv = document.getElementById(prefix + '_instructor_results');
+        if (!input || !resultsDiv) return;
+
+        let debounceTimer = null;
+
+        input.addEventListener('input', function() {
+            const q = this.value.trim();
+            // Om användaren skriver om, rensa rider-kopplingen
+            hiddenId.value = '';
+            const linkedDiv = document.getElementById(prefix + '_instructor_linked');
+            if (linkedDiv) linkedDiv.style.display = 'none';
+
+            if (q.length < 2) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fetch('/api/search.php?type=riders&q=' + encodeURIComponent(q))
+                    .then(r => r.json())
+                    .then(data => {
+                        const riders = data.riders || [];
+                        if (riders.length === 0) {
+                            resultsDiv.style.display = 'none';
+                            return;
+                        }
+                        resultsDiv.innerHTML = riders.slice(0, 8).map(r =>
+                            '<div class="search-item" data-id="' + r.id + '" data-name="' + (r.firstname + ' ' + r.lastname).replace(/"/g, '&quot;') + '">' +
+                            '<span class="si-name">' + r.firstname + ' ' + r.lastname + '</span>' +
+                            '<span class="si-club">' + (r.club_name || '') + '</span>' +
+                            '</div>'
+                        ).join('');
+                        resultsDiv.style.display = 'block';
+
+                        resultsDiv.querySelectorAll('.search-item').forEach(item => {
+                            item.addEventListener('click', function() {
+                                const riderId = this.dataset.id;
+                                const riderName = this.dataset.name;
+                                input.value = riderName;
+                                hiddenId.value = riderId;
+                                resultsDiv.style.display = 'none';
+
+                                // Visa profillänk
+                                let linkedDiv = document.getElementById(prefix + '_instructor_linked');
+                                if (!linkedDiv) {
+                                    linkedDiv = document.createElement('div');
+                                    linkedDiv.className = 'instructor-linked';
+                                    linkedDiv.id = prefix + '_instructor_linked';
+                                    input.parentNode.appendChild(linkedDiv);
+                                }
+                                linkedDiv.innerHTML =
+                                    '<a href="/rider/' + riderId + '" target="_blank" style="color: var(--color-accent); font-size: 0.8rem;">' +
+                                    '<i data-lucide="external-link" style="width: 12px; height: 12px;"></i> Visa profil</a>' +
+                                    '<button type="button" onclick="unlinkInstructor(\'' + prefix + '\')" style="background:none; border:none; color: var(--color-text-muted); cursor:pointer; font-size: 0.8rem; padding: 0; margin-left: 8px;">' +
+                                    '<i data-lucide="x" style="width: 12px; height: 12px;"></i> Ta bort koppling</button>';
+                                linkedDiv.style.display = 'flex';
+                                if (typeof lucide !== 'undefined') lucide.createIcons();
+                            });
+                        });
+                    })
+                    .catch(() => { resultsDiv.style.display = 'none'; });
+            }, 250);
+        });
+
+        // Stäng sökresultat vid klick utanför
+        document.addEventListener('click', function(e) {
+            if (!input.contains(e.target) && !resultsDiv.contains(e.target)) {
+                resultsDiv.style.display = 'none';
+            }
+        });
+    }
+
+    window.unlinkInstructor = function(prefix) {
+        document.getElementById(prefix + '_instructor_rider_id').value = '';
+        const linkedDiv = document.getElementById(prefix + '_instructor_linked');
+        if (linkedDiv) linkedDiv.style.display = 'none';
+    };
+
+    initInstructorSearch('act');
+    initInstructorSearch('grp');
+})();
+</script>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

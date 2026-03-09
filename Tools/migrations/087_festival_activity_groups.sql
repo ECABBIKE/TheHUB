@@ -4,8 +4,8 @@
 
 -- Activity groups table
 CREATE TABLE IF NOT EXISTS festival_activity_groups (
-    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    festival_id INT UNSIGNED NOT NULL,
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    festival_id INT NOT NULL,
     name VARCHAR(200) NOT NULL,
     description TEXT,
     short_description VARCHAR(500),
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS festival_activity_groups (
     location_detail VARCHAR(200),
     instructor_name VARCHAR(150),
     instructor_info TEXT,
-    image_media_id INT UNSIGNED DEFAULT NULL,
+    image_media_id INT DEFAULT NULL,
     sort_order INT DEFAULT 0,
     active TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -28,6 +28,6 @@ CREATE TABLE IF NOT EXISTS festival_activity_groups (
 
 -- Add group_id to festival_activities
 ALTER TABLE festival_activities
-    ADD COLUMN group_id INT UNSIGNED DEFAULT NULL AFTER festival_id,
+    ADD COLUMN group_id INT DEFAULT NULL AFTER festival_id,
     ADD INDEX idx_group (group_id),
     ADD FOREIGN KEY (group_id) REFERENCES festival_activity_groups(id) ON DELETE SET NULL;
