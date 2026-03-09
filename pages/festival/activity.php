@@ -484,8 +484,8 @@ function addActivityToCart(activityId) {
             included_in_pass: a.included_in_pass
         });
 
-        // Update button
-        const btn = event.target.closest('button');
+        // Update button (find by activity id)
+        const btn = document.querySelector('[onclick*="addActivityToCart(' + activityId + ')"]');
         if (btn) {
             btn.innerHTML = '<i data-lucide="check-circle" style="width:14px;height:14px;"></i> Tillagd';
             btn.disabled = true;
@@ -537,4 +537,4 @@ function addFestivalPassToCart() {
 }
 </script>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+
