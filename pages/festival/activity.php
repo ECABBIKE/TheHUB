@@ -18,10 +18,8 @@ $festivalPublic = (site_setting('festival_public_enabled', '0') === '1');
 if (!$festivalPublic && !$isAdmin) {
     http_response_code(404);
     $pageTitle = '404';
-    include __DIR__ . '/../../includes/header.php';
-    echo '<main class="container"><div class="card" style="padding: var(--space-2xl); text-align: center;"><h2>Sidan hittades inte</h2><p><a href="/">Tillbaka till startsidan</a></p></div></main>';
-    include __DIR__ . '/../../includes/footer.php';
-    exit;
+    echo '<div class="card" style="padding: var(--space-2xl); text-align: center;"><h2>Sidan hittades inte</h2><p><a href="/">Tillbaka till startsidan</a></p></div>';
+    return;
 }
 
 // Get IDs from router
@@ -172,7 +170,6 @@ function formatActivityDate($date) {
 $totalRegs = count($participants);
 
 $pageTitle = $group['name'] . ' – ' . $festival['name'];
-include __DIR__ . '/../../includes/header.php';
 ?>
 
 <link rel="stylesheet" href="/assets/css/pages/festival.css?v=<?= filemtime(HUB_ROOT . '/assets/css/pages/festival.css') ?>">
