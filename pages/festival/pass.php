@@ -812,12 +812,15 @@ function loadEventClassesForRider(rider) {
 
     containers.forEach(container => {
         const eventId = container.dataset.eventId;
-        const eventName = container.dataset.eventName;
         const sel = container.querySelector('.pass-class-select');
 
         // Show loading state
         sel.innerHTML = '<option value="">Laddar klasser...</option>';
         sel.disabled = true;
+
+        // Remove old license badge
+        const oldBadge = container.querySelector('.pass-license-badge');
+        if (oldBadge) oldBadge.remove();
 
         fetch('/api/orders.php?action=event_classes&event_id=' + eventId + '&rider_id=' + rider.id)
             .then(r => r.json())
@@ -827,15 +830,15 @@ function loadEventClassesForRider(rider) {
                     // Check if first item is an error object
                     if (data.classes[0].error) {
                         const errMsg = data.classes[0].error === 'incomplete_profile'
-                            ? 'Ofullständig profil – uppdatera profilen'
+                            ? 'Ofullständig profil – uppdatera profilen först'
                             : data.classes[0].message || 'Kunde inte ladda klasser';
                         sel.innerHTML = '<option value="">– ' + errMsg + ' –</option>';
                         return;
                     }
                     data.classes.forEach(cls => {
                         const opt = document.createElement('option');
-                        opt.value = cls.id;
-                        opt.textContent = cls.display_name || cls.name;
+                        opt.value = cls.class_id;
+                        opt.textContent = cls.name + (cls.current_price > 0 ? '' : '');
                         sel.appendChild(opt);
                     });
                     sel.disabled = false;
@@ -844,6 +847,24 @@ function loadEventClassesForRider(rider) {
                 } else {
                     sel.innerHTML = '<option value="">– Inga klasser tillgängliga –</option>';
                 }
+
+                // Show license validation badge
+                if (data.license_validation) {
+                    const lv = data.license_validation;
+                    let badgeHtml = '';
+                    if (lv.status === 'valid') {
+                        badgeHtml = '<div class="pass-license-badge" style="font-size: 0.75rem; color: var(--color-success); margin-top: 4px; display: flex; align-items: center; gap: 4px;"><i data-lucide="check-circle" style="width: 14px; height: 14px;"></i> Licens giltig' + (lv.license_type ? ' (' + lv.license_type + ')' : '') + '</div>';
+                    } else if (lv.status === 'warning') {
+                        badgeHtml = '<div class="pass-license-badge" style="font-size: 0.75rem; color: var(--color-warning); margin-top: 4px; display: flex; align-items: center; gap: 4px;"><i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i> ' + (lv.message || 'Licensvarning') + '</div>';
+                    } else if (lv.status === 'invalid' || lv.status === 'not_found') {
+                        badgeHtml = '<div class="pass-license-badge" style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px;"><i data-lucide="info" style="width: 14px; height: 14px;"></i> ' + (lv.message || 'Ingen licens hittad') + '</div>';
+                    }
+                    if (badgeHtml) {
+                        container.insertAdjacentHTML('beforeend', badgeHtml);
+                    }
+                }
+
+                if (typeof lucide !== 'undefined') lucide.createIcons();
             })
             .catch(() => {
                 sel.innerHTML = '<option value="">– Kunde inte ladda klasser –</option>';
@@ -931,6 +952,9 @@ function resetPassForm() {
         sel.innerHTML = '<option value="">– Välj deltagare först –</option>';
         sel.disabled = true;
     });
+
+    // Remove license badges
+    document.querySelectorAll('.pass-license-badge').forEach(el => el.remove());
 
     // Hide dynamic slot containers
     document.querySelectorAll('.pass-group-slot-container').forEach(el => {
