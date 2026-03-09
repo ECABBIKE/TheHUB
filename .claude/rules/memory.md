@@ -15,6 +15,17 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-09, session 57)
+
+### Festival: Buggfixar + mobilanpassning
+- **Instruktör-sökning fixad:** Sökningen använde `public_riders_display`-inställningen som defaultade till `with_results` — instruktörer utan tävlingsresultat hittades aldrig. Fix: `api/search.php` stödjer nu `filter` GET-parameter. Festival-edit skickar `filter=all` vid instruktörssökning.
+- **GlobalCart slot_id dedup fixad:** `addItem()` i global-cart.js deduplicerade festival_activity items enbart på `activity_id + rider_id` — ignorerade `slot_id` helt. Resultatet: vid val av flera tidspass för samma aktivitet ersattes det första passet tyst. Fix: dedup inkluderar nu `slot_id` i jämförelsen. `removeFestivalItem()` stödjer nu optional `slotId`-parameter.
+- **addSlotToCart event-bugg fixad:** `event` objekt refererades utan att vara parameter i `addSlotToCart()`. `onclick` passerade inte `event` → knappens tillståndsuppdatering ("Tillagd") kunde misslyckas tyst. Fix: `event` passas nu explicit som `evt`-parameter.
+- **Grupp datum/tid döljs vid tidspass:** Gruppformuläret i festival-edit.php visar nu en info-ruta istället för datum/tid-fält om gruppens aktiviteter har tidspass.
+- **Mobilanpassning festival-edit:** iOS zoom-fix (font-size: 16px), touch targets (min-height: 44px), horisontell tab-scroll, activity-cards edge-to-edge, pass-preview kompaktare, event-search wrappas.
+- **VIKTIGT:** `api/search.php` stödjer nu `?filter=all` för att söka alla riders oavsett public_riders_display-inställning.
+- **Filer:** `admin/festival-edit.php`, `api/search.php`, `assets/js/global-cart.js`, `pages/festival/single-activity.php`
+
 ## SENASTE FIXAR (2026-03-09, session 56)
 
 ### Festival: Instruktör kopplad till rider-profil + datum/tid-fält döljs vid tidspass

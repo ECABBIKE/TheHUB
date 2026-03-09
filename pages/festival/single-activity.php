@@ -304,7 +304,7 @@ include __DIR__ . '/../../includes/header.php';
                                 <?php if ($slotFull): ?>
                                 <span class="badge badge-warning" style="font-size: 0.75rem;">Fullbokat</span>
                                 <?php elseif (hub_is_logged_in()): ?>
-                                <button class="btn btn-primary slot-add-btn" onclick="addSlotToCart(<?= (int)$slot['id'] ?>, '<?= htmlspecialchars($slotDate) ?>', '<?= substr($slot['start_time'], 0, 5) ?>')">
+                                <button class="btn btn-primary slot-add-btn" onclick="addSlotToCart(event, <?= (int)$slot['id'] ?>, '<?= htmlspecialchars($slotDate) ?>', '<?= substr($slot['start_time'], 0, 5) ?>')">
                                     <i data-lucide="shopping-cart" style="width: 14px; height: 14px;"></i> Välj
                                 </button>
                                 <?php else: ?>
@@ -425,7 +425,7 @@ const currentActivity = {
     has_slots: <?= $hasSlots ? 'true' : 'false' ?>
 };
 
-function addSlotToCart(slotId, slotDate, slotTime) {
+function addSlotToCart(evt, slotId, slotDate, slotTime) {
     if (!isLoggedIn) return;
     const riderId = registrableRiders[0] ? registrableRiders[0].id : null;
     if (!riderId) return;
@@ -453,9 +453,12 @@ function addSlotToCart(slotId, slotDate, slotTime) {
         });
 
         // Find and update the button
-        event.target.closest('.slot-row').querySelector('.slot-add-btn').innerHTML = '<i data-lucide="check-circle" style="width:14px;height:14px;"></i> Tillagd';
-        event.target.closest('.slot-row').querySelector('.slot-add-btn').disabled = true;
-        event.target.closest('.slot-row').querySelector('.slot-add-btn').style.background = 'var(--color-success)';
+        const btn = evt.target.closest('.slot-row').querySelector('.slot-add-btn');
+        if (btn) {
+            btn.innerHTML = '<i data-lucide="check-circle" style="width:14px;height:14px;"></i> Tillagd';
+            btn.disabled = true;
+            btn.style.background = 'var(--color-success)';
+        }
         if (typeof lucide !== 'undefined') lucide.createIcons();
     } catch (e) {
         alert('Kunde inte lägga till: ' + e.message);

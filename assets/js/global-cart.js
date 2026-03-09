@@ -38,11 +38,12 @@ const GlobalCart = (function() {
             if (!item.activity_id || !item.rider_id || !item.festival_id) {
                 throw new Error('Invalid festival activity item: missing required fields');
             }
-            // Dedup: same activity + rider
+            // Dedup: same activity + slot + rider
             const existingIndex = cart.findIndex(i =>
                 i.type === 'festival_activity' &&
                 i.activity_id === item.activity_id &&
-                i.rider_id === item.rider_id
+                i.rider_id === item.rider_id &&
+                (i.slot_id || null) === (item.slot_id || null)
             );
             if (existingIndex >= 0) {
                 cart[existingIndex] = item;
@@ -97,12 +98,14 @@ const GlobalCart = (function() {
     }
 
     // Remove festival item from cart
-    function removeFestivalItem(type, id, riderId) {
+    function removeFestivalItem(type, id, riderId, slotId) {
         let cart = getCart();
         if (type === 'festival_activity') {
-            cart = cart.filter(item =>
-                !(item.type === 'festival_activity' && item.activity_id === id && item.rider_id === riderId)
-            );
+            cart = cart.filter(item => {
+                if (item.type !== 'festival_activity' || item.activity_id !== id || item.rider_id !== riderId) return true;
+                if (slotId !== undefined) return (item.slot_id || null) !== slotId;
+                return false;
+            });
         } else if (type === 'festival_pass') {
             cart = cart.filter(item =>
                 !(item.type === 'festival_pass' && item.festival_id === id && item.rider_id === riderId)

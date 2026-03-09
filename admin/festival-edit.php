@@ -699,10 +699,78 @@ $activityTypes = [
     .form-row, .form-row-3 {
         grid-template-columns: 1fr;
     }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        font-size: 16px; /* Förhindra iOS auto-zoom */
+        min-height: 44px;
+    }
     .linked-event {
         flex-direction: column;
         align-items: flex-start;
         gap: var(--space-xs);
+    }
+    .linked-event-info {
+        flex-wrap: wrap;
+    }
+    .festival-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+        margin-left: -12px;
+        margin-right: -12px;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+    .festival-tab {
+        padding: var(--space-xs) var(--space-sm);
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+    .festival-tab i {
+        display: none;
+    }
+    .activity-card {
+        margin-left: -12px;
+        margin-right: -12px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    .activity-card-header {
+        flex-wrap: wrap;
+        gap: var(--space-xs);
+    }
+    .activity-card-title {
+        font-size: 0.9rem;
+        flex-wrap: wrap;
+    }
+    .activity-card-meta {
+        font-size: 0.75rem;
+        gap: var(--space-xs);
+    }
+    .pass-preview {
+        padding: var(--space-md);
+    }
+    .pass-preview-title {
+        font-size: 1.2rem;
+    }
+    .pass-preview-price {
+        font-size: 1.5rem;
+    }
+    .event-search-item {
+        flex-wrap: wrap;
+        gap: var(--space-2xs);
+        font-size: 0.85rem;
+    }
+    .instructor-search-results {
+        max-height: 250px;
+    }
+}
+@media (max-width: 480px) {
+    .festival-tab {
+        padding: var(--space-2xs) var(--space-xs);
+        font-size: 0.75rem;
     }
 }
 </style>
@@ -1151,6 +1219,25 @@ endif;
                 <input type="text" name="grp_short_description" value="<?= htmlspecialchars($editGrp['short_description'] ?? '') ?>" placeholder="Max 1-2 meningar" maxlength="500">
             </div>
 
+            <?php
+                // Kolla om gruppens aktiviteter har tidspass
+                $grpHasSlots = false;
+                if ($editGrp) {
+                    foreach ($activities as $a) {
+                        if (($a['group_id'] ?? 0) == $editGrp['id'] && !empty($activitySlots[$a['id']])) {
+                            $grpHasSlots = true;
+                            break;
+                        }
+                    }
+                }
+            ?>
+            <?php if ($grpHasSlots): ?>
+            <div class="alert alert-info" style="margin-bottom: var(--space-md); font-size: 0.85rem;">
+                <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                Datum och tider styrs av tidspass i aktiviteterna. Gruppens egna datum/tid används inte.
+            </div>
+            <input type="hidden" name="grp_date" value="<?= htmlspecialchars($editGrp['date'] ?? $festival['start_date'] ?? '') ?>">
+            <?php else: ?>
             <div class="form-row-3">
                 <div class="form-group">
                     <label>Datum</label>
@@ -1165,6 +1252,7 @@ endif;
                     <input type="time" name="grp_end_time" value="<?= htmlspecialchars($editGrp['end_time'] ?? '') ?>">
                 </div>
             </div>
+            <?php endif; ?>
 
             <div class="form-row">
                 <div class="form-group">
@@ -1781,7 +1869,7 @@ if (file_exists($formatToolbar)) include $formatToolbar;
             }
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
-                fetch('/api/search.php?type=riders&q=' + encodeURIComponent(q))
+                fetch('/api/search.php?type=riders&filter=all&q=' + encodeURIComponent(q))
                     .then(r => r.json())
                     .then(data => {
                         const riders = data.riders || [];
