@@ -15,9 +15,15 @@
 
 ---
 
-## SENASTE FIXAR (2026-03-09, session 64)
+## SENASTE FIXAR (2026-03-09, session 65)
 
-### Festival: Passbokningssida UX + Skapa ny deltagare
+### Festival: Passbokningssida — lägg till flera deltagare utan sidladdning
+- **Ändrat UX-flöde:** Efter att ett festivalpass lagts i kundvagnen visas nu en toast-notis (grön balk överst, auto-döljs efter 5s) istället för att hela sidan ersätts med ett success-meddelande. Formuläret återställs automatiskt: rider nollställs, steg 2–3 låses igen, alla selects återställs. Användaren kan direkt söka och lägga till nästa deltagare.
+- **Toast-notis:** Fixed position top-center, visar passnamn + deltagarnamn + länk till kundvagnen.
+- **`resetPassForm()`:** Ny JS-funktion som nollställer: selectedRider, rider display/search toggle, step card opacity/pointer-events, alla selects (slot, class, group activity, group slot), dynamiska slot-containers, summary text. Scrollar till toppen.
+- **Filer:** `pages/festival/pass.php`
+
+### Festival: Passbokningssida UX + Skapa ny deltagare (session 64)
 - **Pass info-kort:** Nytt infokort överst på passbokningssidan (`pass.php`) som visar passnamn, pris, och lista över vad som ingår (grupper, aktiviteter, tävlingar). Löser problemet att "Sök deltagare" stod för högt upp — nu finns kontext och prisinformation ovanför söksteget.
 - **Skapa ny deltagare:** `components/festival-rider-search.php` utökad med komplett "Skapa ny deltagare"-formulär (samma fält som event-sidan: förnamn, efternamn, e-post, telefon, födelseår, kön, nationalitet, klubb med typeahead, nödkontakt). Länken "Skapa ny deltagare" visas under sökfältet + i "inga resultat"-vyn. Formuläret öppnas i samma fullskärmsmodal. Skapar rider via `/api/orders.php?action=create_rider` och returnerar till callback.
 - **Sökfält uppdaterat:** Placeholder ändrad till "Skriv namn eller UCI ID..." (matchar event-sidans sökmodal).

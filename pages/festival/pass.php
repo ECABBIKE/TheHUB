@@ -129,10 +129,14 @@ try {
 // Load linked competition events
 $evtStmt = $pdo->prepare("
     SELECT e.id, e.name, e.date, e.location, e.discipline, e.event_format,
-        fe.included_in_pass
+        fe.included_in_pass,
+        GROUP_CONCAT(DISTINCT s.name SEPARATOR ', ') as series_names
     FROM festival_events fe
     JOIN events e ON fe.event_id = e.id
+    LEFT JOIN series_events se ON se.event_id = e.id
+    LEFT JOIN series s ON se.series_id = s.id
     WHERE fe.festival_id = ? AND e.active = 1
+    GROUP BY e.id
     ORDER BY e.date ASC, fe.sort_order ASC
 ");
 $evtStmt->execute([$festivalId]);
@@ -217,17 +221,21 @@ $pageTitle = $passName . ' — ' . $festival['name'];
             $passIncludes = [];
             foreach ($passGroups as $grp) {
                 $grpPc = intval($grp['pass_included_count'] ?? 0);
-                $grpActCount = count($grp['activities'] ?? []);
-                if ($grpPc > 0 && $grpActCount > 0) {
-                    $passIncludes[] = ($grpPc > 1 ? $grpPc . 'x ' : '') . htmlspecialchars($grp['name']) . ($grpActCount > $grpPc ? ' (välj ' . $grpPc . ' av ' . $grpActCount . ')' : '');
+                if ($grpPc > 0) {
+                    $passIncludes[] = $grpPc . 'x ' . htmlspecialchars($grp['name']);
                 }
             }
             foreach ($includedActivities as $ia) {
                 $iaPc = max(1, intval($ia['pass_included_count'] ?? 1));
-                $passIncludes[] = ($iaPc > 1 ? $iaPc . 'x ' : '') . htmlspecialchars($ia['name']);
+                $passIncludes[] = $iaPc . 'x ' . htmlspecialchars($ia['name']);
             }
             foreach ($includedEvents as $ie) {
-                $passIncludes[] = 'Startavgift ' . htmlspecialchars($ie['name']);
+                $evtLabel = 'Startavgift ';
+                if (!empty($ie['series_names'])) {
+                    $evtLabel .= htmlspecialchars($ie['series_names']) . ' - ';
+                }
+                $evtLabel .= htmlspecialchars($ie['name']);
+                $passIncludes[] = '1x ' . $evtLabel;
             }
             if (!empty($passIncludes)): ?>
             <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
@@ -480,22 +488,12 @@ $pageTitle = $passName . ' — ' . $festival['name'];
         </div>
     </div>
 
-    <!-- Success-meddelande (dolt) -->
-    <div id="passSuccessMsg" style="display: none;">
-        <div class="card" style="border: 2px solid var(--color-success);">
-            <div class="card-body" style="text-align: center; padding: var(--space-xl);">
-                <i data-lucide="check-circle" style="width: 48px; height: 48px; color: var(--color-success); margin-bottom: var(--space-md);"></i>
-                <h3 style="margin: 0 0 var(--space-xs); font-family: var(--font-heading-secondary);">Tillagd i kundvagnen</h3>
-                <p style="color: var(--color-text-secondary); margin: 0 0 var(--space-lg); font-size: 0.9rem;" id="passSuccessText"></p>
-                <div style="display: flex; gap: var(--space-sm); justify-content: center; flex-wrap: wrap;">
-                    <a href="/festival/<?= $festivalId ?>" class="btn btn-secondary" style="padding: var(--space-sm) var(--space-lg);">
-                        <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Tillbaka till festivalen
-                    </a>
-                    <a href="/cart" class="festival-pass-btn" style="padding: var(--space-sm) var(--space-lg); text-decoration: none;">
-                        <i data-lucide="shopping-cart" style="width: 16px; height: 16px;"></i> Till kundvagnen
-                    </a>
-                </div>
-            </div>
+    <!-- Success-toast (dolt) -->
+    <div id="passSuccessToast" style="display: none; position: fixed; top: var(--space-lg); left: 50%; transform: translateX(-50%); z-index: 10000; width: calc(100% - 32px); max-width: 480px;">
+        <div style="background: var(--color-success); color: #fff; padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); display: flex; align-items: center; gap: var(--space-sm); box-shadow: 0 4px 20px rgba(0,0,0,0.3); font-size: 0.9rem;">
+            <i data-lucide="check-circle" style="width: 20px; height: 20px; flex-shrink: 0;"></i>
+            <span id="passSuccessToastText" style="flex: 1;"></span>
+            <a href="/cart" style="color: #fff; font-weight: 600; white-space: nowrap; text-decoration: underline;">Kundvagn</a>
         </div>
     </div>
 
@@ -631,6 +629,35 @@ function setRider(rider) {
     document.getElementById('passSummaryRider').textContent = 'Deltagare: ' + name;
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function resetPassForm() {
+    // Clear selected rider
+    selectedRider = null;
+    document.getElementById('passRiderDisplay').style.display = 'none';
+    document.getElementById('passRiderSearch').style.display = '';
+
+    // Lock step 2 and 3
+    document.getElementById('passConfigCard').style.opacity = '0.5';
+    document.getElementById('passConfigCard').style.pointerEvents = 'none';
+    document.getElementById('passSummaryCard').style.opacity = '0.5';
+    document.getElementById('passSummaryCard').style.pointerEvents = 'none';
+
+    // Reset all selects
+    document.querySelectorAll('.pass-slot-select, .pass-class-select, .pass-group-activity-select, .pass-group-slot-select').forEach(sel => {
+        sel.selectedIndex = 0;
+    });
+
+    // Hide dynamic slot containers
+    document.querySelectorAll('.pass-group-slot-container').forEach(el => {
+        el.style.display = 'none';
+    });
+
+    // Clear summary
+    document.getElementById('passSummaryRider').textContent = '';
+
+    // Scroll to step 1
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function addPassToCart() {
@@ -817,16 +844,17 @@ function addPassToCart() {
         } catch (e) { /* skip */ }
     });
 
-    // Show success
-    document.getElementById('passSuccessText').textContent = festivalInfo.pass_name + ' för ' + riderName + ' har lagts i kundvagnen.';
-    document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
-    document.querySelector('nav').style.display = 'none';
-    document.querySelector('div[style*="margin-bottom"]').style.display = 'none';
-    document.getElementById('passSuccessMsg').style.display = '';
+    // Show success toast
+    const toast = document.getElementById('passSuccessToast');
+    document.getElementById('passSuccessToastText').textContent = festivalInfo.pass_name + ' för ' + riderName + ' tillagd.';
+    toast.style.display = '';
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Auto-hide toast after 5 seconds
+    setTimeout(() => { toast.style.display = 'none'; }, 5000);
+
+    // Reset form for next participant
+    resetPassForm();
 }
 </script>
 
