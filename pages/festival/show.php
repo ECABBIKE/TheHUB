@@ -534,21 +534,46 @@ $pageTitle = $festival['name'];
                 <?php endif; ?>
                 <div class="festival-pass-card-includes">
                     <?php
-                    $includedActs = array_filter($activities, fn($a) => $a['included_in_pass']);
+                    // Build pass contents list
+                    $passItems = [];
+
+                    // 1. Groups with pass_included_count
+                    $groupIdsWithPass = [];
+                    foreach ($activityGroups as $grp) {
+                        $grpPc = intval($grp['pass_included_count'] ?? 0);
+                        if ($grpPc > 0) {
+                            $groupIdsWithPass[] = (int)$grp['id'];
+                            $grpActCount = intval($grp['activity_count'] ?? 0);
+                            $passItems[] = ($grpPc > 1 ? $grpPc . 'x ' : '') . $grp['name'] . ($grpActCount > $grpPc ? ' (välj ' . $grpPc . ' av ' . $grpActCount . ')' : '');
+                        }
+                    }
+
+                    // 2. Individual activities (not in a group with pass count)
+                    foreach ($activities as $a) {
+                        if (!$a['included_in_pass']) continue;
+                        $aGid = intval($a['group_id'] ?? 0);
+                        if ($aGid && in_array($aGid, $groupIdsWithPass)) continue;
+                        $iaPassCount = intval($a['pass_included_count'] ?? 1);
+                        $passItems[] = $a['name'] . ($iaPassCount > 1 ? ' (' . $iaPassCount . 'x)' : '');
+                    }
+
+                    // 3. Events with included_in_pass
+                    $includedEvts = array_filter($events, fn($e) => !empty($e['included_in_pass']));
+                    foreach ($includedEvts as $ie) {
+                        $passItems[] = 'Startavgift ' . $ie['name'];
+                    }
                     ?>
                     <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: var(--space-2xs);">
-                        <?= count($includedActs) ?> aktiviteter ingår
+                        <?= count($passItems) ?> <?= count($passItems) === 1 ? 'sak' : 'saker' ?> ingår
                     </div>
-                    <?php foreach (array_slice($includedActs, 0, 5) as $ia):
-                        $iaPassCount = intval($ia['pass_included_count'] ?? 1);
-                    ?>
+                    <?php foreach (array_slice($passItems, 0, 6) as $pi): ?>
                     <div style="font-size: 0.8rem; color: var(--color-text-secondary); display: flex; align-items: center; gap: 4px;">
-                        <i data-lucide="check" style="width: 12px; height: 12px; color: var(--color-success);"></i>
-                        <?= htmlspecialchars($ia['name']) ?><?= $iaPassCount > 1 ? ' (' . $iaPassCount . 'x)' : '' ?>
+                        <i data-lucide="check" style="width: 12px; height: 12px; color: var(--color-success); flex-shrink: 0;"></i>
+                        <?= htmlspecialchars($pi) ?>
                     </div>
                     <?php endforeach; ?>
-                    <?php if (count($includedActs) > 5): ?>
-                    <div style="font-size: 0.8rem; color: var(--color-text-muted);">+ <?= count($includedActs) - 5 ?> till</div>
+                    <?php if (count($passItems) > 6): ?>
+                    <div style="font-size: 0.8rem; color: var(--color-text-muted);">+ <?= count($passItems) - 6 ?> till</div>
                     <?php endif; ?>
                 </div>
                 <a href="/festival/<?= $festivalId ?>/pass" class="festival-pass-btn" id="festivalPassBtn" style="text-decoration: none; text-align: center; display: flex; align-items: center; justify-content: center;">
