@@ -643,38 +643,95 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                 $finalPrice = floatval($activity['price'] ?? 0);
 
                 // Kolla om aktiviteten ingår i festivalpass och om åkaren har pass
+                // Två vägar: 1) per-aktivitet (included_in_pass), 2) per-grupp (group.pass_included_count)
                 $passDiscount = false;
-                if (!empty($activity['included_in_pass'])) {
-                    // Hur många gånger ingår denna aktivitet i passet?
-                    $passAllowedCount = 1;
-                    try {
-                        $pcStmt = $pdo->prepare("SELECT pass_included_count FROM festival_activities WHERE id = ?");
-                        $pcStmt->execute([$activityId]);
-                        $pcVal = $pcStmt->fetchColumn();
-                        if ($pcVal !== false) $passAllowedCount = max(1, intval($pcVal));
-                    } catch (PDOException $e) { /* column may not exist */ }
+                $isPassEligible = !empty($activity['included_in_pass']);
+                $useGroupPassLogic = false;
+                $groupPassAllowed = 0;
+                $actGroupId = intval($activity['group_id'] ?? 0);
 
-                    // Räkna hur många pass-inkluderade registreringar åkaren redan har för denna aktivitet
-                    $alreadyUsed = 0;
-                    // I nuvarande order
-                    foreach ($items as $otherItem) {
-                        if (($otherItem['type'] ?? '') === 'festival_activity'
-                            && intval($otherItem['activity_id'] ?? 0) === $activityId
-                            && intval($otherItem['rider_id'] ?? 0) === $riderId
-                            && !empty($otherItem['included_in_pass'])) {
-                            $alreadyUsed++;
-                        }
-                    }
-                    // I databasen (redan betalda)
+                // Check group-level pass inclusion
+                if ($actGroupId > 0 && !$isPassEligible) {
                     try {
-                        $usedStmt = $pdo->prepare("
-                            SELECT COUNT(*) FROM festival_activity_registrations
-                            WHERE activity_id = ? AND rider_id = ? AND status != 'cancelled' AND payment_status = 'paid'
-                                AND pass_discount = 1
-                        ");
-                        $usedStmt->execute([$activityId, $riderId]);
-                        $alreadyUsed += intval($usedStmt->fetchColumn());
-                    } catch (PDOException $e) { /* pass_discount column may not exist */ }
+                        $grpPcStmt = $pdo->prepare("SELECT pass_included_count FROM festival_activity_groups WHERE id = ?");
+                        $grpPcStmt->execute([$actGroupId]);
+                        $grpPcVal = $grpPcStmt->fetchColumn();
+                        if ($grpPcVal !== false && intval($grpPcVal) > 0) {
+                            $isPassEligible = true;
+                            $useGroupPassLogic = true;
+                            $groupPassAllowed = intval($grpPcVal);
+                        }
+                    } catch (PDOException $e) { /* column may not exist */ }
+                }
+
+                if ($isPassEligible) {
+                    if ($useGroupPassLogic) {
+                        // Group-level: count all pass-discount registrations across ALL activities in the group
+                        $passAllowedCount = $groupPassAllowed;
+
+                        $alreadyUsed = 0;
+                        // In current order: count items in same group with included_in_pass
+                        // Get all activity IDs in the group
+                        $groupActIds = [];
+                        try {
+                            $gaStmt = $pdo->prepare("SELECT id FROM festival_activities WHERE group_id = ? AND active = 1");
+                            $gaStmt->execute([$actGroupId]);
+                            $groupActIds = $gaStmt->fetchAll(PDO::FETCH_COLUMN);
+                        } catch (PDOException $e) {}
+
+                        foreach ($items as $otherItem) {
+                            if (($otherItem['type'] ?? '') === 'festival_activity'
+                                && in_array(intval($otherItem['activity_id'] ?? 0), $groupActIds)
+                                && intval($otherItem['rider_id'] ?? 0) === $riderId
+                                && !empty($otherItem['included_in_pass'])) {
+                                $alreadyUsed++;
+                            }
+                        }
+                        // In database (paid registrations with pass_discount in same group)
+                        if (!empty($groupActIds)) {
+                            try {
+                                $placeholders = implode(',', array_fill(0, count($groupActIds), '?'));
+                                $usedStmt = $pdo->prepare("
+                                    SELECT COUNT(*) FROM festival_activity_registrations
+                                    WHERE activity_id IN ($placeholders) AND rider_id = ? AND status != 'cancelled' AND payment_status = 'paid'
+                                        AND pass_discount = 1
+                                ");
+                                $usedStmt->execute(array_merge($groupActIds, [$riderId]));
+                                $alreadyUsed += intval($usedStmt->fetchColumn());
+                            } catch (PDOException $e) { /* pass_discount column may not exist */ }
+                        }
+                    } else {
+                        // Per-activity: original logic
+                        $passAllowedCount = 1;
+                        try {
+                            $pcStmt = $pdo->prepare("SELECT pass_included_count FROM festival_activities WHERE id = ?");
+                            $pcStmt->execute([$activityId]);
+                            $pcVal = $pcStmt->fetchColumn();
+                            if ($pcVal !== false) $passAllowedCount = max(1, intval($pcVal));
+                        } catch (PDOException $e) { /* column may not exist */ }
+
+                        // Räkna hur många pass-inkluderade registreringar åkaren redan har för denna aktivitet
+                        $alreadyUsed = 0;
+                        // I nuvarande order
+                        foreach ($items as $otherItem) {
+                            if (($otherItem['type'] ?? '') === 'festival_activity'
+                                && intval($otherItem['activity_id'] ?? 0) === $activityId
+                                && intval($otherItem['rider_id'] ?? 0) === $riderId
+                                && !empty($otherItem['included_in_pass'])) {
+                                $alreadyUsed++;
+                            }
+                        }
+                        // I databasen (redan betalda)
+                        try {
+                            $usedStmt = $pdo->prepare("
+                                SELECT COUNT(*) FROM festival_activity_registrations
+                                WHERE activity_id = ? AND rider_id = ? AND status != 'cancelled' AND payment_status = 'paid'
+                                    AND pass_discount = 1
+                            ");
+                            $usedStmt->execute([$activityId, $riderId]);
+                            $alreadyUsed += intval($usedStmt->fetchColumn());
+                        } catch (PDOException $e) { /* pass_discount column may not exist */ }
+                    }
 
                     $hasPass = false;
                     // Kolla om åkaren har ett pass i varukorgen

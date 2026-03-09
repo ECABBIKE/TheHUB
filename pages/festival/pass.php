@@ -80,10 +80,36 @@ $actStmt = $pdo->prepare("
 $actStmt->execute([$festivalId]);
 $activities = $actStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Filter included activities
-$includedActivities = array_filter($activities, fn($a) => $a['included_in_pass']);
+// Filter included activities (individual, not in a group with pass_included_count)
+$includedActivities = [];
+$groupPassActivities = []; // activities in groups that have group-level pass inclusion
 
-// Load activity slots for pass-included activities
+// Load groups with pass_included_count
+$passGroups = [];
+try {
+    $grpStmt = $pdo->prepare("SELECT * FROM festival_activity_groups WHERE festival_id = ? AND active = 1 ORDER BY sort_order ASC");
+    $grpStmt->execute([$festivalId]);
+    foreach ($grpStmt->fetchAll(PDO::FETCH_ASSOC) as $grp) {
+        $grpPassCount = intval($grp['pass_included_count'] ?? 0);
+        if ($grpPassCount > 0) {
+            $passGroups[$grp['id']] = $grp;
+            $passGroups[$grp['id']]['activities'] = [];
+        }
+    }
+} catch (PDOException $e) { /* table or column may not exist */ }
+
+foreach ($activities as $a) {
+    $gid = intval($a['group_id'] ?? 0);
+    if ($gid && isset($passGroups[$gid])) {
+        // Activity belongs to a group with group-level pass inclusion
+        $passGroups[$gid]['activities'][] = $a;
+    } elseif ($a['included_in_pass']) {
+        // Individual pass inclusion
+        $includedActivities[] = $a;
+    }
+}
+
+// Load activity slots for ALL pass-related activities (individual + group)
 $passActivitySlots = [];
 try {
     $slotStmt = $pdo->prepare("
@@ -91,7 +117,7 @@ try {
             (SELECT COUNT(*) FROM festival_activity_registrations far WHERE far.slot_id = s.id AND far.status != 'cancelled') as reg_count
         FROM festival_activity_slots s
         JOIN festival_activities fa ON s.activity_id = fa.id
-        WHERE fa.festival_id = ? AND fa.included_in_pass = 1 AND s.active = 1 AND fa.active = 1
+        WHERE fa.festival_id = ? AND s.active = 1 AND fa.active = 1
         ORDER BY s.date ASC, s.start_time ASC
     ");
     $slotStmt->execute([$festivalId]);
@@ -284,6 +310,61 @@ $pageTitle = $passName . ' — ' . $festival['name'];
             <?php endforeach; ?>
             <?php endif; ?>
 
+            <?php // ── Groups with pass inclusion (choose N of M) ──
+            if (!empty($passGroups)): ?>
+            <?php foreach ($passGroups as $grp):
+                $grpType = $actTypes[$grp['activity_type']] ?? $actTypes['other'];
+                $grpPassCount = intval($grp['pass_included_count']);
+                $grpActs = $grp['activities'];
+                if (empty($grpActs)) continue;
+            ?>
+            <div style="padding: var(--space-md) var(--space-md) 0;">
+                <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); margin-bottom: var(--space-xs); display: flex; align-items: center; gap: var(--space-2xs);">
+                    <i data-lucide="folder" style="width: 14px; height: 14px; color: <?= $grpType['color'] ?>;"></i>
+                    <?= htmlspecialchars($grp['name']) ?>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--color-text-secondary); margin-bottom: var(--space-sm);">
+                    Välj <?= $grpPassCount ?> av <?= count($grpActs) ?> aktiviteter (ingår i passet)
+                </div>
+            </div>
+
+            <?php for ($gi = 0; $gi < $grpPassCount; $gi++): ?>
+            <div class="pass-booking-item pass-group-pick" data-group-id="<?= $grp['id'] ?>">
+                <div style="margin-bottom: var(--space-xs);">
+                    <label style="font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); display: block; margin-bottom: 2px;">
+                        <?= $grpPassCount > 1 ? 'Val ' . ($gi + 1) . ':' : 'Välj aktivitet:' ?>
+                    </label>
+                    <select class="pass-group-activity-select" data-group-id="<?= $grp['id'] ?>" data-pick-index="<?= $gi ?>"
+                        style="width: 100%; padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-surface); color: var(--color-text-primary); font-size: 16px; min-height: 44px;"
+                        onchange="onGroupActivityChange(this)">
+                        <option value="">– Välj aktivitet –</option>
+                        <?php foreach ($grpActs as $ga):
+                            $gaSlots = $passActivitySlots[$ga['id']] ?? [];
+                        ?>
+                        <option value="<?= $ga['id'] ?>"
+                            data-activity-name="<?= htmlspecialchars($ga['name']) ?>"
+                            data-has-slots="<?= !empty($gaSlots) ? '1' : '0' ?>"
+                            data-price="<?= (float)$ga['price'] ?>">
+                            <?= htmlspecialchars($ga['name']) ?>
+                            <?php if ($ga['price'] > 0): ?> (<?= number_format($ga['price'], 0) ?> kr à la carte)<?php endif; ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <!-- Slot selector appears dynamically if selected activity has slots -->
+                <div class="pass-group-slot-container" data-group-id="<?= $grp['id'] ?>" data-pick-index="<?= $gi ?>" style="display: none; margin-top: var(--space-xs);">
+                    <label style="font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); display: block; margin-bottom: 2px;">Välj tidspass:</label>
+                    <select class="pass-group-slot-select" data-group-id="<?= $grp['id'] ?>" data-pick-index="<?= $gi ?>"
+                        style="width: 100%; padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-surface); color: var(--color-text-primary); font-size: 16px; min-height: 44px;">
+                        <option value="">– Välj tidspass –</option>
+                    </select>
+                </div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--color-success); text-align: right; margin-top: var(--space-2xs);">0 kr</div>
+            </div>
+            <?php endfor; ?>
+            <?php endforeach; ?>
+            <?php endif; ?>
+
             <?php if (!empty($includedEvents)): ?>
             <div style="padding: var(--space-md) var(--space-md) 0;">
                 <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); margin-bottom: var(--space-sm); display: flex; align-items: center; gap: var(--space-2xs);">
@@ -328,7 +409,7 @@ $pageTitle = $passName . ' — ' . $festival['name'];
             <?php endforeach; ?>
             <?php endif; ?>
 
-            <?php if (empty($includedActivities) && empty($includedEvents)): ?>
+            <?php if (empty($includedActivities) && empty($includedEvents) && empty($passGroups)): ?>
             <div style="padding: var(--space-lg); text-align: center; color: var(--color-text-muted); font-size: 0.9rem;">
                 Inga aktiviteter eller tävlingar ingår i passet ännu.
             </div>
@@ -433,6 +514,45 @@ const festivalInfo = {
     pass_name: <?= json_encode($passName, JSON_UNESCAPED_UNICODE) ?>,
     pass_price: <?= (float)($festival['pass_price'] ?? 0) ?>
 };
+
+// Slot data for all activities (needed for group activity selection)
+const activitySlotsData = <?= json_encode($passActivitySlots, JSON_UNESCAPED_UNICODE) ?>;
+
+function onGroupActivityChange(sel) {
+    const groupId = sel.dataset.groupId;
+    const pickIndex = sel.dataset.pickIndex;
+    const actId = sel.value;
+    const slotContainer = document.querySelector('.pass-group-slot-container[data-group-id="' + groupId + '"][data-pick-index="' + pickIndex + '"]');
+    const slotSelect = slotContainer.querySelector('.pass-group-slot-select');
+
+    if (!actId) {
+        slotContainer.style.display = 'none';
+        return;
+    }
+
+    const opt = sel.options[sel.selectedIndex];
+    const hasSlots = opt.dataset.hasSlots === '1';
+
+    if (hasSlots && activitySlotsData[actId]) {
+        // Build slot options
+        let html = '<option value="">– Välj tidspass –</option>';
+        activitySlotsData[actId].forEach(s => {
+            const full = s.max_participants && parseInt(s.reg_count) >= parseInt(s.max_participants);
+            const dateStr = new Date(s.date + 'T00:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'numeric' });
+            const timeStr = s.start_time.substring(0, 5);
+            const endStr = s.end_time ? '–' + s.end_time.substring(0, 5) : '';
+            const spotsLeft = s.max_participants ? (s.max_participants - s.reg_count) : null;
+            let label = dateStr + ' ' + timeStr + endStr;
+            if (full) label += ' (Fullbokat)';
+            else if (spotsLeft !== null) label += ' (' + spotsLeft + ' platser kvar)';
+            html += '<option value="' + s.id + '" data-date="' + dateStr + '" data-time="' + timeStr + '"' + (full ? ' disabled' : '') + '>' + label + '</option>';
+        });
+        slotSelect.innerHTML = html;
+        slotContainer.style.display = '';
+    } else {
+        slotContainer.style.display = 'none';
+    }
+}
 
 let selectedRider = null;
 
@@ -567,7 +687,75 @@ function addPassToCart() {
         } catch (e) { /* skip */ }
     });
 
-    // 4. Add event classes
+    // 4. Add group-selected activities
+    const groupSelects = document.querySelectorAll('.pass-group-activity-select');
+    const groupPicks = {}; // track picks per group for duplicate check
+    let groupError = false;
+    groupSelects.forEach(sel => {
+        const actId = parseInt(sel.value);
+        if (!actId) return;
+        const groupId = sel.dataset.groupId;
+        if (!groupPicks[groupId]) groupPicks[groupId] = [];
+        if (groupPicks[groupId].includes(actId)) {
+            groupError = true;
+            sel.style.border = '2px solid var(--color-error)';
+            return;
+        }
+        groupPicks[groupId].push(actId);
+        sel.style.border = '';
+
+        const opt = sel.options[sel.selectedIndex];
+        const actName = opt.dataset.activityName;
+        const pickIndex = sel.dataset.pickIndex;
+
+        // Check if this activity has a slot selected
+        const slotSel = document.querySelector('.pass-group-slot-select[data-group-id="' + groupId + '"][data-pick-index="' + pickIndex + '"]');
+        const slotId = slotSel ? parseInt(slotSel.value) : 0;
+
+        if (slotId) {
+            const slotOpt = slotSel.options[slotSel.selectedIndex];
+            const slotDate = slotOpt.dataset.date || '';
+            const slotTime = slotOpt.dataset.time || '';
+            try {
+                GlobalCart.addItem({
+                    type: 'festival_activity',
+                    activity_id: actId,
+                    slot_id: slotId,
+                    festival_id: festivalInfo.id,
+                    rider_id: riderId,
+                    rider_name: riderName,
+                    activity_name: actName + ' (' + slotDate + ' ' + slotTime + ')',
+                    festival_name: festivalInfo.name,
+                    festival_date: festivalInfo.start_date,
+                    price: 0,
+                    included_in_pass: true,
+                    group_id: parseInt(groupId)
+                });
+            } catch (e) { /* skip */ }
+        } else {
+            try {
+                GlobalCart.addItem({
+                    type: 'festival_activity',
+                    activity_id: actId,
+                    festival_id: festivalInfo.id,
+                    rider_id: riderId,
+                    rider_name: riderName,
+                    activity_name: actName,
+                    festival_name: festivalInfo.name,
+                    festival_date: festivalInfo.start_date,
+                    price: 0,
+                    included_in_pass: true,
+                    group_id: parseInt(groupId)
+                });
+            } catch (e) { /* skip */ }
+        }
+    });
+    if (groupError) {
+        alert('Du har valt samma aktivitet flera gånger i en grupp. Välj olika aktiviteter.');
+        return;
+    }
+
+    // 5. Add event classes
     document.querySelectorAll('.pass-class-select').forEach(sel => {
         const classId = parseInt(sel.value);
         if (!classId) return;

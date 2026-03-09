@@ -107,9 +107,16 @@ const GlobalCart = (function() {
                 return false;
             });
         } else if (type === 'festival_pass') {
-            cart = cart.filter(item =>
-                !(item.type === 'festival_pass' && item.festival_id === id && item.rider_id === riderId)
-            );
+            // Remove pass AND all included items (activities + events) for this festival+rider
+            cart = cart.filter(item => {
+                // Remove the pass itself
+                if (item.type === 'festival_pass' && item.festival_id === id && item.rider_id === riderId) return false;
+                // Remove included activities (price 0, same festival+rider)
+                if (item.type === 'festival_activity' && item.festival_id === id && item.rider_id === riderId && item.included_in_pass) return false;
+                // Remove included events (festival_pass_event flag, same festival+rider)
+                if (item.festival_pass_event && item.festival_id === id && item.rider_id === riderId) return false;
+                return true;
+            });
         }
         saveCart(cart);
         return cart;

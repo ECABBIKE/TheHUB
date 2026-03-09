@@ -216,6 +216,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'instructor_rider_id' => !empty($_POST['grp_instructor_rider_id']) ? intval($_POST['grp_instructor_rider_id']) : null,
         ];
 
+        // Add pass_included_count if column exists
+        try {
+            $pdo->query("SELECT pass_included_count FROM festival_activity_groups LIMIT 0");
+            $groupData['pass_included_count'] = max(0, intval($_POST['grp_pass_count'] ?? 0));
+        } catch (PDOException $e) { /* column not yet migrated */ }
+
         if (empty($groupData['name'])) {
             $_SESSION['flash_message'] = 'Gruppnamn krävs';
             $_SESSION['flash_type'] = 'error';
@@ -1140,6 +1146,11 @@ endif;
                 <span class="badge" style="font-size: 0.65rem; padding: 1px 6px;">
                     <?= (int)$grp['activity_count'] ?> aktiviteter
                 </span>
+                <?php $grpPassCount = intval($grp['pass_included_count'] ?? 0); if ($grpPassCount > 0): ?>
+                <span class="badge badge-success" style="font-size: 0.65rem; padding: 1px 6px;">
+                    I pass <?= $grpPassCount ?>x
+                </span>
+                <?php endif; ?>
             </div>
             <div style="display: flex; gap: var(--space-2xs);">
                 <a href="/festival/<?= $id ?>/activity/<?= $grp['id'] ?>" target="_blank" class="btn-admin btn-admin-secondary" style="padding: 4px 8px;" title="Visa publik sida">
@@ -1297,6 +1308,16 @@ endif;
             <div class="form-group">
                 <label>Beskrivning (visas på gruppsidan)</label>
                 <textarea name="grp_description" rows="4"><?= htmlspecialchars($editGrp['description'] ?? '') ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Ingår i festivalpass (antal aktiviteter ur gruppen)</label>
+                <input type="number" name="grp_pass_count"
+                    value="<?= intval($editGrp['pass_included_count'] ?? 0) ?>"
+                    min="0" max="20" placeholder="0 = ingår ej" style="width: 140px;">
+                <small style="color: var(--color-text-muted); margin-top: 2px; display: block;">
+                    0 = ingår ej i pass. T.ex. 2 = passinnehavaren väljer 2 av gruppens aktiviteter.
+                </small>
             </div>
 
             <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-md);">
@@ -1661,9 +1682,23 @@ endif;
     foreach ($activities as $a) {
         if ($a['included_in_pass']) $includedCount++;
     }
+    // Count groups with pass inclusion
+    $groupsWithPass = [];
+    foreach ($activityGroups as $grp) {
+        $grpPc = intval($grp['pass_included_count'] ?? 0);
+        if ($grpPc > 0) {
+            $includedCount++;
+            $groupsWithPass[$grp['id']] = $grp;
+        }
+    }
     $totalIncludedSlots = 0;
     foreach ($activities as $a) {
+        // Skip activities whose group handles pass inclusion
+        if (!empty($a['group_id']) && isset($groupsWithPass[$a['group_id']])) continue;
         $totalIncludedSlots += intval($a['pass_included_count'] ?? ($a['included_in_pass'] ? 1 : 0));
+    }
+    foreach ($groupsWithPass as $grp) {
+        $totalIncludedSlots += intval($grp['pass_included_count']);
     }
 ?>
 
@@ -1758,11 +1793,42 @@ endif;
 
             <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
                 <h4 style="margin-bottom: var(--space-sm); color: var(--color-text-secondary);">Aktiviteter som ingår i passet:</h4>
-                <?php if (empty($activities)): ?>
+                <?php if (empty($activities) && empty($groupsWithPass)): ?>
                 <p style="color: var(--color-text-muted);">Inga aktiviteter skapade ännu. Gå till <a href="?id=<?= $id ?>&tab=activities">Aktiviteter</a>-fliken.</p>
                 <?php else: ?>
                 <div style="display: flex; flex-direction: column; gap: var(--space-2xs);">
-                    <?php foreach ($activities as $a):
+                    <?php // Show groups with pass inclusion first
+                    foreach ($groupsWithPass as $grp):
+                        $grpTypeInfo = $activityTypes[$grp['activity_type']] ?? $activityTypes['other'];
+                        $grpPassCount = intval($grp['pass_included_count']);
+                        $grpActivities = array_filter($activities, fn($a) => ($a['group_id'] ?? 0) == $grp['id']);
+                    ?>
+                    <div style="padding: var(--space-xs) 0; border-bottom: 1px solid var(--color-border);">
+                        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                            <i data-lucide="check-circle" style="width: 16px; height: 16px; color: var(--color-success);"></i>
+                            <i data-lucide="folder" style="width: 14px; height: 14px; color: var(--color-text-muted);"></i>
+                            <span style="color: var(--color-text-primary); font-weight: 600;"><?= htmlspecialchars($grp['name']) ?></span>
+                            <span class="badge badge-success" style="font-size: 0.65rem;">Välj <?= $grpPassCount ?> av <?= count($grpActivities) ?></span>
+                        </div>
+                        <?php if (!empty($grpActivities)): ?>
+                        <div style="margin-left: 38px; margin-top: 2px;">
+                            <?php foreach ($grpActivities as $ga): ?>
+                            <div style="font-size: 0.8rem; color: var(--color-text-secondary); padding: 1px 0;">
+                                <?= htmlspecialchars($ga['name']) ?>
+                                <?php if ($ga['price'] > 0): ?>
+                                <span style="color: var(--color-text-muted);">(<?= number_format($ga['price'], 0) ?> kr)</span>
+                                <?php endif; ?>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+
+                    <?php // Show ungrouped activities with individual pass inclusion
+                    foreach ($activities as $a):
+                        // Skip activities in groups with pass inclusion (shown above)
+                        if (!empty($a['group_id']) && isset($groupsWithPass[$a['group_id']])) continue;
                         $typeInfo = $activityTypes[$a['activity_type']] ?? $activityTypes['other'];
                         $passCount = intval($a['pass_included_count'] ?? ($a['included_in_pass'] ? 1 : 0));
                     ?>
@@ -1786,7 +1852,7 @@ endif;
                     <?php endforeach; ?>
                 </div>
                 <p style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: var(--space-sm);">
-                    Ändra "Ingår i festivalpass" per aktivitet under <a href="?id=<?= $id ?>&tab=activities">Aktiviteter</a>-fliken.
+                    Ändra per aktivitet under <a href="?id=<?= $id ?>&tab=activities">Aktiviteter</a>-fliken, eller per grupp under <a href="?id=<?= $id ?>&tab=groups">Grupper</a>-fliken.
                 </p>
                 <?php endif; ?>
             </div>

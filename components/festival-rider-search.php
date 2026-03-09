@@ -46,6 +46,18 @@
 <style>
 @keyframes frs-spin { to { transform: rotate(360deg); } }
 
+/* Dölj ALL navigation när sökmodalen är öppen */
+html.lightbox-open .header,
+html.lightbox-open .sidebar,
+html.lightbox-open .nav-bottom,
+html.lightbox-open .mobile-nav,
+html.lightbox-open .admin-mobile-nav {
+    display: none !important;
+}
+html.lightbox-open body {
+    overflow: hidden;
+}
+
 /* Overlay: fullskärm, ovanför ALLT */
 .frs-overlay {
     position: fixed;

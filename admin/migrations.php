@@ -309,6 +309,9 @@ $migrationChecks = [
     '090_festival_pass_included_count.sql' => [
         'columns' => ['festival_activities.pass_included_count', 'festival_activity_registrations.pass_discount']
     ],
+    '091_group_pass_included_count.sql' => [
+        'columns' => ['festival_activity_groups.pass_included_count']
+    ],
 ];
 
 // ============================================================================
