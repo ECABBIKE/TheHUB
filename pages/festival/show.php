@@ -1099,4 +1099,3 @@ document.addEventListener('keydown', function(e) {
 });
 </script>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
