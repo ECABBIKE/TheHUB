@@ -15,6 +15,15 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-09, session 63)
+
+### Festival: Säkerhetsfix — borttagning av festivalpass rensar inkluderade items
+- **Bugg:** Om ett festivalpass togs bort från kundvagnen låg inkluderade aktiviteter (pris 0 kr) och events (festival_pass_event) kvar. Användaren kunde slutföra köpet med 0 kr-artiklar utan att ha pass.
+- **Fix (klient):** `GlobalCart.removeFestivalItem()` i `global-cart.js` rensar nu kaskaderat: passet + alla `included_in_pass`-aktiviteter + alla `festival_pass_event`-events för samma festival+rider.
+- **Fix (UI):** `pages/cart.php` döljer nu ta-bort-knappen på pass-inkluderade items. Dessa kan bara tas bort genom att ta bort själva passet.
+- **Backend-skydd:** `order-manager.php` (rad 647-699) validerar redan server-side att rider har pass innan pass-rabatt ges. Även om klient-sidan manipuleras kan ingen få 0 kr utan giltigt pass.
+- **Filer:** `assets/js/global-cart.js`, `pages/cart.php`
+
 ## SENASTE FIXAR (2026-03-09, session 62)
 
 ### Festival: Bokningssida för festivalpass + sökmodal fullskärmsfix

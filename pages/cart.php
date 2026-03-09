@@ -254,11 +254,15 @@ require_once __DIR__ . '/../includes/payment.php';
                 }
 
                 // Remove button: different handler for festival vs event items
+                // Items included in pass cannot be removed individually — remove the pass instead
                 let removeBtn = '';
-                if (item.type === 'festival_pass') {
+                if (item.included_in_pass || item.festival_pass_event) {
+                    // No remove button for pass-included items
+                    removeBtn = '';
+                } else if (item.type === 'festival_pass') {
                     removeBtn = `<button class="btn btn--danger btn--sm remove-festival-item"
                         data-type="festival_pass" data-id="${item.festival_id}" data-riderid="${item.rider_id}"
-                        style="padding: var(--space-2xs) var(--space-xs);" title="Ta bort">
+                        style="padding: var(--space-2xs) var(--space-xs);" title="Ta bort passet och inkluderade aktiviteter">
                         <i data-lucide="x" style="width: 16px; height: 16px;"></i></button>`;
                 } else if (item.type === 'festival_activity') {
                     removeBtn = `<button class="btn btn--danger btn--sm remove-festival-item"
