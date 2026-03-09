@@ -157,6 +157,24 @@ $evtStmt->execute([$festivalId]);
 $events = $evtStmt->fetchAll(PDO::FETCH_ASSOC);
 $includedEvents = array_filter($events, fn($e) => !empty($e['included_in_pass']));
 
+// Load products included in pass
+$passProducts = [];
+try {
+    $ppStmt = $pdo->prepare("SELECT p.*, (SELECT COUNT(*) FROM festival_product_orders po WHERE po.product_id = p.id AND po.status != 'cancelled') as order_count FROM festival_products p WHERE p.festival_id = ? AND p.active = 1 AND p.included_in_pass = 1 ORDER BY p.sort_order ASC, p.name ASC");
+    $ppStmt->execute([$festivalId]);
+    $passProducts = $ppStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {}
+
+// Load product sizes for pass products
+$passProductSizes = [];
+try {
+    $ppsStmt = $pdo->prepare("SELECT ps.* FROM festival_product_sizes ps JOIN festival_products p ON ps.product_id = p.id WHERE p.festival_id = ? AND p.included_in_pass = 1 AND ps.active = 1 ORDER BY ps.sort_order ASC");
+    $ppsStmt->execute([$festivalId]);
+    foreach ($ppsStmt->fetchAll(PDO::FETCH_ASSOC) as $pps) {
+        $passProductSizes[$pps['product_id']][] = $pps;
+    }
+} catch (PDOException $e) {}
+
 // Load classes for included events
 $passEventClasses = [];
 try {
@@ -265,6 +283,11 @@ $pageTitle = $passName . ' — ' . $festival['name'];
                 }
                 $evtLabel .= htmlspecialchars($ie['name']);
                 $passIncludes[] = '1x ' . $evtLabel;
+            }
+            // Products included in pass
+            foreach ($passProducts as $pp) {
+                $ppPc = max(1, intval($pp['pass_included_count']));
+                $passIncludes[] = $ppPc . 'x ' . htmlspecialchars($pp['name']);
             }
             if (!empty($passIncludes)): ?>
             <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
@@ -512,9 +535,68 @@ $pageTitle = $passName . ' — ' . $festival['name'];
             <?php endforeach; ?>
             <?php endif; ?>
 
-            <?php if (empty($includedActivities) && empty($includedEvents) && empty($passGroups)): ?>
+            <?php if (!empty($passProducts)): ?>
+            <div style="padding: var(--space-md) var(--space-md) 0;">
+                <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); margin-bottom: var(--space-sm); display: flex; align-items: center; gap: var(--space-2xs);">
+                    <i data-lucide="shopping-bag" style="width: 14px; height: 14px; color: var(--color-accent);"></i>
+                    Produkter som ingår
+                </div>
+            </div>
+
+            <?php foreach ($passProducts as $pp):
+                $ppSizes = $passProductSizes[$pp['id']] ?? [];
+                $ppPassCount = max(1, intval($pp['pass_included_count']));
+                $ppTypeIcons = ['merch' => 'shirt', 'food' => 'utensils-crossed', 'other' => 'package'];
+                $ppIcon = $ppTypeIcons[$pp['product_type']] ?? 'package';
+            ?>
+            <div class="pass-booking-item" data-product-id="<?= $pp['id'] ?>">
+                <div class="pass-booking-item-header">
+                    <span style="color: var(--color-accent); flex-shrink: 0;">
+                        <i data-lucide="<?= $ppIcon ?>" style="width: 18px; height: 18px;"></i>
+                    </span>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 600; font-size: 0.95rem; color: var(--color-text-primary);">
+                            <?= htmlspecialchars($pp['name']) ?>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--color-text-muted);">
+                            <?php if ($ppPassCount > 1): ?><?= $ppPassCount ?> st ingår<?php else: ?>Ingår i passet<?php endif; ?>
+                        </div>
+                    </div>
+                    <span style="font-size: 0.75rem; font-weight: 600; color: var(--color-success); white-space: nowrap;">0 kr</span>
+                </div>
+
+                <?php if ($pp['has_sizes'] && !empty($ppSizes)): ?>
+                <div class="pass-booking-item-config">
+                    <?php for ($psIdx = 0; $psIdx < $ppPassCount; $psIdx++): ?>
+                    <div style="margin-bottom: var(--space-xs);">
+                        <label style="font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); display: block; margin-bottom: 2px;">
+                            <?= $ppPassCount > 1 ? 'Storlek ' . ($psIdx + 1) . ':' : 'Välj storlek:' ?>
+                        </label>
+                        <select class="pass-product-size-select" data-product-id="<?= $pp['id'] ?>" data-product-name="<?= htmlspecialchars($pp['name']) ?>" data-size-index="<?= $psIdx ?>"
+                            style="width: 100%; padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-surface); color: var(--color-text-primary); font-size: 16px; min-height: 44px;">
+                            <option value="">– Välj storlek –</option>
+                            <?php foreach ($ppSizes as $pps): ?>
+                            <option value="<?= $pps['id'] ?>" data-label="<?= htmlspecialchars($pps['size_label']) ?>"><?= htmlspecialchars($pps['size_label']) ?><?= $pps['stock'] !== null && $pps['stock'] <= 0 ? ' (Slut)' : '' ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php endfor; ?>
+                </div>
+                <?php else: ?>
+                <?php for ($autoIdx = 0; $autoIdx < $ppPassCount; $autoIdx++): ?>
+                <input type="hidden" class="pass-product-auto" data-product-id="<?= $pp['id'] ?>" data-product-name="<?= htmlspecialchars($pp['name']) ?>" value="1">
+                <?php endfor; ?>
+                <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: var(--space-2xs); padding-left: 30px;">
+                    <?= $ppPassCount > 1 ? $ppPassCount . ' st ingår' : 'Ingår automatiskt' ?>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+            <?php endif; ?>
+
+            <?php if (empty($includedActivities) && empty($includedEvents) && empty($passGroups) && empty($passProducts)): ?>
             <div style="padding: var(--space-lg); text-align: center; color: var(--color-text-muted); font-size: 0.9rem;">
-                Inga aktiviteter eller tävlingar ingår i passet ännu.
+                Inga aktiviteter, tävlingar eller produkter ingår i passet ännu.
             </div>
             <?php endif; ?>
 
@@ -820,7 +902,7 @@ function resetPassForm() {
     document.getElementById('passSummaryCard').style.pointerEvents = 'none';
 
     // Reset all selects
-    document.querySelectorAll('.pass-slot-select, .pass-class-select, .pass-group-activity-select, .pass-group-slot-select').forEach(sel => {
+    document.querySelectorAll('.pass-slot-select, .pass-class-select, .pass-group-activity-select, .pass-group-slot-select, .pass-product-size-select').forEach(sel => {
         sel.selectedIndex = 0;
     });
 
@@ -1028,6 +1110,50 @@ function addPassToCart() {
                 price: 0,
                 festival_pass_event: true,
                 festival_id: festivalInfo.id
+            });
+        } catch (e) { /* skip */ }
+    });
+
+    // 6. Add products with size selection
+    document.querySelectorAll('.pass-product-size-select').forEach(sel => {
+        const sizeId = parseInt(sel.value);
+        if (!sizeId) return;
+        const productId = parseInt(sel.dataset.productId);
+        const productName = sel.dataset.productName;
+        const sizeLabel = sel.options[sel.selectedIndex].dataset.label || '';
+        try {
+            GlobalCart.addItem({
+                type: 'festival_product',
+                product_id: productId,
+                size_id: sizeId,
+                festival_id: festivalInfo.id,
+                rider_id: riderId,
+                rider_name: riderName,
+                product_name: productName + (sizeLabel ? ' (' + sizeLabel + ')' : ''),
+                festival_name: festivalInfo.name,
+                festival_date: festivalInfo.start_date,
+                price: 0,
+                included_in_pass: true
+            });
+        } catch (e) { /* skip */ }
+    });
+
+    // 7. Add auto-included products (no sizes)
+    document.querySelectorAll('.pass-product-auto').forEach(input => {
+        const productId = parseInt(input.dataset.productId);
+        const productName = input.dataset.productName;
+        try {
+            GlobalCart.addItem({
+                type: 'festival_product',
+                product_id: productId,
+                festival_id: festivalInfo.id,
+                rider_id: riderId,
+                rider_name: riderName,
+                product_name: productName,
+                festival_name: festivalInfo.name,
+                festival_date: festivalInfo.start_date,
+                price: 0,
+                included_in_pass: true
             });
         } catch (e) { /* skip */ }
     });
