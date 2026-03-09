@@ -92,8 +92,9 @@ $activities = $pdo->prepare("
 $activities->execute([$festivalId]);
 $activities = $activities->fetchAll(PDO::FETCH_ASSOC);
 
-// Load activity slots count (indexed by activity_id)
+// Load activity slots count and dates (indexed by activity_id)
 $activitySlotCounts = [];
+$activitySlotDates = []; // activity_id => [date1, date2, ...]
 try {
     $slStmt = $pdo->prepare("
         SELECT s.activity_id, COUNT(*) as slot_count
@@ -105,6 +106,18 @@ try {
     $slStmt->execute([$festivalId]);
     foreach ($slStmt->fetchAll(PDO::FETCH_ASSOC) as $sc) {
         $activitySlotCounts[$sc['activity_id']] = (int)$sc['slot_count'];
+    }
+    // Load unique dates per activity from slots
+    $slDateStmt = $pdo->prepare("
+        SELECT DISTINCT s.activity_id, s.date
+        FROM festival_activity_slots s
+        JOIN festival_activities fa ON s.activity_id = fa.id
+        WHERE fa.festival_id = ? AND s.active = 1
+        ORDER BY s.date ASC
+    ");
+    $slDateStmt->execute([$festivalId]);
+    foreach ($slDateStmt->fetchAll(PDO::FETCH_ASSOC) as $sd) {
+        $activitySlotDates[$sd['activity_id']][] = $sd['date'];
     }
 } catch (PDOException $e) {}
 
@@ -167,18 +180,53 @@ if ($festival['pass_enabled']) {
 }
 
 // Group ungrouped activities by date
+// Activities with time slots appear under EACH slot date (not just their base date)
 $activitiesByDate = [];
 foreach ($ungroupedActivities as $a) {
-    $activitiesByDate[$a['date']][] = $a;
+    $aId = (int)$a['id'];
+    if (!empty($activitySlotDates[$aId])) {
+        // Show activity under each unique slot date
+        foreach ($activitySlotDates[$aId] as $slotDate) {
+            $activitiesByDate[$slotDate][] = $a;
+        }
+    } else {
+        // No slots: use activity's own date
+        $activitiesByDate[$a['date']][] = $a;
+    }
 }
 
 // Group activity groups by date
+// Groups with activities that have slots: use slot dates
 $groupsByDate = [];
 foreach ($activityGroups as $g) {
-    if ($g['date']) {
+    $gId = (int)$g['id'];
+    // Collect all slot dates from group's activities
+    $groupSlotDates = [];
+    foreach ($activities as $ga) {
+        if (($ga['group_id'] ?? 0) == $gId && !empty($activitySlotDates[$ga['id']])) {
+            $groupSlotDates = array_merge($groupSlotDates, $activitySlotDates[$ga['id']]);
+        }
+    }
+    $groupSlotDates = array_unique($groupSlotDates);
+
+    if (!empty($groupSlotDates)) {
+        foreach ($groupSlotDates as $slotDate) {
+            $groupsByDate[$slotDate][] = $g;
+        }
+    } elseif ($g['date']) {
         $groupsByDate[$g['date']][] = $g;
     }
 }
+// Remove duplicate groups per date
+foreach ($groupsByDate as $d => &$gList) {
+    $seen = [];
+    $gList = array_filter($gList, function($g) use (&$seen) {
+        if (in_array($g['id'], $seen)) return false;
+        $seen[] = $g['id'];
+        return true;
+    });
+}
+unset($gList);
 
 // Group events by date
 $eventsByDate = [];

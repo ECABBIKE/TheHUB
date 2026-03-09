@@ -17,12 +17,25 @@
 
 ## SENASTE FIXAR (2026-03-09, session 63)
 
-### Festival: Säkerhetsfix — borttagning av festivalpass rensar inkluderade items
-- **Bugg:** Om ett festivalpass togs bort från kundvagnen låg inkluderade aktiviteter (pris 0 kr) och events (festival_pass_event) kvar. Användaren kunde slutföra köpet med 0 kr-artiklar utan att ha pass.
-- **Fix (klient):** `GlobalCart.removeFestivalItem()` i `global-cart.js` rensar nu kaskaderat: passet + alla `included_in_pass`-aktiviteter + alla `festival_pass_event`-events för samma festival+rider.
-- **Fix (UI):** `pages/cart.php` döljer nu ta-bort-knappen på pass-inkluderade items. Dessa kan bara tas bort genom att ta bort själva passet.
-- **Backend-skydd:** `order-manager.php` (rad 647-699) validerar redan server-side att rider har pass innan pass-rabatt ges. Även om klient-sidan manipuleras kan ingen få 0 kr utan giltigt pass.
-- **Filer:** `assets/js/global-cart.js`, `pages/cart.php`
+### Festival: Gruppbaserat passinnehåll + säkerhetsfix + flerdag-aktiviteter
+- **Ny funktion: Gruppbaserat passinnehåll** — Festivalpass kan nu inkludera N aktiviteter ur en grupp. Admin sätter `pass_included_count` på gruppen (t.ex. "Välj 2 av 5 clinics"). Bokningssidan visar dropdown-väljare för varje pick. Backend validerar mot gruppens count istället för enskild aktivitets count.
+- **Migration 091:** `pass_included_count` INT på `festival_activity_groups`
+- **Admin festival-edit.php:** Nytt fält "Ingår i festivalpass" på gruppformuläret (antal aktiviteter ur gruppen). Pass-fliken visar grupper med "Välj N av M"-badge + listar gruppens aktiviteter.
+- **Bokningssida pass.php:** Nya selects `.pass-group-activity-select` + `.pass-group-slot-select` för gruppval. JS `onGroupActivityChange()` laddar tidspass dynamiskt vid aktivitetsval. `addPassToCart()` hanterar gruppval med duplikatkontroll.
+- **order-manager.php:** Ny gruppbaserad pass-rabattlogik. Om aktivitet tillhör grupp med `pass_included_count > 0`: räknar alla pass-rabatterade registreringar ÖVER ALLA aktiviteter i gruppen (inte bara den enskilda). Fallback till per-aktivitet-logik om ingen gruppinkludering.
+- **Säkerhetsfix:** `GlobalCart.removeFestivalItem()` rensar kaskaderat vid pass-borttagning: passet + alla `included_in_pass`-aktiviteter + alla `festival_pass_event`-events. `cart.php` döljer ta-bort-knappen på pass-inkluderade items.
+- **Flerdag-fix:** Aktiviteter med tidspass över flera dagar visas nu under ALLA dagar (inte bara aktivitetens bas-datum). Samma fix för grupper: visas under alla dagar där gruppens aktiviteter har tidspass.
+- **VIKTIGT:** Kör migration 091 via `/admin/migrations.php`
+- **Filer:** `Tools/migrations/091_group_pass_included_count.sql`, `admin/festival-edit.php`, `pages/festival/pass.php`, `pages/festival/show.php`, `includes/order-manager.php`, `assets/js/global-cart.js`, `pages/cart.php`, `admin/migrations.php`
+
+### Festival: Gruppbaserad pass-arkitektur (ny)
+- **Två vägar för passinkludering:**
+  1. Per-aktivitet: `festival_activities.pass_included_count` (som förut)
+  2. Per-grupp: `festival_activity_groups.pass_included_count` (ny) — rider väljer N aktiviteter ur gruppen
+- **Grupp överstyr:** Om en grupp har `pass_included_count > 0`, ignoreras enskilda aktiviteters `included_in_pass` i den gruppen
+- **Backend-validering:** `order-manager.php` kollar först om aktiviteten tillhör en grupp med pass-count. Om ja: räknar pass-discount registreringar ÖVER HELA gruppen. Om nej: per-aktivitet som förut.
+- **Booking-flöde:** Bokningssidan visar grupper som "Välj N av M" med dropdown för varje pick. Väljer rider en aktivitet med tidspass laddas slot-väljaren dynamiskt.
+- **Kundvagn:** Gruppvalda items har `group_id` i cart-itemet, `included_in_pass: true`, pris 0 kr
 
 ## SENASTE FIXAR (2026-03-09, session 62)
 
