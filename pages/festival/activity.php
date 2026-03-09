@@ -374,9 +374,9 @@ $pageTitle = $group['name'] . ' – ' . $festival['name'];
                 <div class="festival-pass-card-price">
                     <?= $festival['pass_price'] ? number_format($festival['pass_price'], 0) . ' kr' : 'Gratis' ?>
                 </div>
-                <button class="festival-pass-btn" id="festivalPassBtn" onclick="addFestivalPassToCart()">
-                    <i data-lucide="shopping-cart"></i> Lägg i kundvagn
-                </button>
+                <a href="/festival/<?= $festivalId ?>/pass" class="festival-pass-btn" id="festivalPassBtn" style="text-decoration: none; text-align: center; display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="shopping-cart"></i> Köp festivalpass
+                </a>
             </div>
             <?php endif; ?>
 
@@ -410,10 +410,7 @@ $pageTitle = $group['name'] . ' – ' . $festival['name'];
 const festivalInfo = {
     id: <?= (int)$festival['id'] ?>,
     name: <?= json_encode($festival['name'], JSON_UNESCAPED_UNICODE) ?>,
-    start_date: <?= json_encode($festival['start_date']) ?>,
-    pass_enabled: <?= $festival['pass_enabled'] ? 'true' : 'false' ?>,
-    pass_name: <?= json_encode($festival['pass_name'] ?: 'Festivalpass', JSON_UNESCAPED_UNICODE) ?>,
-    pass_price: <?= (float)($festival['pass_price'] ?? 0) ?>
+    start_date: <?= json_encode($festival['start_date']) ?>
 };
 
 const activityData = <?= json_encode(array_map(function($a) use ($actTypes, $festival) {
@@ -473,39 +470,7 @@ function addActivityToCart(activityId) {
     });
 }
 
-function addFestivalPassToCart() {
-    if (!festivalInfo.pass_enabled) { alert('Festivalpass är inte aktiverat för denna festival.'); return; }
-
-    openFestivalRiderSearch(function(rider) {
-        const cart = GlobalCart.getCart();
-        if (cart.some(ci => ci.type === 'festival_pass' && ci.festival_id === festivalInfo.id && ci.rider_id === rider.id)) {
-            alert('Festivalpasset för ' + rider.firstname + ' ' + rider.lastname + ' finns redan i kundvagnen');
-            return;
-        }
-
-        try {
-            GlobalCart.addItem({
-                type: 'festival_pass',
-                festival_id: festivalInfo.id,
-                rider_id: rider.id,
-                rider_name: rider.firstname + ' ' + rider.lastname,
-                festival_name: festivalInfo.name,
-                festival_date: festivalInfo.start_date,
-                pass_name: festivalInfo.pass_name,
-                price: festivalInfo.pass_price
-            });
-
-            const btn = document.getElementById('festivalPassBtn');
-            if (btn) {
-                btn.innerHTML = '<i data-lucide="check-circle"></i> ' + rider.firstname + ' tillagd';
-                btn.classList.add('btn--success');
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            }
-        } catch (e) {
-            alert('Kunde inte lägga till: ' + e.message);
-        }
-    });
-}
+// Festival pass — now handled by dedicated booking page at /festival/{id}/pass
 </script>
 
 <?php include __DIR__ . '/../../components/festival-rider-search.php'; ?>
