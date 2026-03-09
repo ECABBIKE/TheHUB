@@ -533,6 +533,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Festival Diagnostik -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="tent"></i></div>
+            <div>
+                <h4 class="tool-title">Festival-diagnostik</h4>
+                <p class="tool-description">Testa JS, GlobalCart, API, databas</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/festival-debug.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
     <!-- Diagnose Series -->
     <div class="card">
         <div class="tool-header">
