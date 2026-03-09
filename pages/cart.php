@@ -204,11 +204,13 @@ require_once __DIR__ . '/../includes/payment.php';
 
         let html = '';
         byEvent.forEach(eventGroup => {
+            const isFestival = eventGroup.is_festival;
+            const headerIcon = isFestival ? 'tent' : 'calendar';
             html += `
                 <div class="card" style="margin-bottom: var(--space-lg);">
                     <div class="card-header">
                         <h3 style="font-size: var(--text-lg); margin: 0;">
-                            <i data-lucide="calendar"></i>
+                            <i data-lucide="${headerIcon}"></i>
                             ${eventGroup.event_name || 'Event #' + eventGroup.event_id}
                         </h3>
                         ${eventGroup.event_date ? `<small style="color: var(--color-text-muted);">${eventGroup.event_date}</small>` : ''}
@@ -217,8 +219,27 @@ require_once __DIR__ . '/../includes/payment.php';
             `;
 
             eventGroup.items.forEach(item => {
+                const isFestivalItem = item.type === 'festival_pass' || item.type === 'festival_activity' || item.festival_pass_event;
                 const itemKey = `${item.event_id}_${item.rider_id}_${item.class_id}`;
-                const seriesDiscPerItem = itemSeriesDiscounts[itemKey] || 0;
+                const seriesDiscPerItem = isFestivalItem ? 0 : (itemSeriesDiscounts[itemKey] || 0);
+
+                // Determine label for item
+                let itemLabel = '';
+                if (item.type === 'festival_pass') {
+                    itemLabel = item.pass_name || 'Festivalpass';
+                } else if (item.type === 'festival_activity') {
+                    itemLabel = item.activity_name || 'Aktivitet';
+                } else {
+                    itemLabel = (item.class_name || 'Klass') + (item.club_name ? ' &middot; ' + item.club_name : '');
+                }
+
+                // Tag for included-in-pass items
+                let includedTag = '';
+                if (item.included_in_pass || item.festival_pass_event) {
+                    includedTag = `<span style="font-size: 0.7rem; color: var(--color-success); display: inline-flex; align-items: center; gap: 2px; margin-left: 4px;">
+                        <i data-lucide="ticket" style="width:10px;height:10px;"></i> Ingår i pass
+                    </span>`;
+                }
 
                 // Build per-item discount lines
                 let discountLines = '';
@@ -227,28 +248,43 @@ require_once __DIR__ . '/../includes/payment.php';
                         <i data-lucide="tag" style="width:12px;height:12px;"></i> Serierabatt: -${seriesDiscPerItem} kr
                     </div>`;
                 }
-                // Gravity ID discount placeholder - filled in async for each rider
-                discountLines += `<div class="cart-item-gravity" data-event-id="${item.event_id}" data-rider-id="${item.rider_id}" style="display:none; font-size: var(--text-xs); color: var(--color-success); align-items: center; gap: 4px; margin-top: 2px;"></div>`;
+                if (!isFestivalItem) {
+                    // Gravity ID discount placeholder - filled in async for each rider
+                    discountLines += `<div class="cart-item-gravity" data-event-id="${item.event_id}" data-rider-id="${item.rider_id}" style="display:none; font-size: var(--text-xs); color: var(--color-success); align-items: center; gap: 4px; margin-top: 2px;"></div>`;
+                }
+
+                // Remove button: different handler for festival vs event items
+                let removeBtn = '';
+                if (item.type === 'festival_pass') {
+                    removeBtn = `<button class="btn btn--danger btn--sm remove-festival-item"
+                        data-type="festival_pass" data-id="${item.festival_id}" data-riderid="${item.rider_id}"
+                        style="padding: var(--space-2xs) var(--space-xs);" title="Ta bort">
+                        <i data-lucide="x" style="width: 16px; height: 16px;"></i></button>`;
+                } else if (item.type === 'festival_activity') {
+                    removeBtn = `<button class="btn btn--danger btn--sm remove-festival-item"
+                        data-type="festival_activity" data-id="${item.activity_id}" data-riderid="${item.rider_id}" data-slotid="${item.slot_id || ''}"
+                        style="padding: var(--space-2xs) var(--space-xs);" title="Ta bort">
+                        <i data-lucide="x" style="width: 16px; height: 16px;"></i></button>`;
+                } else {
+                    removeBtn = `<button class="btn btn--danger btn--sm remove-item"
+                        data-eventid="${item.event_id}" data-riderid="${item.rider_id}" data-classid="${item.class_id}"
+                        style="padding: var(--space-2xs) var(--space-xs);" title="Ta bort">
+                        <i data-lucide="x" style="width: 16px; height: 16px;"></i></button>`;
+                }
 
                 html += `
                     <div class="cart-item" style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); padding: var(--space-md); border-bottom: 1px solid var(--color-border);">
                         <div style="flex: 1; min-width: 0;">
                             <strong style="display: block;">${item.rider_name}</strong>
                             <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">
-                                ${item.class_name || 'Klass'}${item.club_name ? ' &middot; ' + item.club_name : ''}
+                                ${itemLabel}
                             </span>
+                            ${includedTag}
                             ${discountLines}
                         </div>
                         <div style="display: flex; align-items: center; gap: var(--space-sm); flex-shrink: 0;">
                             <span style="font-weight: var(--weight-semibold);">${item.price} kr</span>
-                            <button class="btn btn--danger btn--sm remove-item"
-                                    data-eventid="${item.event_id}"
-                                    data-riderid="${item.rider_id}"
-                                    data-classid="${item.class_id}"
-                                    style="padding: var(--space-2xs) var(--space-xs);"
-                                    title="Ta bort">
-                                <i data-lucide="x" style="width: 16px; height: 16px;"></i>
-                            </button>
+                            ${removeBtn}
                         </div>
                     </div>
                 `;
@@ -286,13 +322,25 @@ require_once __DIR__ . '/../includes/payment.php';
         // Re-init Lucide icons
         if (typeof lucide !== 'undefined') lucide.createIcons();
 
-        // Add remove handlers
+        // Add remove handlers for event items
         document.querySelectorAll('.remove-item').forEach(btn => {
             btn.addEventListener('click', function() {
                 const eventId = parseInt(this.dataset.eventid);
                 const riderId = parseInt(this.dataset.riderid);
                 const classId = parseInt(this.dataset.classid);
                 GlobalCart.removeItem(eventId, riderId, classId);
+                renderCart();
+            });
+        });
+
+        // Add remove handlers for festival items
+        document.querySelectorAll('.remove-festival-item').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const type = this.dataset.type;
+                const id = parseInt(this.dataset.id);
+                const riderId = parseInt(this.dataset.riderid);
+                const slotId = this.dataset.slotid ? parseInt(this.dataset.slotid) : undefined;
+                GlobalCart.removeFestivalItem(type, id, riderId, slotId);
                 renderCart();
             });
         });

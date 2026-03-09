@@ -14,9 +14,9 @@ $query = trim($_GET['q'] ?? '');
 $type = $_GET['type'] ?? 'all';
 $limit = min(intval($_GET['limit'] ?? 10), 20);
 
-// Load filter setting from admin configuration
+// Load filter setting from admin configuration (can be overridden via GET param)
 $publicSettings = @include(dirname(__DIR__) . '/config/public_settings.php');
-$filter = $publicSettings['public_riders_display'] ?? 'all';
+$filter = $_GET['filter'] ?? $publicSettings['public_riders_display'] ?? 'all';
 
 if (strlen($query) < 2) {
     echo json_encode(['results' => [], 'query' => $query]);

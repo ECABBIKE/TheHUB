@@ -69,10 +69,11 @@ if ($festival['status'] !== 'published' && !$isAdmin) {
     exit;
 }
 
-// Load linked competition events
+// Load linked competition events (include included_in_pass from festival_events)
 $events = $pdo->prepare("
     SELECT e.id, e.name, e.date, e.end_date, e.location, e.discipline, e.event_format,
         e.max_participants, e.registration_deadline,
+        fe.included_in_pass,
         (SELECT COUNT(*) FROM event_registrations er WHERE er.event_id = e.id AND er.status != 'cancelled') as reg_count,
         GROUP_CONCAT(DISTINCT s.name SEPARATOR ', ') as series_names
     FROM festival_events fe
@@ -160,6 +161,42 @@ if ($festival['logo_media_id']) {
     $logoUrl->execute([$festival['logo_media_id']]);
     $logoUrl = $logoUrl->fetchColumn() ?: null;
 }
+
+// Load activity slots for pass-included activities (for pass config modal)
+$passActivitySlots = [];
+try {
+    $slotDataStmt = $pdo->prepare("
+        SELECT s.id, s.activity_id, s.date, s.start_time, s.end_time, s.max_participants,
+            (SELECT COUNT(*) FROM festival_activity_registrations far WHERE far.slot_id = s.id AND far.status != 'cancelled') as reg_count
+        FROM festival_activity_slots s
+        JOIN festival_activities fa ON s.activity_id = fa.id
+        WHERE fa.festival_id = ? AND fa.included_in_pass = 1 AND s.active = 1 AND fa.active = 1
+        ORDER BY s.date ASC, s.start_time ASC
+    ");
+    $slotDataStmt->execute([$festivalId]);
+    foreach ($slotDataStmt->fetchAll(PDO::FETCH_ASSOC) as $slot) {
+        $passActivitySlots[$slot['activity_id']][] = $slot;
+    }
+} catch (PDOException $e) {}
+
+// Load classes for pass-included events (for pass config modal)
+$passEventClasses = [];
+try {
+    $includedEventIds = array_map(fn($e) => $e['id'], array_filter($events, fn($e) => !empty($e['included_in_pass'])));
+    if (!empty($includedEventIds)) {
+        $placeholders = implode(',', array_fill(0, count($includedEventIds), '?'));
+        $clsStmt = $pdo->prepare("
+            SELECT c.id, c.event_id, COALESCE(c.display_name, c.name) as name, c.gender, c.min_age, c.max_age
+            FROM classes c
+            WHERE c.event_id IN ($placeholders) AND c.active = 1
+            ORDER BY c.sort_order ASC, c.name ASC
+        ");
+        $clsStmt->execute($includedEventIds);
+        foreach ($clsStmt->fetchAll(PDO::FETCH_ASSOC) as $cls) {
+            $passEventClasses[$cls['event_id']][] = $cls;
+        }
+    }
+} catch (PDOException $e) {}
 
 // Pass stats
 $passCount = 0;
@@ -506,8 +543,8 @@ include __DIR__ . '/../../includes/header.php';
                     <?php endif; ?>
                 </div>
                 <?php if (hub_is_logged_in()): ?>
-                <button class="festival-pass-btn" id="festivalPassBtn" onclick="addFestivalPassToCart()">
-                    <i data-lucide="shopping-cart"></i> Lägg i kundvagn
+                <button class="festival-pass-btn" id="festivalPassBtn" onclick="openPassConfigModal()">
+                    <i data-lucide="shopping-cart"></i> Köp festivalpass
                 </button>
                 <?php else: ?>
                 <a href="/login?return=<?= urlencode('/festival/' . $festivalId) ?>" class="festival-pass-btn">
@@ -577,6 +614,314 @@ include __DIR__ . '/../../includes/header.php';
 
     </div>
 
+<?php if ($festival['pass_enabled'] && hub_is_logged_in()): ?>
+<!-- ============ PASS CONFIG MODAL ============ -->
+<div class="pass-modal-overlay" id="passModal" style="display:none;">
+    <div class="pass-modal">
+        <div class="pass-modal-header">
+            <h3><i data-lucide="ticket"></i> <?= htmlspecialchars($festival['pass_name'] ?: 'Festivalpass') ?></h3>
+            <button type="button" class="pass-modal-close" onclick="closePassModal()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+
+        <div class="pass-modal-body">
+
+            <!-- Rider-väljare -->
+            <div class="pass-modal-section" id="passRiderSection">
+                <label class="pass-modal-label">Deltagare</label>
+                <select id="passRiderSelect" class="pass-modal-select" onchange="onPassRiderChange()">
+                </select>
+            </div>
+
+            <?php
+            $includedActs = array_filter($activities, fn($a) => $a['included_in_pass']);
+            $includedEvents = array_filter($events, fn($e) => !empty($e['included_in_pass']));
+            ?>
+
+            <?php if (!empty($includedActs)): ?>
+            <div class="pass-modal-section">
+                <label class="pass-modal-label"><i data-lucide="check-circle" style="width:14px;height:14px;color:var(--color-success);"></i> Aktiviteter som ingår</label>
+
+                <?php foreach ($includedActs as $ia):
+                    $iaType = $actTypes[$ia['activity_type']] ?? $actTypes['other'];
+                    $iaSlots = $passActivitySlots[$ia['id']] ?? [];
+                    $iaHasSlots = !empty($iaSlots);
+                ?>
+                <div class="pass-modal-item" data-activity-id="<?= $ia['id'] ?>">
+                    <div class="pass-modal-item-header">
+                        <span class="pass-modal-item-icon" style="color: <?= $iaType['color'] ?>;">
+                            <i data-lucide="<?= $iaType['icon'] ?>"></i>
+                        </span>
+                        <span class="pass-modal-item-name"><?= htmlspecialchars($ia['name']) ?></span>
+                        <span class="pass-modal-item-badge"><?= $iaType['label'] ?></span>
+                    </div>
+
+                    <?php if ($iaHasSlots): ?>
+                    <div class="pass-modal-item-config">
+                        <label class="pass-modal-sublabel">Välj tidspass:</label>
+                        <select class="pass-modal-select pass-slot-select" data-activity-id="<?= $ia['id'] ?>" data-activity-name="<?= htmlspecialchars($ia['name']) ?>">
+                            <option value="">– Välj tidspass –</option>
+                            <?php foreach ($iaSlots as $slot):
+                                $slotFull = $slot['max_participants'] && $slot['reg_count'] >= $slot['max_participants'];
+                                $slotDate = date('j/n', strtotime($slot['date']));
+                                $slotTime = substr($slot['start_time'], 0, 5);
+                                $slotEnd = $slot['end_time'] ? '–' . substr($slot['end_time'], 0, 5) : '';
+                                $spotsLeft = $slot['max_participants'] ? ($slot['max_participants'] - $slot['reg_count']) : null;
+                            ?>
+                            <option value="<?= $slot['id'] ?>"
+                                data-date="<?= $slotDate ?>"
+                                data-time="<?= $slotTime ?>"
+                                <?= $slotFull ? 'disabled' : '' ?>>
+                                <?= $slotDate ?> <?= $slotTime ?><?= $slotEnd ?>
+                                <?php if ($slotFull): ?> (Fullbokat)
+                                <?php elseif ($spotsLeft !== null): ?> (<?= $spotsLeft ?> platser kvar)
+                                <?php endif; ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php else: ?>
+                    <input type="hidden" class="pass-activity-auto" data-activity-id="<?= $ia['id'] ?>" data-activity-name="<?= htmlspecialchars($ia['name']) ?>" value="1">
+                    <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($includedEvents)): ?>
+            <div class="pass-modal-section">
+                <label class="pass-modal-label"><i data-lucide="flag" style="width:14px;height:14px;color:var(--color-accent);"></i> Tävlingar som ingår i passet</label>
+
+                <?php foreach ($includedEvents as $ie):
+                    $ieClasses = $passEventClasses[$ie['id']] ?? [];
+                ?>
+                <div class="pass-modal-item" data-event-id="<?= $ie['id'] ?>">
+                    <div class="pass-modal-item-header">
+                        <span class="pass-modal-item-icon" style="color: var(--color-accent);">
+                            <i data-lucide="<?= $discIcons[$ie['discipline'] ?? ''] ?? 'flag' ?>"></i>
+                        </span>
+                        <span class="pass-modal-item-name"><?= htmlspecialchars($ie['name']) ?></span>
+                        <?php if ($ie['discipline']): ?>
+                        <span class="pass-modal-item-badge"><?= htmlspecialchars($ie['discipline']) ?></span>
+                        <?php endif; ?>
+                    </div>
+
+                    <?php if (!empty($ieClasses)): ?>
+                    <div class="pass-modal-item-config">
+                        <label class="pass-modal-sublabel">Välj klass:</label>
+                        <select class="pass-modal-select pass-class-select" data-event-id="<?= $ie['id'] ?>" data-event-name="<?= htmlspecialchars($ie['name']) ?>">
+                            <option value="">– Välj klass –</option>
+                            <?php foreach ($ieClasses as $cls): ?>
+                            <option value="<?= $cls['id'] ?>"><?= htmlspecialchars($cls['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php else: ?>
+                    <div class="pass-modal-item-note" style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: var(--space-2xs);">
+                        Inga klasser tillgängliga ännu. Du anmäls automatiskt.
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+
+            <!-- Summering -->
+            <div class="pass-modal-summary">
+                <div class="pass-modal-summary-row">
+                    <span><?= htmlspecialchars($festival['pass_name'] ?: 'Festivalpass') ?></span>
+                    <span class="pass-modal-summary-price"><?= $festival['pass_price'] ? number_format($festival['pass_price'], 0) . ' kr' : 'Gratis' ?></span>
+                </div>
+                <div class="pass-modal-summary-note">
+                    Aktiviteter som ingår i passet kostar 0 kr extra.
+                </div>
+            </div>
+
+        </div>
+
+        <div class="pass-modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closePassModal()" style="padding: 10px 20px;">Avbryt</button>
+            <button type="button" class="festival-pass-btn" id="passModalConfirmBtn" onclick="confirmPassToCart()" style="flex: 1;">
+                <i data-lucide="shopping-cart"></i> Lägg i kundvagn
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.pass-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-md);
+}
+.pass-modal {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.pass-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+.pass-modal-header h3 {
+    margin: 0;
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+.pass-modal-header h3 i {
+    width: 20px; height: 20px;
+    color: var(--color-accent);
+}
+.pass-modal-close {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: var(--space-2xs);
+    border-radius: var(--radius-sm);
+}
+.pass-modal-close:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+}
+.pass-modal-close i { width: 20px; height: 20px; }
+.pass-modal-body {
+    overflow-y: auto;
+    padding: var(--space-lg);
+    flex: 1;
+}
+.pass-modal-section {
+    margin-bottom: var(--space-lg);
+}
+.pass-modal-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-sm);
+}
+.pass-modal-sublabel {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-2xs);
+    display: block;
+}
+.pass-modal-select {
+    width: 100%;
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+}
+.pass-modal-item {
+    padding: var(--space-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--space-xs);
+    background: var(--color-bg-surface);
+}
+.pass-modal-item-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+.pass-modal-item-icon i { width: 16px; height: 16px; }
+.pass-modal-item-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--color-text-primary);
+    flex: 1;
+}
+.pass-modal-item-badge {
+    font-size: 0.7rem;
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+    background: var(--color-bg-hover);
+    color: var(--color-text-muted);
+}
+.pass-modal-item-config {
+    margin-top: var(--space-xs);
+    padding-top: var(--space-xs);
+    border-top: 1px solid var(--color-border);
+}
+.pass-modal-summary {
+    background: var(--color-accent-light);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    padding: var(--space-md);
+}
+.pass-modal-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+.pass-modal-summary-price {
+    font-size: 1.25rem;
+    color: var(--color-accent);
+}
+.pass-modal-summary-note {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-top: var(--space-2xs);
+}
+.pass-modal-footer {
+    display: flex;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    border-top: 1px solid var(--color-border);
+}
+@media (max-width: 767px) {
+    .pass-modal-overlay {
+        padding: 0;
+        align-items: flex-end;
+    }
+    .pass-modal {
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        max-height: 95vh;
+    }
+    .pass-modal-body {
+        padding: var(--space-md);
+    }
+    .pass-modal-header,
+    .pass-modal-footer {
+        padding: var(--space-sm) var(--space-md);
+    }
+    .pass-modal-select {
+        font-size: 16px;
+        min-height: 44px;
+    }
+}
+</style>
+<?php endif; ?>
+
 </main>
 
 <script>
@@ -600,12 +945,12 @@ if (hub_is_logged_in()) {
 const registrableRiders = <?= json_encode($registrableRiders, JSON_UNESCAPED_UNICODE) ?>;
 const isLoggedIn = <?= hub_is_logged_in() ? 'true' : 'false' ?>;
 
-function addFestivalPassToCart() {
+// Open pass configuration modal
+function openPassConfigModal() {
     if (!isLoggedIn || !festivalInfo.pass_enabled) return;
 
     const riderId = registrableRiders[0] ? registrableRiders[0].id : null;
     if (!riderId) return;
-    const rider = registrableRiders[0];
 
     const cart = GlobalCart.getCart();
     if (cart.some(ci => ci.type === 'festival_pass' && ci.festival_id === festivalInfo.id && ci.rider_id === riderId)) {
@@ -613,29 +958,145 @@ function addFestivalPassToCart() {
         return;
     }
 
+    // Populate rider selector
+    const sel = document.getElementById('passRiderSelect');
+    if (sel) {
+        sel.innerHTML = '';
+        registrableRiders.forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.id;
+            opt.textContent = r.firstname + ' ' + r.lastname;
+            sel.appendChild(opt);
+        });
+        // Hide section if only one rider
+        const section = document.getElementById('passRiderSection');
+        if (section) section.style.display = registrableRiders.length > 1 ? '' : 'none';
+    }
+
+    document.getElementById('passModal').style.display = 'flex';
+    document.documentElement.classList.add('lightbox-open');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closePassModal() {
+    document.getElementById('passModal').style.display = 'none';
+    document.documentElement.classList.remove('lightbox-open');
+}
+
+function onPassRiderChange() {
+    // Future: filter classes based on rider gender/age
+}
+
+// Confirm and add pass + selected items to cart
+function confirmPassToCart() {
+    const riderId = parseInt(document.getElementById('passRiderSelect')?.value || registrableRiders[0]?.id);
+    if (!riderId) return;
+
+    const rider = registrableRiders.find(r => r.id === riderId);
+    if (!rider) return;
+    const riderName = rider.firstname + ' ' + rider.lastname;
+
+    // 1. Add the festival pass itself
     try {
         GlobalCart.addItem({
             type: 'festival_pass',
             festival_id: festivalInfo.id,
             rider_id: riderId,
-            rider_name: rider.firstname + ' ' + rider.lastname,
+            rider_name: riderName,
             festival_name: festivalInfo.name,
             festival_date: festivalInfo.start_date,
             pass_name: festivalInfo.pass_name,
             price: festivalInfo.pass_price
         });
-
-        const btn = document.getElementById('festivalPassBtn');
-        if (btn) {
-            btn.innerHTML = '<i data-lucide="check-circle"></i> Tillagd i kundvagnen';
-            btn.disabled = true;
-            btn.classList.add('btn--success');
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
     } catch (e) {
-        alert('Kunde inte lägga till: ' + e.message);
+        alert('Kunde inte lägga till pass: ' + e.message);
+        return;
     }
+
+    // 2. Add selected activity slots (with tidspass)
+    document.querySelectorAll('.pass-slot-select').forEach(sel => {
+        const slotId = parseInt(sel.value);
+        if (!slotId) return; // No slot selected - skip
+        const actId = parseInt(sel.dataset.activityId);
+        const actName = sel.dataset.activityName;
+        const opt = sel.options[sel.selectedIndex];
+        const slotDate = opt.dataset.date || '';
+        const slotTime = opt.dataset.time || '';
+        try {
+            GlobalCart.addItem({
+                type: 'festival_activity',
+                activity_id: actId,
+                slot_id: slotId,
+                festival_id: festivalInfo.id,
+                rider_id: riderId,
+                rider_name: riderName,
+                activity_name: actName + ' (' + slotDate + ' ' + slotTime + ')',
+                festival_name: festivalInfo.name,
+                festival_date: festivalInfo.start_date,
+                price: 0,
+                included_in_pass: true
+            });
+        } catch (e) { /* skip on error */ }
+    });
+
+    // 3. Add activities without slots (auto-included)
+    document.querySelectorAll('.pass-activity-auto').forEach(input => {
+        const actId = parseInt(input.dataset.activityId);
+        const actName = input.dataset.activityName;
+        try {
+            GlobalCart.addItem({
+                type: 'festival_activity',
+                activity_id: actId,
+                festival_id: festivalInfo.id,
+                rider_id: riderId,
+                rider_name: riderName,
+                activity_name: actName,
+                festival_name: festivalInfo.name,
+                festival_date: festivalInfo.start_date,
+                price: 0,
+                included_in_pass: true
+            });
+        } catch (e) { /* skip on error */ }
+    });
+
+    // 4. Add selected event classes
+    document.querySelectorAll('.pass-class-select').forEach(sel => {
+        const classId = parseInt(sel.value);
+        if (!classId) return; // No class selected - skip
+        const eventId = parseInt(sel.dataset.eventId);
+        const eventName = sel.dataset.eventName;
+        const className = sel.options[sel.selectedIndex].textContent.trim();
+        try {
+            GlobalCart.addItem({
+                type: 'event',
+                event_id: eventId,
+                class_id: classId,
+                rider_id: riderId,
+                rider_name: riderName,
+                event_name: eventName,
+                class_name: className,
+                price: 0,
+                festival_pass_event: true,
+                festival_id: festivalInfo.id
+            });
+        } catch (e) { /* skip on error */ }
+    });
+
+    // Close modal and update button
+    closePassModal();
+    const btn = document.getElementById('festivalPassBtn');
+    if (btn) {
+        btn.innerHTML = '<i data-lucide="check-circle"></i> Tillagd i kundvagnen';
+        btn.disabled = true;
+        btn.classList.add('btn--success');
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
+
+// Close modal on Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closePassModal();
+});
 </script>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
