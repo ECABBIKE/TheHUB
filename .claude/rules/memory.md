@@ -1,6 +1,6 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-03-08
+> Senast uppdaterad: 2026-03-09
 
 ---
 
@@ -14,6 +14,17 @@
 - Om en ny sida behöver nås: lägg den under befintlig grupp i `pages`-arrayen, och länka från relevant dashboard/grid
 
 ---
+
+## SENASTE FIXAR (2026-03-09, session 56)
+
+### Festival: Instruktör kopplad till rider-profil + datum/tid-fält döljs vid tidspass
+- **Ny funktion:** Instruktör/guide kan kopplas till en befintlig deltagarprofil via sökfält med typeahead. Publika sidor visar instruktörsnamnet som klickbar länk till profilen.
+- **Admin festival-edit.php:** Instruktör-fältet har nu sökfunktion (typeahead mot `/api/search.php?type=riders`). Vid val visas "Visa profil"-länk + "Ta bort koppling"-knapp. Textfältet fungerar fortfarande för namn som inte finns i systemet (fritext fallback).
+- **Publika sidor:** show.php, activity.php, single-activity.php — instruktörsnamn visas som `<a>` länk till `/rider/{id}` om `instructor_rider_id` är satt, annars bara text.
+- **Datum/tid-fält:** Aktiviteter med tidspass visar nu en info-ruta istället för datum/tid-fälten, eftersom passen styr schemat.
+- **Migration 089:** `instructor_rider_id` INT NULL på `festival_activities` + `festival_activity_groups` med FK till riders(id) ON DELETE SET NULL.
+- **VIKTIGT:** Kör migration 089 via `/admin/migrations.php`
+- **Filer:** `Tools/migrations/089_festival_instructor_rider_id.sql`, `admin/festival-edit.php`, `pages/festival/show.php`, `pages/festival/activity.php`, `pages/festival/single-activity.php`, `admin/migrations.php`, `config.php`
 
 ## SENASTE FIXAR (2026-03-08, session 55)
 

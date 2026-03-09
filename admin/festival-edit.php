@@ -140,6 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'location_detail' => trim($_POST['act_location'] ?? ''),
             'instructor_name' => trim($_POST['act_instructor'] ?? ''),
             'instructor_info' => trim($_POST['act_instructor_info'] ?? ''),
+            'instructor_rider_id' => !empty($_POST['act_instructor_rider_id']) ? intval($_POST['act_instructor_rider_id']) : null,
             'price' => floatval($_POST['act_price'] ?? 0),
             'max_participants' => !empty($_POST['act_max']) ? intval($_POST['act_max']) : null,
             'included_in_pass' => isset($_POST['act_included_in_pass']) ? 1 : 0,
@@ -206,6 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'location_detail' => trim($_POST['grp_location'] ?? ''),
             'instructor_name' => trim($_POST['grp_instructor'] ?? ''),
             'instructor_info' => trim($_POST['grp_instructor_info'] ?? ''),
+            'instructor_rider_id' => !empty($_POST['grp_instructor_rider_id']) ? intval($_POST['grp_instructor_rider_id']) : null,
         ];
 
         if (empty($groupData['name'])) {
@@ -1167,7 +1169,25 @@ endif;
             <div class="form-row">
                 <div class="form-group">
                     <label>Instruktör / Ledare</label>
-                    <input type="text" name="grp_instructor" value="<?= htmlspecialchars($editGrp['instructor_name'] ?? '') ?>" placeholder="Namn">
+                    <div class="instructor-search-wrap" style="position: relative;">
+                        <input type="text" name="grp_instructor" id="grp_instructor_input"
+                            value="<?= htmlspecialchars($editGrp['instructor_name'] ?? '') ?>"
+                            placeholder="Sök deltagare eller skriv namn..."
+                            autocomplete="off">
+                        <input type="hidden" name="grp_instructor_rider_id" id="grp_instructor_rider_id"
+                            value="<?= intval($editGrp['instructor_rider_id'] ?? 0) ?>">
+                        <div class="instructor-search-results" id="grp_instructor_results" style="display:none;"></div>
+                        <?php if (!empty($editGrp['instructor_rider_id'])): ?>
+                        <div class="instructor-linked" id="grp_instructor_linked">
+                            <a href="/rider/<?= intval($editGrp['instructor_rider_id']) ?>" target="_blank" style="color: var(--color-accent); font-size: 0.8rem;">
+                                <i data-lucide="external-link" style="width: 12px; height: 12px;"></i> Visa profil
+                            </a>
+                            <button type="button" onclick="unlinkInstructor('grp')" style="background:none; border:none; color: var(--color-text-muted); cursor:pointer; font-size: 0.8rem; padding: 0; margin-left: var(--space-xs);">
+                                <i data-lucide="x" style="width: 12px; height: 12px;"></i> Ta bort koppling
+                            </button>
+                        </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Plats (inom festivalen)</label>
@@ -1351,7 +1371,25 @@ endif;
             <div class="form-row">
                 <div class="form-group">
                     <label>Instruktör / Ledare</label>
-                    <input type="text" name="act_instructor" value="<?= htmlspecialchars($editAct['instructor_name'] ?? '') ?>" placeholder="Namn">
+                    <div class="instructor-search-wrap" style="position: relative;">
+                        <input type="text" name="act_instructor" id="act_instructor_input"
+                            value="<?= htmlspecialchars($editAct['instructor_name'] ?? '') ?>"
+                            placeholder="Sök deltagare eller skriv namn..."
+                            autocomplete="off">
+                        <input type="hidden" name="act_instructor_rider_id" id="act_instructor_rider_id"
+                            value="<?= intval($editAct['instructor_rider_id'] ?? 0) ?>">
+                        <div class="instructor-search-results" id="act_instructor_results" style="display:none;"></div>
+                        <?php if (!empty($editAct['instructor_rider_id'])): ?>
+                        <div class="instructor-linked" id="act_instructor_linked">
+                            <a href="/rider/<?= intval($editAct['instructor_rider_id']) ?>" target="_blank" style="color: var(--color-accent); font-size: 0.8rem;">
+                                <i data-lucide="external-link" style="width: 12px; height: 12px;"></i> Visa profil
+                            </a>
+                            <button type="button" onclick="unlinkInstructor('act')" style="background:none; border:none; color: var(--color-text-muted); cursor:pointer; font-size: 0.8rem; padding: 0; margin-left: var(--space-xs);">
+                                <i data-lucide="x" style="width: 12px; height: 12px;"></i> Ta bort koppling
+                            </button>
+                        </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Plats (inom festivalen)</label>
@@ -1677,5 +1715,135 @@ function previewFestivalMedia(select, previewId) {
 $formatToolbar = __DIR__ . '/components/format-toolbar.php';
 if (file_exists($formatToolbar)) include $formatToolbar;
 ?>
+
+<style>
+.instructor-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.instructor-search-results .search-item {
+    padding: var(--space-xs) var(--space-sm);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--color-border);
+}
+.instructor-search-results .search-item:last-child { border-bottom: none; }
+.instructor-search-results .search-item:hover {
+    background: var(--color-bg-hover);
+}
+.instructor-search-results .search-item .si-name {
+    color: var(--color-text-primary);
+    font-weight: 500;
+}
+.instructor-search-results .search-item .si-club {
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+}
+.instructor-linked {
+    margin-top: var(--space-2xs);
+    display: flex;
+    align-items: center;
+}
+</style>
+
+<script>
+(function(){
+    function initInstructorSearch(prefix) {
+        const input = document.getElementById(prefix + '_instructor_input');
+        const hiddenId = document.getElementById(prefix + '_instructor_rider_id');
+        const resultsDiv = document.getElementById(prefix + '_instructor_results');
+        if (!input || !resultsDiv) return;
+
+        let debounceTimer = null;
+
+        input.addEventListener('input', function() {
+            const q = this.value.trim();
+            // Om användaren skriver om, rensa rider-kopplingen
+            hiddenId.value = '';
+            const linkedDiv = document.getElementById(prefix + '_instructor_linked');
+            if (linkedDiv) linkedDiv.style.display = 'none';
+
+            if (q.length < 2) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fetch('/api/search.php?type=riders&q=' + encodeURIComponent(q))
+                    .then(r => r.json())
+                    .then(data => {
+                        const riders = data.riders || [];
+                        if (riders.length === 0) {
+                            resultsDiv.style.display = 'none';
+                            return;
+                        }
+                        resultsDiv.innerHTML = riders.slice(0, 8).map(r =>
+                            '<div class="search-item" data-id="' + r.id + '" data-name="' + (r.firstname + ' ' + r.lastname).replace(/"/g, '&quot;') + '">' +
+                            '<span class="si-name">' + r.firstname + ' ' + r.lastname + '</span>' +
+                            '<span class="si-club">' + (r.club_name || '') + '</span>' +
+                            '</div>'
+                        ).join('');
+                        resultsDiv.style.display = 'block';
+
+                        resultsDiv.querySelectorAll('.search-item').forEach(item => {
+                            item.addEventListener('click', function() {
+                                const riderId = this.dataset.id;
+                                const riderName = this.dataset.name;
+                                input.value = riderName;
+                                hiddenId.value = riderId;
+                                resultsDiv.style.display = 'none';
+
+                                // Visa profillänk
+                                let linkedDiv = document.getElementById(prefix + '_instructor_linked');
+                                if (!linkedDiv) {
+                                    linkedDiv = document.createElement('div');
+                                    linkedDiv.className = 'instructor-linked';
+                                    linkedDiv.id = prefix + '_instructor_linked';
+                                    input.parentNode.appendChild(linkedDiv);
+                                }
+                                linkedDiv.innerHTML =
+                                    '<a href="/rider/' + riderId + '" target="_blank" style="color: var(--color-accent); font-size: 0.8rem;">' +
+                                    '<i data-lucide="external-link" style="width: 12px; height: 12px;"></i> Visa profil</a>' +
+                                    '<button type="button" onclick="unlinkInstructor(\'' + prefix + '\')" style="background:none; border:none; color: var(--color-text-muted); cursor:pointer; font-size: 0.8rem; padding: 0; margin-left: 8px;">' +
+                                    '<i data-lucide="x" style="width: 12px; height: 12px;"></i> Ta bort koppling</button>';
+                                linkedDiv.style.display = 'flex';
+                                if (typeof lucide !== 'undefined') lucide.createIcons();
+                            });
+                        });
+                    })
+                    .catch(() => { resultsDiv.style.display = 'none'; });
+            }, 250);
+        });
+
+        // Stäng sökresultat vid klick utanför
+        document.addEventListener('click', function(e) {
+            if (!input.contains(e.target) && !resultsDiv.contains(e.target)) {
+                resultsDiv.style.display = 'none';
+            }
+        });
+    }
+
+    window.unlinkInstructor = function(prefix) {
+        document.getElementById(prefix + '_instructor_rider_id').value = '';
+        const linkedDiv = document.getElementById(prefix + '_instructor_linked');
+        if (linkedDiv) linkedDiv.style.display = 'none';
+    };
+
+    initInstructorSearch('act');
+    initInstructorSearch('grp');
+})();
+</script>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
