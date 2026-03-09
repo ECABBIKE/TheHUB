@@ -146,6 +146,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'included_in_pass' => !empty($_POST['act_pass_count']) ? 1 : 0,
         ];
 
+        // Add gender/age filter if columns exist
+        try {
+            $pdo->query("SELECT gender FROM festival_activities LIMIT 0");
+            $actData['gender'] = !empty($_POST['act_gender']) ? $_POST['act_gender'] : null;
+            $actData['min_age'] = !empty($_POST['act_min_age']) ? intval($_POST['act_min_age']) : null;
+            $actData['max_age'] = !empty($_POST['act_max_age']) ? intval($_POST['act_max_age']) : null;
+        } catch (PDOException $e) {}
+
         // Add pass_included_count if column exists
         try {
             $pdo->query("SELECT pass_included_count FROM festival_activities LIMIT 0");
@@ -297,6 +305,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'end_time' => !empty($_POST['slot_end_time']) ? $_POST['slot_end_time'] : null,
             'max_participants' => !empty($_POST['slot_max']) ? intval($_POST['slot_max']) : null,
         ];
+
+        // Add gender/age filter if columns exist
+        try {
+            $pdo->query("SELECT gender FROM festival_activity_slots LIMIT 0");
+            $slotData['gender'] = !empty($_POST['slot_gender']) ? $_POST['slot_gender'] : null;
+            $slotData['min_age'] = !empty($_POST['slot_min_age']) ? intval($_POST['slot_min_age']) : null;
+            $slotData['max_age'] = !empty($_POST['slot_max_age']) ? intval($_POST['slot_max_age']) : null;
+        } catch (PDOException $e) {}
 
         if (empty($slotData['date']) || empty($slotData['start_time'])) {
             $_SESSION['flash_message'] = 'Datum och starttid krävs för tidspass';
@@ -1395,6 +1411,18 @@ endif;
             <?php if ($act['location_detail']): ?>
             <span><i data-lucide="map-pin"></i> <?= htmlspecialchars($act['location_detail']) ?></span>
             <?php endif; ?>
+            <?php
+            // Gender/age restriction badge
+            $actRestrParts = [];
+            $actG = $act['gender'] ?? null;
+            if ($actG === 'F' || $actG === 'K') $actRestrParts[] = 'Damer';
+            elseif ($actG === 'M') $actRestrParts[] = 'Herrar';
+            if (!empty($act['min_age'])) $actRestrParts[] = $act['min_age'] . '+ år';
+            if (!empty($act['max_age'])) $actRestrParts[] = '–' . $act['max_age'] . ' år';
+            if (!empty($actRestrParts)):
+            ?>
+            <span class="badge badge-info" style="font-size: 0.65rem;"><?= implode(' · ', $actRestrParts) ?></span>
+            <?php endif; ?>
         </div>
         <?php if ($act['description']): ?>
         <p style="margin: var(--space-xs) 0 0; font-size: 0.85rem; color: var(--color-text-secondary);">
@@ -1534,6 +1562,23 @@ endif;
                     <input type="number" name="act_max" value="<?= $editAct['max_participants'] ?? '' ?>" min="1" placeholder="Obegränsat">
                 </div>
                 <div class="form-group">
+                    <label>Kön</label>
+                    <select name="act_gender" style="width: 140px;">
+                        <option value="">Alla</option>
+                        <option value="F" <?= ($editAct['gender'] ?? '') === 'F' ? 'selected' : '' ?>>Endast damer</option>
+                        <option value="M" <?= ($editAct['gender'] ?? '') === 'M' ? 'selected' : '' ?>>Endast herrar</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Ålder (min – max)</label>
+                    <div style="display: flex; gap: var(--space-xs); align-items: center;">
+                        <input type="number" name="act_min_age" value="<?= $editAct['min_age'] ?? '' ?>" min="1" max="99" placeholder="Min" style="width: 80px;">
+                        <span style="color: var(--color-text-muted);">–</span>
+                        <input type="number" name="act_max_age" value="<?= $editAct['max_age'] ?? '' ?>" min="1" max="99" placeholder="Max" style="width: 80px;">
+                        <span style="font-size: 0.75rem; color: var(--color-text-muted);">år</span>
+                    </div>
+                </div>
+                <div class="form-group">
                     <label>Ingår i pass (antal gånger)</label>
                     <input type="number" name="act_pass_count" value="<?= $editAct['pass_included_count'] ?? ($editAct['included_in_pass'] ?? 0) ?>" min="0" max="10" placeholder="0 = ingår ej" style="width: 120px;">
                     <small style="color: var(--color-text-muted); margin-top: 2px; display: block;">0 = ingår ej, 1+ = antal gånger som ingår i passet</small>
@@ -1594,6 +1639,18 @@ endif;
                     <?php if ($slotFull): ?>
                     <span class="badge badge-warning" style="font-size: 0.65rem;">Fullbokat</span>
                     <?php endif; ?>
+                    <?php
+                    // Show gender/age restriction badge
+                    $slotRestrParts = [];
+                    $slotG = $slot['gender'] ?? null;
+                    if ($slotG === 'F' || $slotG === 'K') $slotRestrParts[] = 'Damer';
+                    elseif ($slotG === 'M') $slotRestrParts[] = 'Herrar';
+                    if (!empty($slot['min_age'])) $slotRestrParts[] = $slot['min_age'] . '+ år';
+                    if (!empty($slot['max_age'])) $slotRestrParts[] = '–' . $slot['max_age'] . ' år';
+                    if (!empty($slotRestrParts)):
+                    ?>
+                    <span class="badge badge-info" style="font-size: 0.65rem;"><?= implode(' · ', $slotRestrParts) ?></span>
+                    <?php endif; ?>
                 </div>
                 <div style="display: flex; gap: var(--space-2xs);">
                     <a href="?id=<?= $id ?>&tab=activities&edit_act=<?= $editAct['id'] ?>&edit_slot=<?= $slot['id'] ?>#slots-section" class="btn-admin btn-admin-secondary" style="padding: 3px 6px;">
@@ -1641,6 +1698,22 @@ endif;
                 <div class="form-group">
                     <label>Max deltagare</label>
                     <input type="number" name="slot_max" value="<?= $editSlot['max_participants'] ?? $editAct['max_participants'] ?? '' ?>" min="1" placeholder="Obegränsat">
+                </div>
+                <div class="form-group">
+                    <label>Kön (override)</label>
+                    <select name="slot_gender" style="width: 140px;">
+                        <option value="">Samma som aktivitet</option>
+                        <option value="F" <?= ($editSlot['gender'] ?? '') === 'F' ? 'selected' : '' ?>>Endast damer</option>
+                        <option value="M" <?= ($editSlot['gender'] ?? '') === 'M' ? 'selected' : '' ?>>Endast herrar</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Ålder (override)</label>
+                    <div style="display: flex; gap: var(--space-xs); align-items: center;">
+                        <input type="number" name="slot_min_age" value="<?= $editSlot['min_age'] ?? '' ?>" min="1" max="99" placeholder="Min" style="width: 70px;">
+                        <span style="color: var(--color-text-muted);">–</span>
+                        <input type="number" name="slot_max_age" value="<?= $editSlot['max_age'] ?? '' ?>" min="1" max="99" placeholder="Max" style="width: 70px;">
+                    </div>
                 </div>
             </div>
 

@@ -69,6 +69,19 @@ if ($festival['status'] !== 'published' && !$isAdmin) {
     return;
 }
 
+// Check if slot gender/age columns exist
+function _festHasSlotGender($pdo) {
+    static $result = null;
+    if ($result !== null) return $result;
+    try {
+        $pdo->query("SELECT gender FROM festival_activity_slots LIMIT 0");
+        $result = true;
+    } catch (PDOException $e) {
+        $result = false;
+    }
+    return $result;
+}
+
 // Load all activities
 $actStmt = $pdo->prepare("
     SELECT fa.*,
@@ -115,6 +128,7 @@ try {
     $slotStmt = $pdo->prepare("
         SELECT s.id, s.activity_id, s.date, s.start_time, s.end_time, s.max_participants,
             (SELECT COUNT(*) FROM festival_activity_registrations far WHERE far.slot_id = s.id AND far.status != 'cancelled') as reg_count
+            " . (_festHasSlotGender($pdo) ? ", s.gender, s.min_age, s.max_age" : "") . "
         FROM festival_activity_slots s
         JOIN festival_activities fa ON s.activity_id = fa.id
         WHERE fa.festival_id = ? AND s.active = 1 AND fa.active = 1
@@ -161,6 +175,21 @@ try {
         }
     }
 } catch (PDOException $e) {}
+
+// Helper: restriction badge for gender/age
+function festivalRestrictionBadge($item) {
+    $parts = [];
+    $g = $item['gender'] ?? null;
+    if ($g === 'F' || $g === 'K') $parts[] = 'Damer';
+    elseif ($g === 'M') $parts[] = 'Herrar';
+    $minAge = $item['min_age'] ?? null;
+    $maxAge = $item['max_age'] ?? null;
+    if ($minAge && $maxAge) $parts[] = $minAge . '–' . $maxAge . ' år';
+    elseif ($minAge) $parts[] = $minAge . '+ år';
+    elseif ($maxAge) $parts[] = '–' . $maxAge . ' år';
+    if (empty($parts)) return '';
+    return '<span style="font-size: 0.65rem; font-weight: 700; background: var(--color-accent-light); color: var(--color-accent-text); padding: 1px 6px; border-radius: var(--radius-full); white-space: nowrap;">' . implode(' · ', $parts) . '</span>';
+}
 
 // Activity type config
 $actTypes = [
@@ -306,7 +335,9 @@ $pageTitle = $passName . ' — ' . $festival['name'];
                         <i data-lucide="<?= $iaType['icon'] ?>" style="width: 18px; height: 18px;"></i>
                     </span>
                     <div style="flex: 1; min-width: 0;">
-                        <div style="font-weight: 600; font-size: 0.95rem; color: var(--color-text-primary);"><?= htmlspecialchars($ia['name']) ?></div>
+                        <div style="font-weight: 600; font-size: 0.95rem; color: var(--color-text-primary);">
+                            <?= htmlspecialchars($ia['name']) ?> <?= festivalRestrictionBadge($ia) ?>
+                        </div>
                         <div style="font-size: 0.75rem; color: var(--color-text-muted);">
                             <?= $iaType['label'] ?>
                             <?php if ($iaPassCount > 1): ?> · <?= $iaPassCount ?> tillfällen ingår<?php endif; ?>
@@ -331,11 +362,23 @@ $pageTitle = $passName . ' — ' . $festival['name'];
                                 $slotEnd = $slot['end_time'] ? '–' . substr($slot['end_time'], 0, 5) : '';
                                 $spotsLeft = $slot['max_participants'] ? ($slot['max_participants'] - $slot['reg_count']) : null;
                             ?>
+                            <?php
+                                $slotRestr = [];
+                                $sg = $slot['gender'] ?? null;
+                                if ($sg === 'F' || $sg === 'K') $slotRestr[] = 'Damer';
+                                elseif ($sg === 'M') $slotRestr[] = 'Herrar';
+                                if (!empty($slot['min_age'])) $slotRestr[] = $slot['min_age'] . '+ år';
+                                if (!empty($slot['max_age'])) $slotRestr[] = '–' . $slot['max_age'] . ' år';
+                                $slotRestrText = !empty($slotRestr) ? ' [' . implode(', ', $slotRestr) . ']' : '';
+                            ?>
                             <option value="<?= $slot['id'] ?>"
                                 data-date="<?= $slotDate ?>"
                                 data-time="<?= $slotTime ?>"
+                                data-gender="<?= $slot['gender'] ?? '' ?>"
+                                data-min-age="<?= $slot['min_age'] ?? '' ?>"
+                                data-max-age="<?= $slot['max_age'] ?? '' ?>"
                                 <?= $slotFull ? 'disabled' : '' ?>>
-                                <?= $slotDate ?> <?= $slotTime ?><?= $slotEnd ?>
+                                <?= $slotDate ?> <?= $slotTime ?><?= $slotEnd ?><?= $slotRestrText ?>
                                 <?php if ($slotFull): ?> (Fullbokat)
                                 <?php elseif ($spotsLeft !== null): ?> (<?= $spotsLeft ?> platser kvar)
                                 <?php endif; ?>
@@ -388,11 +431,23 @@ $pageTitle = $passName . ' — ' . $festival['name'];
                         <?php foreach ($grpActs as $ga):
                             $gaSlots = $passActivitySlots[$ga['id']] ?? [];
                         ?>
+                        <?php
+                            $gaRestrParts = [];
+                            $gaG = $ga['gender'] ?? null;
+                            if ($gaG === 'F' || $gaG === 'K') $gaRestrParts[] = 'Damer';
+                            elseif ($gaG === 'M') $gaRestrParts[] = 'Herrar';
+                            if (!empty($ga['min_age'])) $gaRestrParts[] = $ga['min_age'] . '+ år';
+                            if (!empty($ga['max_age'])) $gaRestrParts[] = '–' . $ga['max_age'] . ' år';
+                            $gaRestrText = !empty($gaRestrParts) ? ' [' . implode(', ', $gaRestrParts) . ']' : '';
+                        ?>
                         <option value="<?= $ga['id'] ?>"
                             data-activity-name="<?= htmlspecialchars($ga['name']) ?>"
                             data-has-slots="<?= !empty($gaSlots) ? '1' : '0' ?>"
-                            data-price="<?= (float)$ga['price'] ?>">
-                            <?= htmlspecialchars($ga['name']) ?>
+                            data-price="<?= (float)$ga['price'] ?>"
+                            data-gender="<?= $ga['gender'] ?? '' ?>"
+                            data-min-age="<?= $ga['min_age'] ?? '' ?>"
+                            data-max-age="<?= $ga['max_age'] ?? '' ?>">
+                            <?= htmlspecialchars($ga['name']) ?><?= $gaRestrText ?>
                             <?php if ($ga['price'] > 0): ?> (<?= number_format($ga['price'], 0) ?> kr)<?php endif; ?>
                         </option>
                         <?php endforeach; ?>
@@ -556,6 +611,51 @@ const festivalInfo = {
 // Slot data for all activities (needed for group activity selection)
 const activitySlotsData = <?= json_encode($passActivitySlots, JSON_UNESCAPED_UNICODE) ?>;
 
+// Activity filter data (gender/age restrictions)
+const activityFilters = <?php
+$_filters = [];
+foreach ($activities as $_a) {
+    $_filters[$_a['id']] = [
+        'gender' => $_a['gender'] ?? null,
+        'min_age' => $_a['min_age'] ?? null,
+        'max_age' => $_a['max_age'] ?? null,
+    ];
+}
+echo json_encode($_filters);
+?>;
+
+function checkActivityRestriction(activityId, slotData) {
+    if (!selectedRider) return null;
+    // Slot overrides activity-level filter
+    const slotGender = slotData ? slotData.gender : null;
+    const slotMinAge = slotData ? slotData.min_age : null;
+    const slotMaxAge = slotData ? slotData.max_age : null;
+    const act = activityFilters[activityId] || {};
+    const gender = slotGender || act.gender;
+    const minAge = slotMinAge || act.min_age;
+    const maxAge = slotMaxAge || act.max_age;
+    if (!gender && !minAge && !maxAge) return null;
+
+    const riderGender = selectedRider.gender;
+    const riderBirthYear = parseInt(selectedRider.birth_year || 0);
+    const currentYear = new Date().getFullYear();
+    const riderAge = riderBirthYear ? (currentYear - riderBirthYear) : 0;
+
+    if (gender) {
+        const normalizedGender = (gender === 'K') ? 'F' : gender;
+        if (riderGender && normalizedGender !== riderGender) {
+            return gender === 'M' ? 'Endast herrar' : 'Endast damer';
+        }
+    }
+    if (minAge && riderAge && riderAge < parseInt(minAge)) {
+        return 'Minst ' + minAge + ' år';
+    }
+    if (maxAge && riderAge && riderAge > parseInt(maxAge)) {
+        return 'Max ' + maxAge + ' år';
+    }
+    return null;
+}
+
 function onGroupActivityChange(sel) {
     const groupId = sel.dataset.groupId;
     const pickIndex = sel.dataset.pickIndex;
@@ -580,10 +680,24 @@ function onGroupActivityChange(sel) {
             const timeStr = s.start_time.substring(0, 5);
             const endStr = s.end_time ? '–' + s.end_time.substring(0, 5) : '';
             const spotsLeft = s.max_participants ? (s.max_participants - s.reg_count) : null;
-            let label = dateStr + ' ' + timeStr + endStr;
+            // Slot restriction text
+            let restrParts = [];
+            if (s.gender === 'F' || s.gender === 'K') restrParts.push('Damer');
+            else if (s.gender === 'M') restrParts.push('Herrar');
+            if (s.min_age) restrParts.push(s.min_age + '+ år');
+            if (s.max_age) restrParts.push('–' + s.max_age + ' år');
+            const restrText = restrParts.length ? ' [' + restrParts.join(', ') + ']' : '';
+            // Check rider eligibility
+            let slotDisabled = full;
+            if (selectedRider && (s.gender || s.min_age || s.max_age)) {
+                const msg = checkActivityRestriction(actId, { gender: s.gender, min_age: s.min_age, max_age: s.max_age });
+                if (msg) slotDisabled = true;
+            }
+            let label = dateStr + ' ' + timeStr + endStr + restrText;
             if (full) label += ' (Fullbokat)';
+            else if (slotDisabled) label += ' (Ej tillgänglig)';
             else if (spotsLeft !== null) label += ' (' + spotsLeft + ' platser kvar)';
-            html += '<option value="' + s.id + '" data-date="' + dateStr + '" data-time="' + timeStr + '"' + (full ? ' disabled' : '') + '>' + label + '</option>';
+            html += '<option value="' + s.id + '" data-date="' + dateStr + '" data-time="' + timeStr + '" data-gender="' + (s.gender || '') + '" data-min-age="' + (s.min_age || '') + '" data-max-age="' + (s.max_age || '') + '"' + (slotDisabled ? ' disabled' : '') + '>' + label + '</option>';
         });
         slotSelect.innerHTML = html;
         slotContainer.style.display = '';
@@ -629,6 +743,67 @@ function setRider(rider) {
     // Update summary
     document.getElementById('passSummaryRider').textContent = 'Deltagare: ' + name;
 
+    // Show restriction warnings on activities/slots
+    updateRestrictionWarnings();
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function updateRestrictionWarnings() {
+    // Remove old warnings
+    document.querySelectorAll('.restriction-warning').forEach(el => el.remove());
+
+    if (!selectedRider) return;
+
+    // Check individual activities
+    document.querySelectorAll('.pass-booking-item[data-activity-id]').forEach(item => {
+        const actId = item.dataset.activityId;
+        const msg = checkActivityRestriction(actId, null);
+        if (msg) {
+            const warn = document.createElement('div');
+            warn.className = 'restriction-warning';
+            warn.style.cssText = 'font-size: 0.75rem; color: var(--color-warning); padding: var(--space-2xs) 0 0 30px; display: flex; align-items: center; gap: 4px;';
+            warn.innerHTML = '<i data-lucide="alert-triangle" style="width: 14px; height: 14px; flex-shrink: 0;"></i> ' + msg;
+            item.appendChild(warn);
+        }
+    });
+
+    // Check group activity options - disable ineligible options
+    document.querySelectorAll('.pass-group-activity-select').forEach(sel => {
+        for (let i = 1; i < sel.options.length; i++) {
+            const opt = sel.options[i];
+            const actId = opt.value;
+            const optGender = opt.dataset.gender || null;
+            const optMinAge = opt.dataset.minAge ? parseInt(opt.dataset.minAge) : null;
+            const optMaxAge = opt.dataset.maxAge ? parseInt(opt.dataset.maxAge) : null;
+            const msg = checkActivityRestriction(actId, { gender: optGender, min_age: optMinAge, max_age: optMaxAge });
+            if (msg) {
+                opt.disabled = true;
+                if (!opt.textContent.includes('(' + msg + ')')) {
+                    opt.textContent = opt.textContent.replace(/\s*\(Ej tillgänglig:.*\)$/, '') + ' (Ej tillgänglig: ' + msg + ')';
+                }
+            }
+        }
+    });
+
+    // Check slot options - disable ineligible slots
+    document.querySelectorAll('.pass-slot-select').forEach(sel => {
+        const actId = sel.dataset.activityId;
+        for (let i = 1; i < sel.options.length; i++) {
+            const opt = sel.options[i];
+            const slotGender = opt.dataset.gender || null;
+            const slotMinAge = opt.dataset.minAge ? parseInt(opt.dataset.minAge) : null;
+            const slotMaxAge = opt.dataset.maxAge ? parseInt(opt.dataset.maxAge) : null;
+            if (slotGender || slotMinAge || slotMaxAge) {
+                const msg = checkActivityRestriction(actId, { gender: slotGender, min_age: slotMinAge, max_age: slotMaxAge });
+                if (msg && !opt.disabled) {
+                    opt.disabled = true;
+                    opt.textContent += ' (' + msg + ')';
+                }
+            }
+        }
+    });
+
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -669,6 +844,18 @@ function addPassToCart() {
 
     const riderId = selectedRider.id;
     const riderName = (selectedRider.firstname || '') + ' ' + (selectedRider.lastname || '');
+
+    // Check activity-level restrictions
+    let restrictionError = null;
+    document.querySelectorAll('.pass-booking-item[data-activity-id]').forEach(item => {
+        const actId = item.dataset.activityId;
+        const msg = checkActivityRestriction(actId, null);
+        if (msg) restrictionError = msg;
+    });
+    if (restrictionError) {
+        alert('Deltagaren uppfyller inte kraven för en inkluderad aktivitet: ' + restrictionError);
+        return;
+    }
 
     // Check duplicate
     const cart = GlobalCart.getCart();

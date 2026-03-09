@@ -255,6 +255,21 @@ function formatFestivalDate($date) {
     return "$wd $d $m";
 }
 
+// Helper: restriction badge for gender/age
+function festivalRestrictionBadge($item) {
+    $parts = [];
+    $g = $item['gender'] ?? null;
+    if ($g === 'F' || $g === 'K') $parts[] = 'Damer';
+    elseif ($g === 'M') $parts[] = 'Herrar';
+    $minAge = $item['min_age'] ?? null;
+    $maxAge = $item['max_age'] ?? null;
+    if ($minAge && $maxAge) $parts[] = $minAge . '–' . $maxAge . ' år';
+    elseif ($minAge) $parts[] = $minAge . '+ år';
+    elseif ($maxAge) $parts[] = '–' . $maxAge . ' år';
+    if (empty($parts)) return '';
+    return '<span style="font-size: 0.65rem; font-weight: 700; background: var(--color-accent-light); color: var(--color-accent-text); padding: 1px 6px; border-radius: var(--radius-full); white-space: nowrap;">' . implode(' · ', $parts) . '</span>';
+}
+
 // Activity type config
 $actTypes = [
     'clinic' => ['label' => 'Clinic', 'icon' => 'bike', 'color' => 'var(--series-enduro)'],
@@ -468,6 +483,7 @@ $pageTitle = $festival['name'];
                             <div class="festival-item-body">
                                 <div class="festival-item-title">
                                     <?= htmlspecialchars($a['name']) ?>
+                                    <?= festivalRestrictionBadge($a) ?>
                                     <?php if ($a['included_in_pass'] && $festival['pass_enabled']): ?>
                                     <span class="festival-pass-badge"><i data-lucide="ticket" style="width: 10px; height: 10px;"></i> Pass</span>
                                     <?php endif; ?>

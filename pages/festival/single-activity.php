@@ -160,7 +160,21 @@ $pageTitle = $activity['name'] . ' – ' . $festival['name'];
                 <i data-lucide="<?= $typeInfo['icon'] ?>"></i>
                 <?= $typeInfo['label'] ?>
             </div>
-            <h1 class="activity-group-title"><?= htmlspecialchars($activity['name']) ?></h1>
+            <h1 class="activity-group-title">
+                <?= htmlspecialchars($activity['name']) ?>
+                <?php
+                $restrParts = [];
+                $rg = $activity['gender'] ?? null;
+                if ($rg === 'F' || $rg === 'K') $restrParts[] = 'Damer';
+                elseif ($rg === 'M') $restrParts[] = 'Herrar';
+                if (!empty($activity['min_age']) && !empty($activity['max_age'])) $restrParts[] = $activity['min_age'] . '–' . $activity['max_age'] . ' år';
+                elseif (!empty($activity['min_age'])) $restrParts[] = $activity['min_age'] . '+ år';
+                elseif (!empty($activity['max_age'])) $restrParts[] = '–' . $activity['max_age'] . ' år';
+                if (!empty($restrParts)):
+                ?>
+                <span style="font-size: 0.55em; font-weight: 700; background: var(--color-accent-light); color: var(--color-accent-text); padding: 2px 8px; border-radius: var(--radius-full); white-space: nowrap; vertical-align: middle;"><?= implode(' · ', $restrParts) ?></span>
+                <?php endif; ?>
+            </h1>
 
             <div class="activity-group-meta">
                 <?php if ($actDate): ?>
@@ -287,6 +301,18 @@ $pageTitle = $activity['name'] . ' – ' . $festival['name'];
                         <div class="slot-row <?= $slotFull ? 'slot-row--full' : '' ?>">
                             <div class="slot-time">
                                 <span class="slot-time-value"><?= substr($slot['start_time'], 0, 5) ?><?= $slot['end_time'] ? ' – ' . substr($slot['end_time'], 0, 5) : '' ?></span>
+                                <?php
+                                // Slot restriction badge
+                                $slotRP = [];
+                                $sG = $slot['gender'] ?? null;
+                                if ($sG === 'F' || $sG === 'K') $slotRP[] = 'Damer';
+                                elseif ($sG === 'M') $slotRP[] = 'Herrar';
+                                if (!empty($slot['min_age'])) $slotRP[] = $slot['min_age'] . '+ år';
+                                if (!empty($slot['max_age'])) $slotRP[] = '–' . $slot['max_age'] . ' år';
+                                if (!empty($slotRP)):
+                                ?>
+                                <span style="font-size: 0.7rem; font-weight: 700; background: var(--color-accent-light); color: var(--color-accent-text); padding: 1px 6px; border-radius: var(--radius-full);"><?= implode(' · ', $slotRP) ?></span>
+                                <?php endif; ?>
                                 <span class="slot-spots">
                                     <?php if ($slotFull): ?>
                                         <span style="color: var(--color-warning);">Fullbokat</span>
