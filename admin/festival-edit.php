@@ -51,6 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'venue_coordinates' => trim($_POST['venue_coordinates'] ?? ''),
             'venue_map_url' => trim($_POST['venue_map_url'] ?? ''),
             'status' => $_POST['status'] ?? 'draft',
+            'header_banner_media_id' => !empty($_POST['header_banner_media_id']) ? intval($_POST['header_banner_media_id']) : null,
+            'logo_media_id' => !empty($_POST['logo_media_id']) ? intval($_POST['logo_media_id']) : null,
         ];
 
         if (empty($data['name'])) {
@@ -380,6 +382,28 @@ if (!$isNew && $id > 0) {
         header('Location: /admin/festivals.php');
         exit;
     }
+
+    // Load media URLs for banner/logo preview
+    $festivalBannerUrl = null;
+    $festivalLogoUrl = null;
+    if (!empty($festival['header_banner_media_id'])) {
+        $mStmt = $pdo->prepare("SELECT url, original_filename FROM media WHERE id = ?");
+        $mStmt->execute([$festival['header_banner_media_id']]);
+        $bMedia = $mStmt->fetch(PDO::FETCH_ASSOC);
+        if ($bMedia) { $festivalBannerUrl = $bMedia['url']; $festivalBannerName = $bMedia['original_filename']; }
+    }
+    if (!empty($festival['logo_media_id'])) {
+        $mStmt = $pdo->prepare("SELECT url, original_filename FROM media WHERE id = ?");
+        $mStmt->execute([$festival['logo_media_id']]);
+        $lMedia = $mStmt->fetch(PDO::FETCH_ASSOC);
+        if ($lMedia) { $festivalLogoUrl = $lMedia['url']; $festivalLogoName = $lMedia['original_filename']; }
+    }
+
+    // Load all media for picker
+    $allMedia = [];
+    try {
+        $allMedia = $pdo->query("SELECT id, url, original_filename, folder FROM media ORDER BY created_at DESC LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {}
 
     // Load linked events (with included_in_pass if column exists)
     $feIncludedCol = '';
@@ -826,6 +850,49 @@ endif;
                     <textarea name="description" rows="6" data-format-toolbar placeholder="Beskriv festivalen..."><?= htmlspecialchars($festival['description'] ?? '') ?></textarea>
                 </div>
             </div>
+
+            <!-- Bilder -->
+            <?php if (!$isNew): ?>
+            <div class="form-subsection">
+                <div class="form-subsection-label"><i data-lucide="image"></i> Bilder</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Omslagsbild (banner)</label>
+                        <select name="header_banner_media_id" onchange="previewFestivalMedia(this, 'banner-preview')">
+                            <option value="">-- Ingen --</option>
+                            <?php foreach ($allMedia as $m): ?>
+                            <option value="<?= $m['id'] ?>" data-url="<?= htmlspecialchars($m['url']) ?>" <?= ($festival['header_banner_media_id'] ?? '') == $m['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($m['original_filename']) ?> (<?= htmlspecialchars($m['folder'] ?? '') ?>)
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div id="banner-preview" style="margin-top: var(--space-xs);">
+                            <?php if ($festivalBannerUrl): ?>
+                            <img src="<?= htmlspecialchars($festivalBannerUrl) ?>" alt="Banner" style="max-height: 80px; border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
+                            <?php endif; ?>
+                        </div>
+                        <small class="form-help">Rekommenderat: 1200×400 px eller liknande (3:1). Visas som bakgrundsbild i hero-sektionen. Ladda upp via <a href="/admin/media.php" target="_blank">Mediabiblioteket</a>.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Logotyp</label>
+                        <select name="logo_media_id" onchange="previewFestivalMedia(this, 'logo-preview')">
+                            <option value="">-- Ingen --</option>
+                            <?php foreach ($allMedia as $m): ?>
+                            <option value="<?= $m['id'] ?>" data-url="<?= htmlspecialchars($m['url']) ?>" <?= ($festival['logo_media_id'] ?? '') == $m['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($m['original_filename']) ?> (<?= htmlspecialchars($m['folder'] ?? '') ?>)
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div id="logo-preview" style="margin-top: var(--space-xs);">
+                            <?php if ($festivalLogoUrl): ?>
+                            <img src="<?= htmlspecialchars($festivalLogoUrl) ?>" alt="Logo" style="max-height: 60px; border-radius: var(--radius-sm);">
+                            <?php endif; ?>
+                        </div>
+                        <small class="form-help">Visas ovanför festivalnamnet i hero-sektionen.</small>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <!-- Status -->
             <div class="form-subsection">
@@ -1580,6 +1647,19 @@ endif;
 </form>
 
 <?php endif; ?>
+
+<script>
+function previewFestivalMedia(select, previewId) {
+    var el = document.getElementById(previewId);
+    var opt = select.options[select.selectedIndex];
+    var url = opt ? opt.getAttribute('data-url') : null;
+    if (url) {
+        el.innerHTML = '<img src="' + url + '" alt="" style="max-height: 80px; border-radius: var(--radius-sm); border: 1px solid var(--color-border);">';
+    } else {
+        el.innerHTML = '';
+    }
+}
+</script>
 
 <?php
 // Include format toolbar if available
