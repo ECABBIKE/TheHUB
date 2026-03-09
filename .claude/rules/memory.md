@@ -15,6 +15,28 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-09, session 61)
+
+### Festival: Rider-sökning ersätter inloggningskrav — vem som helst kan anmäla
+- **Grundproblem:** Alla festival-köpknappar krävde inloggning + använde `getRegistrableRiders()` för att hitta deltagare kopplade till kontot. Om inga riders var kopplade → knapparna gjorde ingenting. Plattformens USP (anmäla deltagare utan eget konto) fungerade inte alls på festivalsidor.
+- **Ny komponent:** `components/festival-rider-search.php` — delad sökmodal (bottom-sheet mobil, centrerad desktop). Söker via `/api/orders.php?action=search_riders` (samma API som event-sidan). Visar namn, födelseår, klubb. Ingen inloggning krävs.
+- **Nytt flöde:**
+  - Klicka på köpknapp → sökmodal öppnas → sök deltagare → välj → läggs i kundvagn
+  - Kan anmäla FLERA deltagare till samma aktivitet/tidspass (knappen förblir aktiv)
+  - Festivalpass: sök deltagare → pass-konfigurationsmodal öppnas med vald deltagare
+- **Borttagna login-krav:** Alla `hub_is_logged_in()` PHP-villkor runt köpknappar borttagna. Alla "Logga in"-länkar ersatta med vanliga knappar. `registrableRiders`-arrayen och `isLoggedIn`-flaggan borttagna från JS.
+- **Aktiviteter vs tävlingar:** Aktiviteter har INGEN licenskontroll (till skillnad från tävlingsklasser). Enkel sök → välj → lägg i kundvagn.
+- **order-manager.php INSERT-fix:** Alla 4 INSERT-grenar för `festival_activity_registrations` inkluderar nu `first_name`, `last_name`, `email` (NOT NULL-kolumner). Utan dessa kraschade checkout med SQL-fel.
+- **Filer:** `components/festival-rider-search.php` (ny), `pages/festival/show.php`, `pages/festival/activity.php`, `pages/festival/single-activity.php`, `includes/order-manager.php`
+
+### VIKTIGT: Festival-anmälningsarkitektur (ny)
+- **Ingen inloggning krävs** för att lägga i kundvagn (precis som event-sidan)
+- **Inloggning krävs vid checkout** (hanteras av checkout.php)
+- **Rider-sökning via:** `/api/orders.php?action=search_riders&q=...` (kräver ingen auth)
+- **Rider-objekt från sökning:** `{ id, firstname, lastname, birth_year, club_name, ... }`
+- **Callback-mönster:** `openFestivalRiderSearch(callback)` → callback(rider) vid val
+- **Flera deltagare:** Knappar förblir aktiva (inte disabled) efter val — kan anmäla fler
+
 ## SENASTE FIXAR (2026-03-09, session 60)
 
 ### Festival: Diagnostikverktyg + köpknappar feedback + order-manager INSERT-fix

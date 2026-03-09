@@ -537,15 +537,9 @@ $pageTitle = $festival['name'];
                     <div style="font-size: 0.8rem; color: var(--color-text-muted);">+ <?= count($includedActs) - 5 ?> till</div>
                     <?php endif; ?>
                 </div>
-                <?php if (hub_is_logged_in()): ?>
                 <button class="festival-pass-btn" id="festivalPassBtn" onclick="openPassConfigModal()">
                     <i data-lucide="shopping-cart"></i> Köp festivalpass
                 </button>
-                <?php else: ?>
-                <a href="/login?return=<?= urlencode('/festival/' . $festivalId) ?>" class="festival-pass-btn">
-                    <i data-lucide="log-in"></i> Logga in för att köpa
-                </a>
-                <?php endif; ?>
             </div>
             <?php endif; ?>
 
@@ -609,7 +603,7 @@ $pageTitle = $festival['name'];
 
     </div>
 
-<?php if ($festival['pass_enabled'] && hub_is_logged_in()): ?>
+<?php if ($festival['pass_enabled']): ?>
 <!-- ============ PASS CONFIG MODAL ============ -->
 <div class="pass-modal-overlay" id="passModal" style="display:none;">
     <div class="pass-modal">
@@ -941,57 +935,42 @@ const festivalInfo = {
     pass_price: <?= (float)($festival['pass_price'] ?? 0) ?>
 };
 
-<?php
-$registrableRiders = [];
-if (hub_is_logged_in()) {
-    require_once __DIR__ . '/../../includes/order-manager.php';
-    $registrableRiders = getRegistrableRiders($_SESSION['hub_user_id'] ?? $_SESSION['rider_id'] ?? 0);
-}
-?>
-const registrableRiders = <?= json_encode($registrableRiders, JSON_UNESCAPED_UNICODE) ?>;
-const isLoggedIn = <?= hub_is_logged_in() ? 'true' : 'false' ?>;
+// Selected rider (from search modal)
+let selectedRider = null;
 
-// Open pass configuration modal
+// Open pass configuration modal — first select rider, then show config
 function openPassConfigModal() {
-    if (!isLoggedIn) {
-        alert('Du måste vara inloggad för att köpa festivalpass.');
-        return;
-    }
     if (!festivalInfo.pass_enabled) {
         alert('Festivalpass är inte aktiverat för denna festival.');
         return;
     }
 
-    const riderId = registrableRiders[0] ? registrableRiders[0].id : null;
-    if (!riderId) {
-        alert('Inga deltagare kopplade till ditt konto. Gå till din profil och lägg till en deltagare.');
-        return;
-    }
+    // Open rider search to pick who to buy pass for
+    openFestivalRiderSearch(function(rider) {
+        selectedRider = rider;
 
-    const cart = GlobalCart.getCart();
-    if (cart.some(ci => ci.type === 'festival_pass' && ci.festival_id === festivalInfo.id && ci.rider_id === riderId)) {
-        alert('Festivalpasset finns redan i kundvagnen');
-        return;
-    }
+        const cart = GlobalCart.getCart();
+        if (cart.some(ci => ci.type === 'festival_pass' && ci.festival_id === festivalInfo.id && ci.rider_id === rider.id)) {
+            alert('Festivalpasset för ' + rider.firstname + ' ' + rider.lastname + ' finns redan i kundvagnen');
+            return;
+        }
 
-    // Populate rider selector
-    const sel = document.getElementById('passRiderSelect');
-    if (sel) {
-        sel.innerHTML = '';
-        registrableRiders.forEach(r => {
+        // Show rider name in modal
+        const sel = document.getElementById('passRiderSelect');
+        if (sel) {
+            sel.innerHTML = '';
             const opt = document.createElement('option');
-            opt.value = r.id;
-            opt.textContent = r.firstname + ' ' + r.lastname;
+            opt.value = rider.id;
+            opt.textContent = rider.firstname + ' ' + rider.lastname;
             sel.appendChild(opt);
-        });
-        // Hide section if only one rider
+        }
         const section = document.getElementById('passRiderSection');
-        if (section) section.style.display = registrableRiders.length > 1 ? '' : 'none';
-    }
+        if (section) section.style.display = '';
 
-    document.getElementById('passModal').style.display = 'flex';
-    document.documentElement.classList.add('lightbox-open');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+        document.getElementById('passModal').style.display = 'flex';
+        document.documentElement.classList.add('lightbox-open');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
 }
 
 function closePassModal() {
@@ -1005,12 +984,9 @@ function onPassRiderChange() {
 
 // Confirm and add pass + selected items to cart
 function confirmPassToCart() {
-    const riderId = parseInt(document.getElementById('passRiderSelect')?.value || registrableRiders[0]?.id);
-    if (!riderId) return;
-
-    const rider = registrableRiders.find(r => r.id === riderId);
-    if (!rider) return;
-    const riderName = rider.firstname + ' ' + rider.lastname;
+    if (!selectedRider) { alert('Ingen deltagare vald.'); return; }
+    const riderId = selectedRider.id;
+    const riderName = (selectedRider.firstname || '') + ' ' + (selectedRider.lastname || '');
 
     // 1. Add the festival pass itself
     try {
@@ -1128,4 +1104,6 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closePassModal();
 });
 </script>
+
+<?php include __DIR__ . '/../../components/festival-rider-search.php'; ?>
 

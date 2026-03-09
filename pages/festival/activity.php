@@ -312,14 +312,10 @@ $pageTitle = $group['name'] . ' – ' . $festival['name'];
                                 </a>
                                 <?php elseif ($spotsFull): ?>
                                 <span class="badge badge-warning">Fullbokat</span>
-                                <?php elseif (hub_is_logged_in()): ?>
+                                <?php else: ?>
                                 <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="addActivityToCart(<?= $act['id'] ?>)">
                                     <i data-lucide="shopping-cart" style="width: 14px; height: 14px;"></i> Anmäl
                                 </button>
-                                <?php else: ?>
-                                <a href="/login?return=<?= urlencode('/festival/' . $festivalId . '/activity/' . $groupId) ?>" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">
-                                    <i data-lucide="log-in" style="width: 14px; height: 14px;"></i> Logga in
-                                </a>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -378,15 +374,9 @@ $pageTitle = $group['name'] . ' – ' . $festival['name'];
                 <div class="festival-pass-card-price">
                     <?= $festival['pass_price'] ? number_format($festival['pass_price'], 0) . ' kr' : 'Gratis' ?>
                 </div>
-                <?php if (hub_is_logged_in()): ?>
                 <button class="festival-pass-btn" id="festivalPassBtn" onclick="addFestivalPassToCart()">
                     <i data-lucide="shopping-cart"></i> Lägg i kundvagn
                 </button>
-                <?php else: ?>
-                <a href="/login?return=<?= urlencode('/festival/' . $festivalId . '/activity/' . $groupId) ?>" class="festival-pass-btn">
-                    <i data-lucide="log-in"></i> Logga in för att köpa
-                </a>
-                <?php endif; ?>
             </div>
             <?php endif; ?>
 
@@ -426,16 +416,6 @@ const festivalInfo = {
     pass_price: <?= (float)($festival['pass_price'] ?? 0) ?>
 };
 
-<?php
-$registrableRiders = [];
-if (hub_is_logged_in()) {
-    require_once __DIR__ . '/../../includes/order-manager.php';
-    $registrableRiders = getRegistrableRiders($_SESSION['hub_user_id'] ?? $_SESSION['rider_id'] ?? 0);
-}
-?>
-const registrableRiders = <?= json_encode($registrableRiders, JSON_UNESCAPED_UNICODE) ?>;
-const isLoggedIn = <?= hub_is_logged_in() ? 'true' : 'false' ?>;
-
 const activityData = <?= json_encode(array_map(function($a) use ($actTypes, $festival) {
     $typeInfo = $actTypes[$a['activity_type']] ?? $actTypes['other'];
     return [
@@ -452,88 +432,82 @@ const activityData = <?= json_encode(array_map(function($a) use ($actTypes, $fes
 const activityMap = {};
 activityData.forEach(a => activityMap[a.id] = a);
 
+let _pendingActivityId = null;
+
 function addActivityToCart(activityId) {
     const a = activityMap[activityId];
     if (!a) { alert('Aktiviteten hittades inte.'); return; }
-    if (!isLoggedIn) { alert('Du måste vara inloggad för att anmäla dig.'); return; }
+    _pendingActivityId = activityId;
 
-    const riderId = registrableRiders[0] ? registrableRiders[0].id : null;
-    if (!riderId) { alert('Inga deltagare kopplade till ditt konto. Gå till din profil och lägg till en deltagare.'); return; }
-    const rider = registrableRiders[0];
-
-    // Check if already in cart
-    const cart = GlobalCart.getCart();
-    if (cart.some(ci => ci.type === 'festival_activity' && ci.activity_id === a.id && ci.rider_id === riderId)) {
-        alert('Aktiviteten finns redan i kundvagnen');
-        return;
-    }
-
-    try {
-        GlobalCart.addItem({
-            type: 'festival_activity',
-            activity_id: a.id,
-            festival_id: festivalInfo.id,
-            rider_id: riderId,
-            rider_name: rider.firstname + ' ' + rider.lastname,
-            activity_name: a.name,
-            festival_name: festivalInfo.name,
-            festival_date: festivalInfo.start_date,
-            price: a.price,
-            included_in_pass: a.included_in_pass
-        });
-
-        // Update button (find by activity id)
-        const btn = document.querySelector('[onclick*="addActivityToCart(' + activityId + ')"]');
-        if (btn) {
-            btn.innerHTML = '<i data-lucide="check-circle" style="width:14px;height:14px;"></i> Tillagd';
-            btn.disabled = true;
-            btn.classList.remove('btn-primary');
-            btn.style.background = 'var(--color-success)';
-            btn.style.color = '#fff';
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+    openFestivalRiderSearch(function(rider) {
+        const cart = GlobalCart.getCart();
+        if (cart.some(ci => ci.type === 'festival_activity' && ci.activity_id === a.id && ci.rider_id === rider.id)) {
+            alert(rider.firstname + ' ' + rider.lastname + ' är redan anmäld');
+            return;
         }
-    } catch (e) {
-        alert('Kunde inte lägga till: ' + e.message);
-    }
+
+        try {
+            GlobalCart.addItem({
+                type: 'festival_activity',
+                activity_id: a.id,
+                festival_id: festivalInfo.id,
+                rider_id: rider.id,
+                rider_name: rider.firstname + ' ' + rider.lastname,
+                activity_name: a.name,
+                festival_name: festivalInfo.name,
+                festival_date: festivalInfo.start_date,
+                price: a.price,
+                included_in_pass: a.included_in_pass
+            });
+
+            const btn = document.querySelector('[onclick*="addActivityToCart(' + activityId + ')"]');
+            if (btn) {
+                btn.innerHTML = '<i data-lucide="check-circle" style="width:14px;height:14px;"></i> ' + rider.firstname;
+                btn.style.background = 'var(--color-success)';
+                btn.style.color = '#fff';
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        } catch (e) {
+            alert('Kunde inte lägga till: ' + e.message);
+        }
+    });
 }
 
 function addFestivalPassToCart() {
-    if (!isLoggedIn) { alert('Du måste vara inloggad för att köpa festivalpass.'); return; }
     if (!festivalInfo.pass_enabled) { alert('Festivalpass är inte aktiverat för denna festival.'); return; }
 
-    const riderId = registrableRiders[0] ? registrableRiders[0].id : null;
-    if (!riderId) { alert('Inga deltagare kopplade till ditt konto. Gå till din profil och lägg till en deltagare.'); return; }
-    const rider = registrableRiders[0];
-
-    const cart = GlobalCart.getCart();
-    if (cart.some(ci => ci.type === 'festival_pass' && ci.festival_id === festivalInfo.id && ci.rider_id === riderId)) {
-        alert('Festivalpasset finns redan i kundvagnen');
-        return;
-    }
-
-    try {
-        GlobalCart.addItem({
-            type: 'festival_pass',
-            festival_id: festivalInfo.id,
-            rider_id: riderId,
-            rider_name: rider.firstname + ' ' + rider.lastname,
-            festival_name: festivalInfo.name,
-            festival_date: festivalInfo.start_date,
-            pass_name: festivalInfo.pass_name,
-            price: festivalInfo.pass_price
-        });
-
-        const btn = document.getElementById('festivalPassBtn');
-        if (btn) {
-            btn.innerHTML = '<i data-lucide="check-circle"></i> Tillagd i kundvagnen';
-            btn.disabled = true;
-            btn.classList.add('btn--success');
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+    openFestivalRiderSearch(function(rider) {
+        const cart = GlobalCart.getCart();
+        if (cart.some(ci => ci.type === 'festival_pass' && ci.festival_id === festivalInfo.id && ci.rider_id === rider.id)) {
+            alert('Festivalpasset för ' + rider.firstname + ' ' + rider.lastname + ' finns redan i kundvagnen');
+            return;
         }
-    } catch (e) {
-        alert('Kunde inte lägga till: ' + e.message);
-    }
+
+        try {
+            GlobalCart.addItem({
+                type: 'festival_pass',
+                festival_id: festivalInfo.id,
+                rider_id: rider.id,
+                rider_name: rider.firstname + ' ' + rider.lastname,
+                festival_name: festivalInfo.name,
+                festival_date: festivalInfo.start_date,
+                pass_name: festivalInfo.pass_name,
+                price: festivalInfo.pass_price
+            });
+
+            const btn = document.getElementById('festivalPassBtn');
+            if (btn) {
+                btn.innerHTML = '<i data-lucide="check-circle"></i> ' + rider.firstname + ' tillagd';
+                btn.classList.add('btn--success');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        } catch (e) {
+            alert('Kunde inte lägga till: ' + e.message);
+        }
+    });
 }
 </script>
+
+<?php include __DIR__ . '/../../components/festival-rider-search.php'; ?>
 
 
