@@ -137,8 +137,8 @@ const GlobalCart = (function() {
 
         cart.forEach(item => {
             // Festival items group by festival_id with 'festival_' prefix
-            if (item.type === 'festival_activity' || item.type === 'festival_pass') {
-                const key = 'festival_' + item.festival_id;
+            if (item.type === 'festival_activity' || item.type === 'festival_pass' || item.festival_pass_event) {
+                const key = 'festival_' + (item.festival_id || 0);
                 if (!grouped[key]) {
                     grouped[key] = {
                         event_id: key,

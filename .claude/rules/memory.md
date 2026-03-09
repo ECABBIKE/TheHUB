@@ -15,6 +15,24 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-09, session 58)
+
+### Festival: Passkonfigurationsmodal + kundvagnsrendering
+- **Ny funktion:** Festivalpass-köp öppnar nu en konfigurationsmodal istället för att direkt lägga i kundvagnen. Modalen låter användaren:
+  - Välja åkare (rider-dropdown)
+  - Välja tidspass för aktiviteter med flera tidspass (dropdown per aktivitet)
+  - Välja klass för inkluderade tävlingsevent (dropdown per event)
+  - Se sammanfattning med totalpris
+- **Modal-arkitektur:** Bottom-sheet på mobil (slide up), centrerad dialog på desktop. PHP laddar `festival_activity_slots` och `classes` för inkluderade event/aktiviteter. JS `confirmPassToCart()` paketerar allt till GlobalCart: festival_pass + festival_activity (med/utan slot) + event (med `festival_pass_event: true`).
+- **Kundvagn (cart.php) uppdaterad:** Renderar nu festival-items korrekt:
+  - `festival_pass` → visar passnamn + pris
+  - `festival_activity` → visar aktivitetsnamn + eventuellt tidspass
+  - Event med `included_in_pass` eller `festival_pass_event` → visar "Ingår i pass"-tagg
+  - Separata remove-handlers via `GlobalCart.removeFestivalItem()`
+- **GlobalCart gruppering:** Items med `festival_pass_event: true` grupperas nu under festival-nyckeln (inte event-nyckeln) i `getItemsByEvent()`.
+- **Backend:** Ingen ändring behövdes — `order-manager.php` hanterar redan `festival_events.included_in_pass` korrekt. Kollar om festival_pass finns i samma order → sätter pris till 0 kr.
+- **Filer:** `pages/festival/show.php`, `pages/cart.php`, `assets/js/global-cart.js`
+
 ## SENASTE FIXAR (2026-03-09, session 57)
 
 ### Festival: Buggfixar + mobilanpassning
