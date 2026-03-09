@@ -602,7 +602,6 @@ if (!$isNew && $id > 0) {
             $productSizes[$ps['product_id']][] = $ps;
         }
     } catch (PDOException $e) {}
-}
 
 // Venues for dropdown
 try {
