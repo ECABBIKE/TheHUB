@@ -739,41 +739,50 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
 
                 $passDiscountVal = $passDiscount ? 1 : 0;
 
+                // Rider-data för NOT NULL-kolumner
+                $rFirstName = $rider['firstname'] ?? '';
+                $rLastName = $rider['lastname'] ?? '';
+                $rEmail = $rider['email'] ?? '';
+
                 if ($hasSlotCol && $slotId) {
                     if ($hasPassDiscountCol) {
                         $regStmt = $pdo->prepare("
                             INSERT INTO festival_activity_registrations (
                                 activity_id, slot_id, rider_id, order_id,
-                                status, payment_status, pass_discount, registered_at
-                            ) VALUES (?, ?, ?, ?, 'pending', 'unpaid', ?, NOW())
+                                first_name, last_name, email,
+                                status, payment_status, pass_discount
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 'unpaid', ?)
                         ");
-                        $regStmt->execute([$activityId, $slotId, $riderId, $orderId, $passDiscountVal]);
+                        $regStmt->execute([$activityId, $slotId, $riderId, $orderId, $rFirstName, $rLastName, $rEmail, $passDiscountVal]);
                     } else {
                         $regStmt = $pdo->prepare("
                             INSERT INTO festival_activity_registrations (
                                 activity_id, slot_id, rider_id, order_id,
-                                status, payment_status, registered_at
-                            ) VALUES (?, ?, ?, ?, 'pending', 'unpaid', NOW())
+                                first_name, last_name, email,
+                                status, payment_status
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 'unpaid')
                         ");
-                        $regStmt->execute([$activityId, $slotId, $riderId, $orderId]);
+                        $regStmt->execute([$activityId, $slotId, $riderId, $orderId, $rFirstName, $rLastName, $rEmail]);
                     }
                 } else {
                     if ($hasPassDiscountCol) {
                         $regStmt = $pdo->prepare("
                             INSERT INTO festival_activity_registrations (
                                 activity_id, rider_id, order_id,
-                                status, payment_status, pass_discount, registered_at
-                            ) VALUES (?, ?, ?, 'pending', 'unpaid', ?, NOW())
+                                first_name, last_name, email,
+                                status, payment_status, pass_discount
+                            ) VALUES (?, ?, ?, ?, ?, ?, 'pending', 'unpaid', ?)
                         ");
-                        $regStmt->execute([$activityId, $riderId, $orderId, $passDiscountVal]);
+                        $regStmt->execute([$activityId, $riderId, $orderId, $rFirstName, $rLastName, $rEmail, $passDiscountVal]);
                     } else {
                         $regStmt = $pdo->prepare("
                             INSERT INTO festival_activity_registrations (
                                 activity_id, rider_id, order_id,
-                                status, payment_status, registered_at
-                            ) VALUES (?, ?, ?, 'pending', 'unpaid', NOW())
+                                first_name, last_name, email,
+                                status, payment_status
+                            ) VALUES (?, ?, ?, ?, ?, ?, 'pending', 'unpaid')
                         ");
-                        $regStmt->execute([$activityId, $riderId, $orderId]);
+                        $regStmt->execute([$activityId, $riderId, $orderId, $rFirstName, $rLastName, $rEmail]);
                     }
                 }
                 $actRegId = $pdo->lastInsertId();

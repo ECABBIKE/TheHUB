@@ -15,6 +15,14 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-09, session 60)
+
+### Festival: Diagnostikverktyg + köpknappar feedback + order-manager INSERT-fix
+- **Diagnostikverktyg:** `admin/tools/festival-debug.php` — testar JS-exekvering, GlobalCart, filexistens, databas, migrationer, site settings, PHP error log. Länkad från tools.php under Felsökning.
+- **Köpknappar feedback:** Alla tysta `return`-satser i festival-JS (show.php, activity.php, single-activity.php) har nu `alert()`-meddelanden som förklarar varför knappen inte fungerar: "Du måste vara inloggad", "Festivalpass inte aktiverat", "Inga deltagare kopplade till ditt konto".
+- **order-manager.php INSERT-fix:** Alla 4 INSERT-grenar för `festival_activity_registrations` inkluderar nu `first_name`, `last_name`, `email` (NOT NULL-kolumner i tabellschemat). Utan dessa kraschade checkout med SQL-fel.
+- **Filer:** `admin/tools/festival-debug.php` (ny), `admin/tools.php`, `pages/festival/show.php`, `pages/festival/activity.php`, `pages/festival/single-activity.php`, `includes/order-manager.php`
+
 ## SENASTE FIXAR (2026-03-09, session 59)
 
 ### Festival: Köpknappar fixade + pass_included_count

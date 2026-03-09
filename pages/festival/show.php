@@ -953,10 +953,20 @@ const isLoggedIn = <?= hub_is_logged_in() ? 'true' : 'false' ?>;
 
 // Open pass configuration modal
 function openPassConfigModal() {
-    if (!isLoggedIn || !festivalInfo.pass_enabled) return;
+    if (!isLoggedIn) {
+        alert('Du måste vara inloggad för att köpa festivalpass.');
+        return;
+    }
+    if (!festivalInfo.pass_enabled) {
+        alert('Festivalpass är inte aktiverat för denna festival.');
+        return;
+    }
 
     const riderId = registrableRiders[0] ? registrableRiders[0].id : null;
-    if (!riderId) return;
+    if (!riderId) {
+        alert('Inga deltagare kopplade till ditt konto. Gå till din profil och lägg till en deltagare.');
+        return;
+    }
 
     const cart = GlobalCart.getCart();
     if (cart.some(ci => ci.type === 'festival_pass' && ci.festival_id === festivalInfo.id && ci.rider_id === riderId)) {
