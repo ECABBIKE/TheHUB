@@ -175,24 +175,8 @@ try {
     }
 } catch (PDOException $e) {}
 
-// Load classes for included events
-$passEventClasses = [];
-try {
-    $includedEventIds = array_map(fn($e) => $e['id'], $includedEvents);
-    if (!empty($includedEventIds)) {
-        $placeholders = implode(',', array_fill(0, count($includedEventIds), '?'));
-        $clsStmt = $pdo->prepare("
-            SELECT c.id, c.event_id, COALESCE(c.display_name, c.name) as name, c.gender, c.min_age, c.max_age
-            FROM classes c
-            WHERE c.event_id IN ($placeholders) AND c.active = 1
-            ORDER BY c.sort_order ASC, c.name ASC
-        ");
-        $clsStmt->execute($includedEventIds);
-        foreach ($clsStmt->fetchAll(PDO::FETCH_ASSOC) as $cls) {
-            $passEventClasses[$cls['event_id']][] = $cls;
-        }
-    }
-} catch (PDOException $e) {}
+// Note: Event classes are loaded dynamically via AJAX after rider selection
+// (uses /api/orders.php?action=event_classes which filters by rider gender/age)
 
 // Helper: restriction badge for gender/age
 function festivalRestrictionBadge($item) {
@@ -498,9 +482,7 @@ $pageTitle = $passName . ' — ' . $festival['name'];
                 </div>
             </div>
 
-            <?php foreach ($includedEvents as $ie):
-                $ieClasses = $passEventClasses[$ie['id']] ?? [];
-            ?>
+            <?php foreach ($includedEvents as $ie): ?>
             <div class="pass-booking-item" data-event-id="<?= $ie['id'] ?>">
                 <div class="pass-booking-item-header">
                     <span style="color: var(--color-accent); flex-shrink: 0;">
@@ -515,22 +497,12 @@ $pageTitle = $passName . ' — ' . $festival['name'];
                     <span style="font-size: 0.75rem; font-weight: 600; color: var(--color-success); white-space: nowrap;">0 kr</span>
                 </div>
 
-                <?php if (!empty($ieClasses)): ?>
-                <div class="pass-booking-item-config">
+                <div class="pass-booking-item-config pass-event-class-container" data-event-id="<?= $ie['id'] ?>" data-event-name="<?= htmlspecialchars($ie['name']) ?>">
                     <label style="font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); display: block; margin-bottom: 2px;">Välj klass:</label>
-                    <select class="pass-class-select" data-event-id="<?= $ie['id'] ?>" data-event-name="<?= htmlspecialchars($ie['name']) ?>" style="width: 100%; padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-surface); color: var(--color-text-primary); font-size: 16px; min-height: 44px;">
-                        <option value="">– Välj klass –</option>
-                        <?php foreach ($ieClasses as $cls): ?>
-                        <option value="<?= $cls['id'] ?>"><?= htmlspecialchars($cls['name']) ?></option>
-                        <?php endforeach; ?>
+                    <select class="pass-class-select" data-event-id="<?= $ie['id'] ?>" data-event-name="<?= htmlspecialchars($ie['name']) ?>" style="width: 100%; padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-surface); color: var(--color-text-primary); font-size: 16px; min-height: 44px;" disabled>
+                        <option value="">– Välj deltagare först –</option>
                     </select>
                 </div>
-                <?php else: ?>
-                <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: var(--space-2xs); padding-left: 30px;">
-                    <i data-lucide="info" style="width: 12px; height: 12px; display: inline; vertical-align: -2px;"></i>
-                    Klass väljs vid anmälan till tävlingen
-                </div>
-                <?php endif; ?>
             </div>
             <?php endforeach; ?>
             <?php endif; ?>
@@ -825,10 +797,58 @@ function setRider(rider) {
     // Update summary
     document.getElementById('passSummaryRider').textContent = 'Deltagare: ' + name;
 
+    // Load classes for included events based on rider
+    loadEventClassesForRider(rider);
+
     // Show restriction warnings on activities/slots
     updateRestrictionWarnings();
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function loadEventClassesForRider(rider) {
+    const containers = document.querySelectorAll('.pass-event-class-container');
+    if (!containers.length) return;
+
+    containers.forEach(container => {
+        const eventId = container.dataset.eventId;
+        const eventName = container.dataset.eventName;
+        const sel = container.querySelector('.pass-class-select');
+
+        // Show loading state
+        sel.innerHTML = '<option value="">Laddar klasser...</option>';
+        sel.disabled = true;
+
+        fetch('/api/orders.php?action=event_classes&event_id=' + eventId + '&rider_id=' + rider.id)
+            .then(r => r.json())
+            .then(data => {
+                sel.innerHTML = '<option value="">– Välj klass –</option>';
+                if (data.success && data.classes && data.classes.length > 0) {
+                    // Check if first item is an error object
+                    if (data.classes[0].error) {
+                        const errMsg = data.classes[0].error === 'incomplete_profile'
+                            ? 'Ofullständig profil – uppdatera profilen'
+                            : data.classes[0].message || 'Kunde inte ladda klasser';
+                        sel.innerHTML = '<option value="">– ' + errMsg + ' –</option>';
+                        return;
+                    }
+                    data.classes.forEach(cls => {
+                        const opt = document.createElement('option');
+                        opt.value = cls.id;
+                        opt.textContent = cls.display_name || cls.name;
+                        sel.appendChild(opt);
+                    });
+                    sel.disabled = false;
+                } else if (data.error) {
+                    sel.innerHTML = '<option value="">– ' + data.error + ' –</option>';
+                } else {
+                    sel.innerHTML = '<option value="">– Inga klasser tillgängliga –</option>';
+                }
+            })
+            .catch(() => {
+                sel.innerHTML = '<option value="">– Kunde inte ladda klasser –</option>';
+            });
+    });
 }
 
 function updateRestrictionWarnings() {
@@ -904,6 +924,12 @@ function resetPassForm() {
     // Reset all selects
     document.querySelectorAll('.pass-slot-select, .pass-class-select, .pass-group-activity-select, .pass-group-slot-select, .pass-product-size-select').forEach(sel => {
         sel.selectedIndex = 0;
+    });
+
+    // Reset event class selects to initial state
+    document.querySelectorAll('.pass-class-select').forEach(sel => {
+        sel.innerHTML = '<option value="">– Välj deltagare först –</option>';
+        sel.disabled = true;
     });
 
     // Hide dynamic slot containers
