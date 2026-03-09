@@ -1322,6 +1322,16 @@ endif;
             </div>
             <?php endif; ?>
 
+            <?php
+                $editActHasSlots = !empty($activitySlots[$editAct['id'] ?? 0]);
+            ?>
+            <?php if ($editActHasSlots): ?>
+            <div class="alert alert-info" style="margin-bottom: var(--space-md); font-size: 0.85rem;">
+                <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                Datum och tider styrs av tidspass (se nedan). Aktivitetens egna datum/tid används inte när tidspass finns.
+            </div>
+            <input type="hidden" name="act_date" value="<?= htmlspecialchars($editAct['date'] ?? $festival['start_date'] ?? '') ?>">
+            <?php else: ?>
             <div class="form-row-3">
                 <div class="form-group">
                     <label>Datum *</label>
@@ -1336,6 +1346,7 @@ endif;
                     <input type="time" name="act_end_time" value="<?= htmlspecialchars($editAct['end_time'] ?? '') ?>">
                 </div>
             </div>
+            <?php endif; ?>
 
             <div class="form-row">
                 <div class="form-group">
