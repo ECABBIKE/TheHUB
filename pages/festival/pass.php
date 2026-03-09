@@ -346,7 +346,7 @@ $pageTitle = $passName . ' — ' . $festival['name'];
                             data-has-slots="<?= !empty($gaSlots) ? '1' : '0' ?>"
                             data-price="<?= (float)$ga['price'] ?>">
                             <?= htmlspecialchars($ga['name']) ?>
-                            <?php if ($ga['price'] > 0): ?> (<?= number_format($ga['price'], 0) ?> kr à la carte)<?php endif; ?>
+                            <?php if ($ga['price'] > 0): ?> (<?= number_format($ga['price'], 0) ?> kr)<?php endif; ?>
                         </option>
                         <?php endforeach; ?>
                     </select>
