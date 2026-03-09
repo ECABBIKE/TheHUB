@@ -179,6 +179,24 @@ if ($festival['pass_enabled']) {
     $passCount = $ps->fetchColumn();
 }
 
+// Load products
+$festivalProducts = [];
+try {
+    $fpStmt = $pdo->prepare("SELECT p.*, (SELECT COUNT(*) FROM festival_product_orders po WHERE po.product_id = p.id AND po.status != 'cancelled') as order_count FROM festival_products p WHERE p.festival_id = ? AND p.active = 1 ORDER BY p.sort_order ASC, p.name ASC");
+    $fpStmt->execute([$festivalId]);
+    $festivalProducts = $fpStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {}
+
+// Load product sizes
+$festProductSizes = [];
+try {
+    $fpsStmt = $pdo->prepare("SELECT ps.* FROM festival_product_sizes ps JOIN festival_products p ON ps.product_id = p.id WHERE p.festival_id = ? AND ps.active = 1 ORDER BY ps.sort_order ASC");
+    $fpsStmt->execute([$festivalId]);
+    foreach ($fpsStmt->fetchAll(PDO::FETCH_ASSOC) as $fps) {
+        $festProductSizes[$fps['product_id']][] = $fps;
+    }
+} catch (PDOException $e) {}
+
 // Group ungrouped activities by date
 // Activities with time slots appear under EACH slot date (not just their base date)
 $activitiesByDate = [];
@@ -253,6 +271,21 @@ function formatFestivalDate($date) {
     $d = date('j', $ts);
     $m = $months[date('n', $ts) - 1];
     return "$wd $d $m";
+}
+
+// Helper: restriction badge for gender/age
+function festivalRestrictionBadge($item) {
+    $parts = [];
+    $g = $item['gender'] ?? null;
+    if ($g === 'F' || $g === 'K') $parts[] = 'Damer';
+    elseif ($g === 'M') $parts[] = 'Herrar';
+    $minAge = $item['min_age'] ?? null;
+    $maxAge = $item['max_age'] ?? null;
+    if ($minAge && $maxAge) $parts[] = $minAge . '–' . $maxAge . ' år';
+    elseif ($minAge) $parts[] = $minAge . '+ år';
+    elseif ($maxAge) $parts[] = '–' . $maxAge . ' år';
+    if (empty($parts)) return '';
+    return '<span style="font-size: 0.65rem; font-weight: 700; background: var(--color-accent-light); color: var(--color-accent-text); padding: 1px 6px; border-radius: var(--radius-full); white-space: nowrap;">' . implode(' · ', $parts) . '</span>';
 }
 
 // Activity type config
@@ -468,6 +501,7 @@ $pageTitle = $festival['name'];
                             <div class="festival-item-body">
                                 <div class="festival-item-title">
                                     <?= htmlspecialchars($a['name']) ?>
+                                    <?= festivalRestrictionBadge($a) ?>
                                     <?php if ($a['included_in_pass'] && $festival['pass_enabled']): ?>
                                     <span class="festival-pass-badge"><i data-lucide="ticket" style="width: 10px; height: 10px;"></i> Pass</span>
                                     <?php endif; ?>
@@ -515,6 +549,68 @@ $pageTitle = $festival['name'];
             </div>
             <?php endforeach; ?>
         </section>
+
+        <?php if (!empty($festivalProducts)): ?>
+        <!-- ============ PRODUKTER ============ -->
+        <section style="margin-bottom: var(--space-xl);">
+            <h2 style="font-family: var(--font-heading); font-size: 1.25rem; margin-bottom: var(--space-md); display: flex; align-items: center; gap: var(--space-xs);">
+                <i data-lucide="shopping-bag" style="width: 20px; height: 20px; color: var(--color-accent);"></i>
+                Produkter
+            </h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-md);">
+                <?php foreach ($festivalProducts as $fp):
+                    $fpSizes = $festProductSizes[$fp['id']] ?? [];
+                    $fpTypeIcons = ['merch' => 'shirt', 'food' => 'utensils-crossed', 'other' => 'package'];
+                    $fpIcon = $fpTypeIcons[$fp['product_type']] ?? 'package';
+                ?>
+                <div class="card" style="overflow: hidden;">
+                    <?php if ($fp['image_url']): ?>
+                    <div style="height: 140px; overflow: hidden; background: var(--color-bg-hover);">
+                        <img src="<?= htmlspecialchars($fp['image_url']) ?>" alt="<?= htmlspecialchars($fp['name']) ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <?php else: ?>
+                    <div style="height: 80px; display: flex; align-items: center; justify-content: center; background: var(--color-bg-hover);">
+                        <i data-lucide="<?= $fpIcon ?>" style="width: 32px; height: 32px; color: var(--color-text-muted);"></i>
+                    </div>
+                    <?php endif; ?>
+                    <div style="padding: var(--space-sm);">
+                        <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: var(--space-2xs);">
+                            <?= htmlspecialchars($fp['name']) ?>
+                            <?php if ($fp['included_in_pass'] && $festival['pass_enabled']): ?>
+                            <span class="festival-pass-badge"><i data-lucide="ticket" style="width: 10px; height: 10px;"></i> Pass</span>
+                            <?php endif; ?>
+                        </div>
+                        <?php if ($fp['description']): ?>
+                        <p style="font-size: 0.75rem; color: var(--color-text-muted); margin: 0 0 var(--space-xs);"><?= htmlspecialchars(mb_strimwidth($fp['description'], 0, 80, '...')) ?></p>
+                        <?php endif; ?>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-xs);">
+                            <span style="font-weight: 700; color: var(--color-accent); font-family: var(--font-heading);">
+                                <?= $fp['price'] > 0 ? number_format($fp['price'], 0) . ' kr' : 'Gratis' ?>
+                            </span>
+                            <?php if ($fp['has_sizes'] && !empty($fpSizes)): ?>
+                            <span style="font-size: 0.7rem; color: var(--color-text-muted);"><?= implode('/', array_map(fn($s) => $s['size_label'], $fpSizes)) ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <?php if ($fp['has_sizes'] && !empty($fpSizes)): ?>
+                        <div style="margin-top: var(--space-xs);">
+                            <select class="product-size-select" data-product-id="<?= $fp['id'] ?>" style="width: 100%; padding: var(--space-2xs) var(--space-xs); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-surface); color: var(--color-text-primary); font-size: 14px;">
+                                <option value="">Välj storlek</option>
+                                <?php foreach ($fpSizes as $fps): ?>
+                                <option value="<?= $fps['id'] ?>" data-label="<?= htmlspecialchars($fps['size_label']) ?>"><?= htmlspecialchars($fps['size_label']) ?><?= $fps['stock'] !== null && $fps['stock'] <= 0 ? ' (Slut)' : '' ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <?php endif; ?>
+                        <button type="button" class="btn btn-primary" style="width: 100%; margin-top: var(--space-xs); font-size: 0.8rem; min-height: 36px;"
+                            onclick="addProductToCart(<?= $fp['id'] ?>, <?= json_encode($fp['name'], JSON_UNESCAPED_UNICODE) ?>, <?= (float)$fp['price'] ?>, <?= $fp['has_sizes'] ? 'true' : 'false' ?>)">
+                            <i data-lucide="shopping-cart" style="width: 14px; height: 14px;"></i> Lägg i kundvagn
+                        </button>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php endif; ?>
 
         <!-- ============ SIDEBAR ============ -->
         <aside class="festival-sidebar">
@@ -582,6 +678,13 @@ $pageTitle = $festival['name'];
                         }
                         $evtLabel .= $ie['name'];
                         $passItems[] = '1x ' . $evtLabel;
+                    }
+
+                    // 4. Products with included_in_pass
+                    foreach ($festivalProducts as $fp) {
+                        if (!$fp['included_in_pass']) continue;
+                        $fpPc = max(1, intval($fp['pass_included_count']));
+                        $passItems[] = $fpPc . 'x ' . $fp['name'];
                     }
                     ?>
                     <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: var(--space-2xs);">
@@ -691,6 +794,44 @@ function addActivityToCart(activityId, activityName, price) {
                 price: parseFloat(price) || 0
             });
             alert(rider.firstname + ' tillagd för ' + activityName);
+        } catch (e) {
+            alert('Kunde inte lägga till: ' + e.message);
+        }
+    });
+}
+
+// Add product to cart
+function addProductToCart(productId, productName, price, hasSizes) {
+    if (hasSizes) {
+        const sizeSel = document.querySelector('.product-size-select[data-product-id="' + productId + '"]');
+        if (!sizeSel || !sizeSel.value) {
+            alert('Välj en storlek först.');
+            sizeSel && sizeSel.focus();
+            return;
+        }
+        var sizeId = parseInt(sizeSel.value);
+        var sizeLabel = sizeSel.options[sizeSel.selectedIndex].dataset.label;
+    } else {
+        var sizeId = null;
+        var sizeLabel = null;
+    }
+
+    openFestivalRiderSearch(function(rider) {
+        const riderName = (rider.firstname || '') + ' ' + (rider.lastname || '');
+        try {
+            GlobalCart.addItem({
+                type: 'festival_product',
+                product_id: productId,
+                size_id: sizeId,
+                festival_id: festivalInfo.id,
+                rider_id: rider.id,
+                rider_name: riderName,
+                product_name: productName + (sizeLabel ? ' (' + sizeLabel + ')' : ''),
+                festival_name: festivalInfo.name,
+                festival_date: festivalInfo.start_date,
+                price: parseFloat(price) || 0
+            });
+            alert(productName + (sizeLabel ? ' (' + sizeLabel + ')' : '') + ' tillagd för ' + rider.firstname);
         } catch (e) {
             alert('Kunde inte lägga till: ' + e.message);
         }

@@ -15,6 +15,27 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-09, session 66)
+
+### Festival: Köns-/åldersfilter på aktiviteter + tidspass
+- **Ny funktion:** Aktiviteter och tidspass kan nu begränsas till kön (Herrar/Damer) och/eller åldersintervall (min/max). Aktivitetsnivå sätter default, tidspass kan ha egna överskrivningar.
+- **Migration 092:** `gender CHAR(1)`, `min_age INT`, `max_age INT` på `festival_activities` och `festival_activity_slots`
+- **Admin festival-edit.php:** Kön-dropdown + min/max ålder-fält i aktivitetsformuläret och tidspassformuläret. Badges i listan.
+- **Publika sidor:** `festivalRestrictionBadge()` PHP-hjälpfunktion renderar inline badges (t.ex. "Damer · 15–25 år"). Visas på show.php, pass.php, single-activity.php.
+- **Bokningssida pass.php:** `updateRestrictionWarnings()` JS validerar vald deltagares kön/ålder mot aktivitetens/slottens restriktioner. Ineligibla options disablas. `addPassToCart()` blockerar om deltagaren inte uppfyller krav.
+- **Könsnormalisering:** Klasser använder 'K' för kvinnor, riders 'F' — JS normaliserar K→F.
+- **Filer:** `Tools/migrations/092_festival_activity_gender_age_filter.sql`, `admin/festival-edit.php`, `pages/festival/pass.php`, `pages/festival/show.php`, `pages/festival/single-activity.php`
+
+### Festival: Produkter (merchandise, mat) med storlekar och moms
+- **Ny funktion:** Festivaler kan ha produkter (kepsar, strumpor, tröjor, mat) som säljs separat eller inkluderas i festivalpass. Stödjer storlekar (S/M/L/XL/"Ej aktuellt") och konfigurerbara momssatser (6%/12%/25%).
+- **Migration 093:** `festival_products` (namn, typ, pris, moms, storlekar, passinkludering), `festival_product_sizes` (storlek, lager), `festival_product_orders` (beställningar med rider/order-koppling), `order_items.product_order_id`.
+- **Admin festival-edit.php:** Ny "Produkter"-flik med CRUD. Produktformulär: namn, typ (merch/mat/övrigt), beskrivning, pris, momssats, max antal, sorteringsordning, storlekar (dynamiska rader med +/×), passinkludering.
+- **Publik show.php:** Produktsektion med kort-grid: bild/ikon, namn, pris, storleksval, "Lägg i kundvagn"-knapp. `addProductToCart()` JS öppnar rider-sökning → lägger i GlobalCart.
+- **Publik pass.php:** Pass-inkluderade produkter visas i steg 2 med storleksväljare. `addPassToCart()` lägger produkter med `included_in_pass: true` och pris 0 kr. Produkter visas i passinnehålls-listan.
+- **Produkttyper:** merch (shirt-ikon), food (utensils-ikon), other (package-ikon)
+- **VIKTIGT:** Kör migration 093 via `/admin/migrations.php`
+- **Filer:** `Tools/migrations/093_festival_products.sql`, `admin/festival-edit.php`, `pages/festival/show.php`, `pages/festival/pass.php`, `admin/migrations.php`
+
 ## SENASTE FIXAR (2026-03-09, session 65)
 
 ### Festival: 3 fixar — passkort, klasser, instruktörssök

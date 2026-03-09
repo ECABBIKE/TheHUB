@@ -312,6 +312,13 @@ $migrationChecks = [
     '091_group_pass_included_count.sql' => [
         'columns' => ['festival_activity_groups.pass_included_count']
     ],
+    '092_festival_activity_gender_age_filter.sql' => [
+        'columns' => ['festival_activities.gender', 'festival_activities.min_age', 'festival_activities.max_age', 'festival_activity_slots.gender', 'festival_activity_slots.min_age']
+    ],
+    '093_festival_products.sql' => [
+        'tables' => ['festival_products', 'festival_product_sizes', 'festival_product_orders'],
+        'columns' => ['order_items.product_order_id']
+    ],
 ];
 
 // ============================================================================

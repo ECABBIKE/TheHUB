@@ -146,6 +146,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'included_in_pass' => !empty($_POST['act_pass_count']) ? 1 : 0,
         ];
 
+        // Add gender/age filter if columns exist
+        try {
+            $pdo->query("SELECT gender FROM festival_activities LIMIT 0");
+            $actData['gender'] = !empty($_POST['act_gender']) ? $_POST['act_gender'] : null;
+            $actData['min_age'] = !empty($_POST['act_min_age']) ? intval($_POST['act_min_age']) : null;
+            $actData['max_age'] = !empty($_POST['act_max_age']) ? intval($_POST['act_max_age']) : null;
+        } catch (PDOException $e) {}
+
         // Add pass_included_count if column exists
         try {
             $pdo->query("SELECT pass_included_count FROM festival_activities LIMIT 0");
@@ -298,6 +306,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'max_participants' => !empty($_POST['slot_max']) ? intval($_POST['slot_max']) : null,
         ];
 
+        // Add gender/age filter if columns exist
+        try {
+            $pdo->query("SELECT gender FROM festival_activity_slots LIMIT 0");
+            $slotData['gender'] = !empty($_POST['slot_gender']) ? $_POST['slot_gender'] : null;
+            $slotData['min_age'] = !empty($_POST['slot_min_age']) ? intval($_POST['slot_min_age']) : null;
+            $slotData['max_age'] = !empty($_POST['slot_max_age']) ? intval($_POST['slot_max_age']) : null;
+        } catch (PDOException $e) {}
+
         if (empty($slotData['date']) || empty($slotData['start_time'])) {
             $_SESSION['flash_message'] = 'Datum och starttid krävs för tidspass';
             $_SESSION['flash_type'] = 'error';
@@ -358,6 +374,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['flash_type'] = 'error';
         }
         header("Location: /admin/festival-edit.php?id=$id&tab=events");
+        exit;
+    }
+
+    // ── Save product ──
+    if ($action === 'save_product' && $id > 0) {
+        $prodId = intval($_POST['product_id'] ?? 0);
+        $prodData = [
+            'name' => trim($_POST['prod_name'] ?? ''),
+            'description' => trim($_POST['prod_description'] ?? ''),
+            'product_type' => in_array($_POST['prod_type'] ?? '', ['merch', 'food', 'other']) ? $_POST['prod_type'] : 'merch',
+            'price' => floatval($_POST['prod_price'] ?? 0),
+            'vat_rate' => floatval($_POST['prod_vat_rate'] ?? 25),
+            'has_sizes' => isset($_POST['prod_has_sizes']) ? 1 : 0,
+            'max_quantity' => !empty($_POST['prod_max_quantity']) ? intval($_POST['prod_max_quantity']) : null,
+            'included_in_pass' => isset($_POST['prod_included_in_pass']) ? 1 : 0,
+            'pass_included_count' => max(0, intval($_POST['prod_pass_included_count'] ?? 0)),
+            'sort_order' => intval($_POST['prod_sort_order'] ?? 0),
+        ];
+
+        if (empty($prodData['name'])) {
+            $_SESSION['flash_message'] = 'Produktnamn krävs';
+            $_SESSION['flash_type'] = 'error';
+        } else {
+            try {
+                if ($prodId > 0) {
+                    $sets = [];
+                    $vals = [];
+                    foreach ($prodData as $k => $v) {
+                        $sets[] = "$k = ?";
+                        $vals[] = $v;
+                    }
+                    $vals[] = $prodId;
+                    $vals[] = $id;
+                    $pdo->prepare("UPDATE festival_products SET " . implode(', ', $sets) . " WHERE id = ? AND festival_id = ?")->execute($vals);
+                    $_SESSION['flash_message'] = 'Produkt uppdaterad';
+                } else {
+                    $prodData['festival_id'] = $id;
+                    $cols = implode(', ', array_keys($prodData));
+                    $placeholders = implode(', ', array_fill(0, count($prodData), '?'));
+                    $pdo->prepare("INSERT INTO festival_products ($cols) VALUES ($placeholders)")->execute(array_values($prodData));
+                    $prodId = $pdo->lastInsertId();
+                    $_SESSION['flash_message'] = 'Produkt skapad';
+                }
+                $_SESSION['flash_type'] = 'success';
+
+                // Handle sizes
+                $sizeLabels = $_POST['size_labels'] ?? [];
+                $sizeStocks = $_POST['size_stocks'] ?? [];
+                $sizeIds = $_POST['size_ids'] ?? [];
+                // Delete removed sizes
+                $existingSizeIds = array_filter(array_map('intval', $sizeIds));
+                if (!empty($existingSizeIds)) {
+                    $inList = implode(',', $existingSizeIds);
+                    $pdo->prepare("DELETE FROM festival_product_sizes WHERE product_id = ? AND id NOT IN ($inList)")->execute([$prodId]);
+                } else {
+                    $pdo->prepare("DELETE FROM festival_product_sizes WHERE product_id = ?")->execute([$prodId]);
+                }
+                // Update/create sizes
+                for ($si = 0; $si < count($sizeLabels); $si++) {
+                    $sLabel = trim($sizeLabels[$si] ?? '');
+                    if (empty($sLabel)) continue;
+                    $sStock = !empty($sizeStocks[$si]) ? intval($sizeStocks[$si]) : null;
+                    $sId = intval($sizeIds[$si] ?? 0);
+                    if ($sId > 0) {
+                        $pdo->prepare("UPDATE festival_product_sizes SET size_label = ?, stock = ?, sort_order = ? WHERE id = ?")->execute([$sLabel, $sStock, $si, $sId]);
+                    } else {
+                        $pdo->prepare("INSERT INTO festival_product_sizes (product_id, size_label, stock, sort_order) VALUES (?, ?, ?, ?)")->execute([$prodId, $sLabel, $sStock, $si]);
+                    }
+                }
+            } catch (PDOException $e) {
+                $_SESSION['flash_message'] = 'Fel: ' . $e->getMessage();
+                $_SESSION['flash_type'] = 'error';
+            }
+        }
+        header("Location: /admin/festival-edit.php?id=$id&tab=products");
+        exit;
+    }
+
+    // ── Delete product ──
+    if ($action === 'delete_product' && $id > 0) {
+        $prodId = intval($_POST['product_id'] ?? 0);
+        try {
+            $pdo->prepare("DELETE FROM festival_products WHERE id = ? AND festival_id = ?")->execute([$prodId, $id]);
+            $_SESSION['flash_message'] = 'Produkt raderad';
+            $_SESSION['flash_type'] = 'success';
+        } catch (PDOException $e) {
+            $_SESSION['flash_message'] = 'Fel: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'error';
+        }
+        header("Location: /admin/festival-edit.php?id=$id&tab=products");
         exit;
     }
 
@@ -475,6 +581,27 @@ if (!$isNew && $id > 0) {
     } catch (PDOException $e) {
         // Table doesn't exist yet
     }
+}
+
+    // Load products
+    $products = [];
+    try {
+        $pStmt = $pdo->prepare("SELECT p.*, (SELECT COUNT(*) FROM festival_product_orders po WHERE po.product_id = p.id AND po.status != 'cancelled') as order_count FROM festival_products p WHERE p.festival_id = ? ORDER BY p.sort_order ASC, p.name ASC");
+        $pStmt->execute([$id]);
+        $products = $pStmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // Table doesn't exist yet
+    }
+
+    // Load product sizes
+    $productSizes = [];
+    try {
+        $psStmt = $pdo->prepare("SELECT ps.* FROM festival_product_sizes ps JOIN festival_products p ON ps.product_id = p.id WHERE p.festival_id = ? ORDER BY ps.sort_order ASC");
+        $psStmt->execute([$id]);
+        foreach ($psStmt->fetchAll(PDO::FETCH_ASSOC) as $ps) {
+            $productSizes[$ps['product_id']][] = $ps;
+        }
+    } catch (PDOException $e) {}
 }
 
 // Venues for dropdown
@@ -804,6 +931,9 @@ $activityTypes = [
     <a href="?id=<?= $id ?>&tab=activities" class="festival-tab <?= $activeTab === 'activities' ? 'active' : '' ?>">
         <i data-lucide="tent"></i> Aktiviteter
         <span class="badge" style="font-size: 0.7rem; padding: 1px 6px;"><?= count($activities) ?></span>
+    </a>
+    <a href="?id=<?= $id ?>&tab=products" class="festival-tab <?= $activeTab === 'products' ? 'active' : '' ?>">
+        <i data-lucide="shopping-bag"></i> Produkter
     </a>
     <a href="?id=<?= $id ?>&tab=pass" class="festival-tab <?= $activeTab === 'pass' ? 'active' : '' ?>">
         <i data-lucide="ticket"></i> Festivalpass
@@ -1395,6 +1525,18 @@ endif;
             <?php if ($act['location_detail']): ?>
             <span><i data-lucide="map-pin"></i> <?= htmlspecialchars($act['location_detail']) ?></span>
             <?php endif; ?>
+            <?php
+            // Gender/age restriction badge
+            $actRestrParts = [];
+            $actG = $act['gender'] ?? null;
+            if ($actG === 'F' || $actG === 'K') $actRestrParts[] = 'Damer';
+            elseif ($actG === 'M') $actRestrParts[] = 'Herrar';
+            if (!empty($act['min_age'])) $actRestrParts[] = $act['min_age'] . '+ år';
+            if (!empty($act['max_age'])) $actRestrParts[] = '–' . $act['max_age'] . ' år';
+            if (!empty($actRestrParts)):
+            ?>
+            <span class="badge badge-info" style="font-size: 0.65rem;"><?= implode(' · ', $actRestrParts) ?></span>
+            <?php endif; ?>
         </div>
         <?php if ($act['description']): ?>
         <p style="margin: var(--space-xs) 0 0; font-size: 0.85rem; color: var(--color-text-secondary);">
@@ -1534,6 +1676,23 @@ endif;
                     <input type="number" name="act_max" value="<?= $editAct['max_participants'] ?? '' ?>" min="1" placeholder="Obegränsat">
                 </div>
                 <div class="form-group">
+                    <label>Kön</label>
+                    <select name="act_gender" style="width: 140px;">
+                        <option value="">Alla</option>
+                        <option value="F" <?= ($editAct['gender'] ?? '') === 'F' ? 'selected' : '' ?>>Endast damer</option>
+                        <option value="M" <?= ($editAct['gender'] ?? '') === 'M' ? 'selected' : '' ?>>Endast herrar</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Ålder (min – max)</label>
+                    <div style="display: flex; gap: var(--space-xs); align-items: center;">
+                        <input type="number" name="act_min_age" value="<?= $editAct['min_age'] ?? '' ?>" min="1" max="99" placeholder="Min" style="width: 80px;">
+                        <span style="color: var(--color-text-muted);">–</span>
+                        <input type="number" name="act_max_age" value="<?= $editAct['max_age'] ?? '' ?>" min="1" max="99" placeholder="Max" style="width: 80px;">
+                        <span style="font-size: 0.75rem; color: var(--color-text-muted);">år</span>
+                    </div>
+                </div>
+                <div class="form-group">
                     <label>Ingår i pass (antal gånger)</label>
                     <input type="number" name="act_pass_count" value="<?= $editAct['pass_included_count'] ?? ($editAct['included_in_pass'] ?? 0) ?>" min="0" max="10" placeholder="0 = ingår ej" style="width: 120px;">
                     <small style="color: var(--color-text-muted); margin-top: 2px; display: block;">0 = ingår ej, 1+ = antal gånger som ingår i passet</small>
@@ -1594,6 +1753,18 @@ endif;
                     <?php if ($slotFull): ?>
                     <span class="badge badge-warning" style="font-size: 0.65rem;">Fullbokat</span>
                     <?php endif; ?>
+                    <?php
+                    // Show gender/age restriction badge
+                    $slotRestrParts = [];
+                    $slotG = $slot['gender'] ?? null;
+                    if ($slotG === 'F' || $slotG === 'K') $slotRestrParts[] = 'Damer';
+                    elseif ($slotG === 'M') $slotRestrParts[] = 'Herrar';
+                    if (!empty($slot['min_age'])) $slotRestrParts[] = $slot['min_age'] . '+ år';
+                    if (!empty($slot['max_age'])) $slotRestrParts[] = '–' . $slot['max_age'] . ' år';
+                    if (!empty($slotRestrParts)):
+                    ?>
+                    <span class="badge badge-info" style="font-size: 0.65rem;"><?= implode(' · ', $slotRestrParts) ?></span>
+                    <?php endif; ?>
                 </div>
                 <div style="display: flex; gap: var(--space-2xs);">
                     <a href="?id=<?= $id ?>&tab=activities&edit_act=<?= $editAct['id'] ?>&edit_slot=<?= $slot['id'] ?>#slots-section" class="btn-admin btn-admin-secondary" style="padding: 3px 6px;">
@@ -1642,6 +1813,22 @@ endif;
                     <label>Max deltagare</label>
                     <input type="number" name="slot_max" value="<?= $editSlot['max_participants'] ?? $editAct['max_participants'] ?? '' ?>" min="1" placeholder="Obegränsat">
                 </div>
+                <div class="form-group">
+                    <label>Kön (override)</label>
+                    <select name="slot_gender" style="width: 140px;">
+                        <option value="">Samma som aktivitet</option>
+                        <option value="F" <?= ($editSlot['gender'] ?? '') === 'F' ? 'selected' : '' ?>>Endast damer</option>
+                        <option value="M" <?= ($editSlot['gender'] ?? '') === 'M' ? 'selected' : '' ?>>Endast herrar</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Ålder (override)</label>
+                    <div style="display: flex; gap: var(--space-xs); align-items: center;">
+                        <input type="number" name="slot_min_age" value="<?= $editSlot['min_age'] ?? '' ?>" min="1" max="99" placeholder="Min" style="width: 70px;">
+                        <span style="color: var(--color-text-muted);">–</span>
+                        <input type="number" name="slot_max_age" value="<?= $editSlot['max_age'] ?? '' ?>" min="1" max="99" placeholder="Max" style="width: 70px;">
+                    </div>
+                </div>
             </div>
 
             <div style="display: flex; gap: var(--space-xs);">
@@ -1657,6 +1844,241 @@ endif;
     </div>
 </div>
 <?php endif; ?>
+
+<?php endif; ?>
+
+<!-- ============================================================ -->
+<!-- TAB: PRODUKTER                                                -->
+<!-- ============================================================ -->
+<?php if (!$isNew && $activeTab === 'products'): ?>
+
+<?php
+$editProd = null;
+$editProdId = intval($_GET['edit_prod'] ?? 0);
+if ($editProdId) {
+    foreach ($products as $p) {
+        if ($p['id'] === $editProdId) { $editProd = $p; break; }
+    }
+}
+$editProdSizes = $editProd ? ($productSizes[$editProd['id']] ?? []) : [];
+$vatRates = [
+    '6.00' => '6% (sport/event)',
+    '12.00' => '12% (mat/dryck)',
+    '25.00' => '25% (övrigt/merch)',
+];
+$prodTypes = [
+    'merch' => 'Merchandise',
+    'food' => 'Mat & Dryck',
+    'other' => 'Övrigt',
+];
+?>
+
+<!-- Product form -->
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
+        <h3><?= $editProd ? 'Redigera produkt' : 'Ny produkt' ?></h3>
+    </div>
+    <div class="admin-card-body">
+        <form method="post">
+            <input type="hidden" name="action" value="save_product">
+            <input type="hidden" name="product_id" value="<?= $editProd['id'] ?? 0 ?>">
+
+            <div class="form-row" style="margin-bottom: var(--space-md);">
+                <div class="form-group">
+                    <label class="form-label">Produktnamn *</label>
+                    <input type="text" name="prod_name" class="form-input" value="<?= htmlspecialchars($editProd['name'] ?? '') ?>" required placeholder="T.ex. Festivaltröja">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Typ</label>
+                    <select name="prod_type" class="form-select">
+                        <?php foreach ($prodTypes as $ptk => $ptv): ?>
+                        <option value="<?= $ptk ?>" <?= ($editProd['product_type'] ?? 'merch') === $ptk ? 'selected' : '' ?>><?= $ptv ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: var(--space-md);">
+                <label class="form-label">Beskrivning</label>
+                <textarea name="prod_description" class="form-textarea" rows="2" placeholder="Kort beskrivning..."><?= htmlspecialchars($editProd['description'] ?? '') ?></textarea>
+            </div>
+
+            <div class="form-row" style="margin-bottom: var(--space-md);">
+                <div class="form-group">
+                    <label class="form-label">Pris (kr)</label>
+                    <input type="number" name="prod_price" class="form-input" value="<?= $editProd['price'] ?? 0 ?>" min="0" step="1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Moms</label>
+                    <select name="prod_vat_rate" class="form-select">
+                        <?php foreach ($vatRates as $vk => $vl): ?>
+                        <option value="<?= $vk ?>" <?= number_format($editProd['vat_rate'] ?? 25, 2) === $vk ? 'selected' : '' ?>><?= $vl ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row" style="margin-bottom: var(--space-md);">
+                <div class="form-group">
+                    <label class="form-label">Max antal (0 = obegränsat)</label>
+                    <input type="number" name="prod_max_quantity" class="form-input" value="<?= $editProd['max_quantity'] ?? '' ?>" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sorteringsordning</label>
+                    <input type="number" name="prod_sort_order" class="form-input" value="<?= $editProd['sort_order'] ?? 0 ?>" min="0">
+                </div>
+            </div>
+
+            <!-- Sizes -->
+            <div style="margin-bottom: var(--space-md); padding: var(--space-md); background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+                <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm);">
+                    <label style="display: flex; align-items: center; gap: var(--space-xs); cursor: pointer;">
+                        <input type="checkbox" name="prod_has_sizes" id="prodHasSizes" value="1" <?= !empty($editProd['has_sizes']) ? 'checked' : '' ?> onchange="toggleSizesSection()">
+                        <span class="form-label" style="margin: 0;">Produkten har storlekar</span>
+                    </label>
+                </div>
+                <div id="sizesSection" style="<?= empty($editProd['has_sizes']) ? 'display: none;' : '' ?>">
+                    <div id="sizeRows">
+                        <?php if (!empty($editProdSizes)):
+                            foreach ($editProdSizes as $si => $sz):
+                        ?>
+                        <div class="size-row" style="display: flex; gap: var(--space-xs); align-items: center; margin-bottom: var(--space-2xs);">
+                            <input type="hidden" name="size_ids[]" value="<?= $sz['id'] ?>">
+                            <input type="text" name="size_labels[]" class="form-input" value="<?= htmlspecialchars($sz['size_label']) ?>" placeholder="Storlek" style="width: 120px;">
+                            <input type="number" name="size_stocks[]" class="form-input" value="<?= $sz['stock'] ?? '' ?>" placeholder="Lager" style="width: 80px;" min="0">
+                            <button type="button" onclick="this.closest('.size-row').remove()" class="btn-admin btn-admin-danger" style="padding: 4px 8px;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+                        </div>
+                        <?php endforeach;
+                        else: ?>
+                        <div class="size-row" style="display: flex; gap: var(--space-xs); align-items: center; margin-bottom: var(--space-2xs);">
+                            <input type="hidden" name="size_ids[]" value="0">
+                            <input type="text" name="size_labels[]" class="form-input" value="Ej aktuellt" placeholder="Storlek" style="width: 120px;">
+                            <input type="number" name="size_stocks[]" class="form-input" value="" placeholder="Lager" style="width: 80px;" min="0">
+                            <button type="button" onclick="this.closest('.size-row').remove()" class="btn-admin btn-admin-danger" style="padding: 4px 8px;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                    <button type="button" onclick="addSizeRow()" class="btn-admin btn-admin-secondary" style="margin-top: var(--space-xs); font-size: 0.8rem;">
+                        <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Lägg till storlek
+                    </button>
+                    <div style="margin-top: var(--space-xs);">
+                        <button type="button" onclick="addStandardSizes()" class="btn-admin btn-admin-ghost" style="font-size: 0.75rem;">
+                            Lägg till XS, S, M, L, XL
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pass inclusion -->
+            <div style="margin-bottom: var(--space-md); padding: var(--space-md); background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+                <label style="display: flex; align-items: center; gap: var(--space-xs); cursor: pointer; margin-bottom: var(--space-xs);">
+                    <input type="checkbox" name="prod_included_in_pass" value="1" <?= !empty($editProd['included_in_pass']) ? 'checked' : '' ?>>
+                    <span class="form-label" style="margin: 0;">Ingår i festivalpass</span>
+                </label>
+                <div style="display: flex; align-items: center; gap: var(--space-xs);">
+                    <label class="form-label" style="margin: 0; font-size: 0.8rem;">Antal som ingår:</label>
+                    <input type="number" name="prod_pass_included_count" class="form-input" value="<?= $editProd['pass_included_count'] ?? 0 ?>" min="0" style="width: 70px;">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: var(--space-sm);">
+                <button type="submit" class="btn-admin btn-admin-primary">
+                    <i data-lucide="save" style="width: 16px; height: 16px;"></i> <?= $editProd ? 'Uppdatera' : 'Skapa produkt' ?>
+                </button>
+                <?php if ($editProd): ?>
+                <a href="?id=<?= $id ?>&tab=products" class="btn-admin btn-admin-secondary">Avbryt</a>
+                <?php endif; ?>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Product list -->
+<?php if (!empty($products)): ?>
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
+        <h3>Produkter (<?= count($products) ?>)</h3>
+    </div>
+    <div class="admin-card-body" style="padding: 0;">
+        <?php foreach ($products as $prod):
+            $pType = $prodTypes[$prod['product_type']] ?? 'Övrigt';
+            $pSizes = $productSizes[$prod['id']] ?? [];
+            $vatLabel = number_format($prod['vat_rate'], 0) . '% moms';
+        ?>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); <?= $editProd && $editProd['id'] == $prod['id'] ? 'background: var(--color-accent-light);' : '' ?>">
+            <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 600; font-size: 0.9rem;">
+                    <?= htmlspecialchars($prod['name']) ?>
+                    <?php if ($prod['included_in_pass']): ?>
+                    <span class="badge badge-success" style="font-size: 0.6rem;">Pass</span>
+                    <?php endif; ?>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--color-text-muted); display: flex; flex-wrap: wrap; gap: var(--space-xs);">
+                    <span><?= $pType ?></span>
+                    <span><?= number_format($prod['price'], 0) ?> kr</span>
+                    <span><?= $vatLabel ?></span>
+                    <?php if (!empty($pSizes)): ?>
+                    <span><?= implode(', ', array_map(fn($s) => $s['size_label'], $pSizes)) ?></span>
+                    <?php endif; ?>
+                    <span><?= (int)$prod['order_count'] ?> beställda</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: var(--space-2xs);">
+                <a href="?id=<?= $id ?>&tab=products&edit_prod=<?= $prod['id'] ?>" class="btn-admin btn-admin-secondary" style="padding: 4px 8px;">
+                    <i data-lucide="pencil" style="width: 14px; height: 14px;"></i>
+                </a>
+                <form method="post" style="margin: 0;" onsubmit="return confirm('Radera denna produkt?')">
+                    <input type="hidden" name="action" value="delete_product">
+                    <input type="hidden" name="product_id" value="<?= $prod['id'] ?>">
+                    <button type="submit" class="btn-admin btn-admin-danger" style="padding: 4px 8px;">
+                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php else: ?>
+<div class="alert alert-info" style="margin-bottom: var(--space-md);">
+    Inga produkter ännu. Skapa den första ovan.
+</div>
+<?php endif; ?>
+
+<script>
+function toggleSizesSection() {
+    document.getElementById('sizesSection').style.display = document.getElementById('prodHasSizes').checked ? '' : 'none';
+}
+
+function addSizeRow() {
+    const row = document.createElement('div');
+    row.className = 'size-row';
+    row.style.cssText = 'display: flex; gap: var(--space-xs); align-items: center; margin-bottom: var(--space-2xs);';
+    row.innerHTML = '<input type="hidden" name="size_ids[]" value="0">' +
+        '<input type="text" name="size_labels[]" class="form-input" placeholder="Storlek" style="width: 120px;">' +
+        '<input type="number" name="size_stocks[]" class="form-input" placeholder="Lager" style="width: 80px;" min="0">' +
+        '<button type="button" onclick="this.closest(\'.size-row\').remove()" class="btn-admin btn-admin-danger" style="padding: 4px 8px;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>';
+    document.getElementById('sizeRows').appendChild(row);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function addStandardSizes() {
+    ['XS', 'S', 'M', 'L', 'XL'].forEach(s => {
+        const existing = [...document.querySelectorAll('input[name="size_labels[]"]')].some(i => i.value === s);
+        if (!existing) {
+            const row = document.createElement('div');
+            row.className = 'size-row';
+            row.style.cssText = 'display: flex; gap: var(--space-xs); align-items: center; margin-bottom: var(--space-2xs);';
+            row.innerHTML = '<input type="hidden" name="size_ids[]" value="0">' +
+                '<input type="text" name="size_labels[]" class="form-input" value="' + s + '" style="width: 120px;">' +
+                '<input type="number" name="size_stocks[]" class="form-input" placeholder="Lager" style="width: 80px;" min="0">' +
+                '<button type="button" onclick="this.closest(\'.size-row\').remove()" class="btn-admin btn-admin-danger" style="padding: 4px 8px;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>';
+            document.getElementById('sizeRows').appendChild(row);
+        }
+    });
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+</script>
 
 <?php endif; ?>
 
