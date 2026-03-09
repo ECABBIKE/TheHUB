@@ -143,8 +143,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'instructor_rider_id' => !empty($_POST['act_instructor_rider_id']) ? intval($_POST['act_instructor_rider_id']) : null,
             'price' => floatval($_POST['act_price'] ?? 0),
             'max_participants' => !empty($_POST['act_max']) ? intval($_POST['act_max']) : null,
-            'included_in_pass' => isset($_POST['act_included_in_pass']) ? 1 : 0,
+            'included_in_pass' => !empty($_POST['act_pass_count']) ? 1 : 0,
         ];
+
+        // Add pass_included_count if column exists
+        try {
+            $pdo->query("SELECT pass_included_count FROM festival_activities LIMIT 0");
+            $actData['pass_included_count'] = max(0, intval($_POST['act_pass_count'] ?? 0));
+        } catch (PDOException $e) {}
 
         // Add group_id if column exists
         try {
@@ -1327,8 +1333,10 @@ endif;
                 <span class="badge" style="font-size: 0.65rem; padding: 1px 6px; margin-left: 4px;">
                     <?= $typeInfo['label'] ?>
                 </span>
-                <?php if ($act['included_in_pass']): ?>
-                <span class="badge badge-success" style="font-size: 0.65rem; padding: 1px 6px;">Ingår i pass</span>
+                <?php
+                $actPassCount = intval($act['pass_included_count'] ?? ($act['included_in_pass'] ? 1 : 0));
+                if ($actPassCount > 0): ?>
+                <span class="badge badge-success" style="font-size: 0.65rem; padding: 1px 6px;">I pass <?= $actPassCount ?>x</span>
                 <?php endif; ?>
             </div>
             <div style="display: flex; gap: var(--space-2xs);">
@@ -1504,11 +1512,10 @@ endif;
                     <label>Max deltagare</label>
                     <input type="number" name="act_max" value="<?= $editAct['max_participants'] ?? '' ?>" min="1" placeholder="Obegränsat">
                 </div>
-                <div class="form-group" style="display: flex; align-items: flex-end; padding-bottom: var(--space-xs);">
-                    <label style="display: flex; align-items: center; gap: var(--space-xs); cursor: pointer;">
-                        <input type="checkbox" name="act_included_in_pass" <?= ($editAct['included_in_pass'] ?? 1) ? 'checked' : '' ?>>
-                        Ingår i festivalpass
-                    </label>
+                <div class="form-group">
+                    <label>Ingår i pass (antal gånger)</label>
+                    <input type="number" name="act_pass_count" value="<?= $editAct['pass_included_count'] ?? ($editAct['included_in_pass'] ?? 0) ?>" min="0" max="10" placeholder="0 = ingår ej" style="width: 120px;">
+                    <small style="color: var(--color-text-muted); margin-top: 2px; display: block;">0 = ingår ej, 1+ = antal gånger som ingår i passet</small>
                 </div>
             </div>
 
@@ -1654,6 +1661,10 @@ endif;
     foreach ($activities as $a) {
         if ($a['included_in_pass']) $includedCount++;
     }
+    $totalIncludedSlots = 0;
+    foreach ($activities as $a) {
+        $totalIncludedSlots += intval($a['pass_included_count'] ?? ($a['included_in_pass'] ? 1 : 0));
+    }
 ?>
 
 <!-- Pass preview -->
@@ -1753,15 +1764,21 @@ endif;
                 <div style="display: flex; flex-direction: column; gap: var(--space-2xs);">
                     <?php foreach ($activities as $a):
                         $typeInfo = $activityTypes[$a['activity_type']] ?? $activityTypes['other'];
+                        $passCount = intval($a['pass_included_count'] ?? ($a['included_in_pass'] ? 1 : 0));
                     ?>
                     <div style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-2xs) 0;">
-                        <?php if ($a['included_in_pass']): ?>
+                        <?php if ($passCount > 0): ?>
                         <i data-lucide="check-circle" style="width: 16px; height: 16px; color: var(--color-success);"></i>
                         <?php else: ?>
                         <i data-lucide="circle" style="width: 16px; height: 16px; color: var(--color-text-muted);"></i>
                         <?php endif; ?>
                         <span style="color: var(--color-text-primary);"><?= htmlspecialchars($a['name']) ?></span>
                         <span class="badge" style="font-size: 0.65rem;"><?= $typeInfo['label'] ?></span>
+                        <?php if ($passCount > 1): ?>
+                        <span class="badge badge-success" style="font-size: 0.65rem;"><?= $passCount ?>x</span>
+                        <?php elseif ($passCount === 1): ?>
+                        <span class="badge badge-success" style="font-size: 0.65rem;">1x</span>
+                        <?php endif; ?>
                         <?php if ($a['price'] > 0): ?>
                         <span style="font-size: 0.8rem; color: var(--color-text-muted);"><?= number_format($a['price'], 0) ?> kr</span>
                         <?php endif; ?>

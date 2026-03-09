@@ -15,6 +15,19 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-09, session 59)
+
+### Festival: Köpknappar fixade + pass_included_count
+- **Buggfix köpknappar:** Alla 4 festivalsidor (show.php, activity.php, single-activity.php, index.php) inkluderade `includes/footer.php` som inte finns. Footer (med global-cart.js) laddas av index.php via `components/footer.php`. De felaktiga includes genererade PHP-varningar som bröt JS-exekvering → inga knappar fungerade. Fix: borttagna alla bogus footer-includes.
+- **Buggfix activity.php event.target:** `addActivityToCart()` använde `event.target.closest('button')` men `event` var inte en parameter → TypeError fångad av catch → förvirrande felmeddelande. Fix: ersatt med `document.querySelector()`.
+- **Ny funktion: pass_included_count** — Konfigurerbart antal inkluderingar per aktivitet i festivalpass. Istället för boolean (ingår/ingår ej) kan admin nu ange t.ex. "2" för att aktiviteten ingår 2 gånger i passet.
+- **Admin festival-edit.php:** Checkbox "Ingår i pass" ersatt med numeriskt fält "Ingår i pass (antal gånger)". 0 = ingår ej, 1+ = antal. Passfliken visar "Nx"-badge per aktivitet och totalt antal inkluderade tillfällen.
+- **Publik show.php passmodal:** Renderar N tidspass-väljare per aktivitet baserat på `pass_included_count`. Duplikatvalidering i JS förhindrar att samma tidspass väljs flera gånger. Aktiviteter utan tidspass visar "N tillfällen ingår".
+- **order-manager.php:** Pass-rabattlogiken kollar nu `pass_included_count` — räknar redan använda pass-inkluderade registreringar (i samma order + databas) mot tillåtet antal. `pass_discount`-flagga sätts på registreringar som använde passrabatten.
+- **Migration 090:** `pass_included_count` INT på `festival_activities` + `pass_discount` TINYINT på `festival_activity_registrations`. Backfill från boolean.
+- **VIKTIGT:** Kör migration 090 via `/admin/migrations.php`
+- **Filer:** `Tools/migrations/090_festival_pass_included_count.sql`, `admin/festival-edit.php`, `pages/festival/show.php`, `pages/festival/activity.php`, `pages/festival/single-activity.php`, `pages/festival/index.php`, `includes/order-manager.php`, `admin/migrations.php`
+
 ## SENASTE FIXAR (2026-03-09, session 58)
 
 ### Festival: Passkonfigurationsmodal + kundvagnsrendering

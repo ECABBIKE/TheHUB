@@ -645,27 +645,62 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                 // Kolla om aktiviteten ingår i festivalpass och om åkaren har pass
                 $passDiscount = false;
                 if (!empty($activity['included_in_pass'])) {
-                    // Kolla om åkaren redan har ett pass i varukorgen
+                    // Hur många gånger ingår denna aktivitet i passet?
+                    $passAllowedCount = 1;
+                    try {
+                        $pcStmt = $pdo->prepare("SELECT pass_included_count FROM festival_activities WHERE id = ?");
+                        $pcStmt->execute([$activityId]);
+                        $pcVal = $pcStmt->fetchColumn();
+                        if ($pcVal !== false) $passAllowedCount = max(1, intval($pcVal));
+                    } catch (PDOException $e) { /* column may not exist */ }
+
+                    // Räkna hur många pass-inkluderade registreringar åkaren redan har för denna aktivitet
+                    $alreadyUsed = 0;
+                    // I nuvarande order
+                    foreach ($items as $otherItem) {
+                        if (($otherItem['type'] ?? '') === 'festival_activity'
+                            && intval($otherItem['activity_id'] ?? 0) === $activityId
+                            && intval($otherItem['rider_id'] ?? 0) === $riderId
+                            && !empty($otherItem['included_in_pass'])) {
+                            $alreadyUsed++;
+                        }
+                    }
+                    // I databasen (redan betalda)
+                    try {
+                        $usedStmt = $pdo->prepare("
+                            SELECT COUNT(*) FROM festival_activity_registrations
+                            WHERE activity_id = ? AND rider_id = ? AND status != 'cancelled' AND payment_status = 'paid'
+                                AND pass_discount = 1
+                        ");
+                        $usedStmt->execute([$activityId, $riderId]);
+                        $alreadyUsed += intval($usedStmt->fetchColumn());
+                    } catch (PDOException $e) { /* pass_discount column may not exist */ }
+
+                    $hasPass = false;
+                    // Kolla om åkaren har ett pass i varukorgen
                     foreach ($items as $otherItem) {
                         if (($otherItem['type'] ?? '') === 'festival_pass'
                             && intval($otherItem['festival_id']) === $festivalId
                             && intval($otherItem['rider_id']) === $riderId) {
-                            $passDiscount = true;
-                            $finalPrice = 0;
+                            $hasPass = true;
                             break;
                         }
                     }
                     // Kolla om åkaren redan har ett betalt pass
-                    if (!$passDiscount) {
+                    if (!$hasPass) {
                         $passCheckStmt = $pdo->prepare("
                             SELECT id FROM festival_passes
                             WHERE festival_id = ? AND rider_id = ? AND status != 'cancelled' AND payment_status = 'paid'
                         ");
                         $passCheckStmt->execute([$festivalId, $riderId]);
                         if ($passCheckStmt->fetch()) {
-                            $passDiscount = true;
-                            $finalPrice = 0;
+                            $hasPass = true;
                         }
+                    }
+
+                    if ($hasPass && $alreadyUsed < $passAllowedCount) {
+                        $passDiscount = true;
+                        $finalPrice = 0;
                     }
                 }
 
@@ -690,29 +725,56 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                     }
                 }
 
-                // Check if slot_id column exists
+                // Check available columns
                 $hasSlotCol = false;
+                $hasPassDiscountCol = false;
                 try {
                     $pdo->query("SELECT slot_id FROM festival_activity_registrations LIMIT 0");
                     $hasSlotCol = true;
                 } catch (PDOException $e) {}
+                try {
+                    $pdo->query("SELECT pass_discount FROM festival_activity_registrations LIMIT 0");
+                    $hasPassDiscountCol = true;
+                } catch (PDOException $e) {}
+
+                $passDiscountVal = $passDiscount ? 1 : 0;
 
                 if ($hasSlotCol && $slotId) {
-                    $regStmt = $pdo->prepare("
-                        INSERT INTO festival_activity_registrations (
-                            activity_id, slot_id, rider_id, order_id,
-                            status, payment_status, registered_at
-                        ) VALUES (?, ?, ?, ?, 'pending', 'unpaid', NOW())
-                    ");
-                    $regStmt->execute([$activityId, $slotId, $riderId, $orderId]);
+                    if ($hasPassDiscountCol) {
+                        $regStmt = $pdo->prepare("
+                            INSERT INTO festival_activity_registrations (
+                                activity_id, slot_id, rider_id, order_id,
+                                status, payment_status, pass_discount, registered_at
+                            ) VALUES (?, ?, ?, ?, 'pending', 'unpaid', ?, NOW())
+                        ");
+                        $regStmt->execute([$activityId, $slotId, $riderId, $orderId, $passDiscountVal]);
+                    } else {
+                        $regStmt = $pdo->prepare("
+                            INSERT INTO festival_activity_registrations (
+                                activity_id, slot_id, rider_id, order_id,
+                                status, payment_status, registered_at
+                            ) VALUES (?, ?, ?, ?, 'pending', 'unpaid', NOW())
+                        ");
+                        $regStmt->execute([$activityId, $slotId, $riderId, $orderId]);
+                    }
                 } else {
-                    $regStmt = $pdo->prepare("
-                        INSERT INTO festival_activity_registrations (
-                            activity_id, rider_id, order_id,
-                            status, payment_status, registered_at
-                        ) VALUES (?, ?, ?, 'pending', 'unpaid', NOW())
-                    ");
-                    $regStmt->execute([$activityId, $riderId, $orderId]);
+                    if ($hasPassDiscountCol) {
+                        $regStmt = $pdo->prepare("
+                            INSERT INTO festival_activity_registrations (
+                                activity_id, rider_id, order_id,
+                                status, payment_status, pass_discount, registered_at
+                            ) VALUES (?, ?, ?, 'pending', 'unpaid', ?, NOW())
+                        ");
+                        $regStmt->execute([$activityId, $riderId, $orderId, $passDiscountVal]);
+                    } else {
+                        $regStmt = $pdo->prepare("
+                            INSERT INTO festival_activity_registrations (
+                                activity_id, rider_id, order_id,
+                                status, payment_status, registered_at
+                            ) VALUES (?, ?, ?, 'pending', 'unpaid', NOW())
+                        ");
+                        $regStmt->execute([$activityId, $riderId, $orderId]);
+                    }
                 }
                 $actRegId = $pdo->lastInsertId();
 

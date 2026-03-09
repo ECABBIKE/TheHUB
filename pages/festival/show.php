@@ -532,10 +532,12 @@ include __DIR__ . '/../../includes/header.php';
                     <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: var(--space-2xs);">
                         <?= count($includedActs) ?> aktiviteter ingår
                     </div>
-                    <?php foreach (array_slice($includedActs, 0, 5) as $ia): ?>
+                    <?php foreach (array_slice($includedActs, 0, 5) as $ia):
+                        $iaPassCount = intval($ia['pass_included_count'] ?? 1);
+                    ?>
                     <div style="font-size: 0.8rem; color: var(--color-text-secondary); display: flex; align-items: center; gap: 4px;">
                         <i data-lucide="check" style="width: 12px; height: 12px; color: var(--color-success);"></i>
-                        <?= htmlspecialchars($ia['name']) ?>
+                        <?= htmlspecialchars($ia['name']) ?><?= $iaPassCount > 1 ? ' (' . $iaPassCount . 'x)' : '' ?>
                     </div>
                     <?php endforeach; ?>
                     <?php if (count($includedActs) > 5): ?>
@@ -647,6 +649,7 @@ include __DIR__ . '/../../includes/header.php';
                     $iaType = $actTypes[$ia['activity_type']] ?? $actTypes['other'];
                     $iaSlots = $passActivitySlots[$ia['id']] ?? [];
                     $iaHasSlots = !empty($iaSlots);
+                    $iaPassCount = max(1, intval($ia['pass_included_count'] ?? 1));
                 ?>
                 <div class="pass-modal-item" data-activity-id="<?= $ia['id'] ?>">
                     <div class="pass-modal-item-header">
@@ -655,12 +658,16 @@ include __DIR__ . '/../../includes/header.php';
                         </span>
                         <span class="pass-modal-item-name"><?= htmlspecialchars($ia['name']) ?></span>
                         <span class="pass-modal-item-badge"><?= $iaType['label'] ?></span>
+                        <?php if ($iaPassCount > 1): ?>
+                        <span class="pass-modal-item-badge" style="background: var(--color-success); color: #fff;"><?= $iaPassCount ?>x</span>
+                        <?php endif; ?>
                     </div>
 
                     <?php if ($iaHasSlots): ?>
                     <div class="pass-modal-item-config">
-                        <label class="pass-modal-sublabel">Välj tidspass:</label>
-                        <select class="pass-modal-select pass-slot-select" data-activity-id="<?= $ia['id'] ?>" data-activity-name="<?= htmlspecialchars($ia['name']) ?>">
+                        <?php for ($slotIdx = 0; $slotIdx < $iaPassCount; $slotIdx++): ?>
+                        <label class="pass-modal-sublabel"><?= $iaPassCount > 1 ? 'Tidspass ' . ($slotIdx + 1) . ':' : 'Välj tidspass:' ?></label>
+                        <select class="pass-modal-select pass-slot-select" data-activity-id="<?= $ia['id'] ?>" data-activity-name="<?= htmlspecialchars($ia['name']) ?>" data-slot-index="<?= $slotIdx ?>">
                             <option value="">– Välj tidspass –</option>
                             <?php foreach ($iaSlots as $slot):
                                 $slotFull = $slot['max_participants'] && $slot['reg_count'] >= $slot['max_participants'];
@@ -680,9 +687,15 @@ include __DIR__ . '/../../includes/header.php';
                             </option>
                             <?php endforeach; ?>
                         </select>
+                        <?php endfor; ?>
                     </div>
                     <?php else: ?>
+                    <?php for ($autoIdx = 0; $autoIdx < $iaPassCount; $autoIdx++): ?>
                     <input type="hidden" class="pass-activity-auto" data-activity-id="<?= $ia['id'] ?>" data-activity-name="<?= htmlspecialchars($ia['name']) ?>" value="1">
+                    <?php endfor; ?>
+                    <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px; padding-left: 28px;">
+                        <?= $iaPassCount > 1 ? $iaPassCount . ' tillfällen ingår' : 'Ingår automatiskt' ?>
+                    </div>
                     <?php endif; ?>
                 </div>
                 <?php endforeach; ?>
@@ -1013,11 +1026,21 @@ function confirmPassToCart() {
         return;
     }
 
-    // 2. Add selected activity slots (with tidspass)
+    // 2. Add selected activity slots (with tidspass) — validate no duplicate slots
+    const selectedSlots = new Set();
+    let slotDuplicateError = false;
     document.querySelectorAll('.pass-slot-select').forEach(sel => {
         const slotId = parseInt(sel.value);
         if (!slotId) return; // No slot selected - skip
         const actId = parseInt(sel.dataset.activityId);
+        const key = actId + '_' + slotId;
+        if (selectedSlots.has(key)) {
+            slotDuplicateError = true;
+            sel.style.border = '2px solid var(--color-error)';
+            return;
+        }
+        selectedSlots.add(key);
+        sel.style.border = '';
         const actName = sel.dataset.activityName;
         const opt = sel.options[sel.selectedIndex];
         const slotDate = opt.dataset.date || '';
@@ -1038,6 +1061,10 @@ function confirmPassToCart() {
             });
         } catch (e) { /* skip on error */ }
     });
+    if (slotDuplicateError) {
+        alert('Du har valt samma tidspass flera gånger för en aktivitet. Välj olika tidspass.');
+        return;
+    }
 
     // 3. Add activities without slots (auto-included)
     document.querySelectorAll('.pass-activity-auto').forEach(input => {
