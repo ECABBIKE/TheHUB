@@ -537,30 +537,58 @@ $pageTitle = $festival['name'];
                     // Build pass contents list
                     $passItems = [];
 
-                    // 1. Groups with pass_included_count
+                    // First: find which groups have pass inclusion
+                    // Either via pass_included_count on group, or via included_in_pass on activities
                     $groupIdsWithPass = [];
+                    $groupPassInfo = []; // group_id => ['name' => ..., 'count' => ..., 'total' => ...]
                     foreach ($activityGroups as $grp) {
+                        $gid = (int)$grp['id'];
                         $grpPc = intval($grp['pass_included_count'] ?? 0);
+                        $grpActCount = intval($grp['activity_count'] ?? 0);
+
                         if ($grpPc > 0) {
-                            $groupIdsWithPass[] = (int)$grp['id'];
-                            $grpActCount = intval($grp['activity_count'] ?? 0);
-                            $passItems[] = ($grpPc > 1 ? $grpPc . 'x ' : '') . $grp['name'] . ($grpActCount > $grpPc ? ' (välj ' . $grpPc . ' av ' . $grpActCount . ')' : '');
+                            // Group explicitly configured for pass
+                            $groupIdsWithPass[] = $gid;
+                            $groupPassInfo[$gid] = ['name' => $grp['name'], 'count' => $grpPc, 'total' => $grpActCount];
                         }
                     }
 
-                    // 2. Individual activities (not in a group with pass count)
+                    // Also check if activities in groups have included_in_pass
                     foreach ($activities as $a) {
-                        if (!$a['included_in_pass']) continue;
+                        if (empty($a['included_in_pass'])) continue;
+                        $aGid = intval($a['group_id'] ?? 0);
+                        if ($aGid && !in_array($aGid, $groupIdsWithPass) && isset($groupsById[$aGid])) {
+                            // Activity in a group has included_in_pass but group doesn't have pass_included_count
+                            $groupIdsWithPass[] = $aGid;
+                            $g = $groupsById[$aGid];
+                            $groupPassInfo[$aGid] = ['name' => $g['name'], 'count' => 1, 'total' => intval($g['activity_count'] ?? 0)];
+                        }
+                    }
+
+                    // 1. Add groups
+                    foreach ($groupPassInfo as $gid => $gi) {
+                        $cnt = $gi['count'];
+                        $passItems[] = $cnt . 'x ' . $gi['name'];
+                    }
+
+                    // 2. Individual activities (skip those in pass-groups)
+                    foreach ($activities as $a) {
+                        if (empty($a['included_in_pass'])) continue;
                         $aGid = intval($a['group_id'] ?? 0);
                         if ($aGid && in_array($aGid, $groupIdsWithPass)) continue;
-                        $iaPassCount = intval($a['pass_included_count'] ?? 1);
-                        $passItems[] = $a['name'] . ($iaPassCount > 1 ? ' (' . $iaPassCount . 'x)' : '');
+                        $iaPassCount = max(1, intval($a['pass_included_count'] ?? 1));
+                        $passItems[] = $iaPassCount . 'x ' . $a['name'];
                     }
 
                     // 3. Events with included_in_pass
                     $includedEvts = array_filter($events, fn($e) => !empty($e['included_in_pass']));
                     foreach ($includedEvts as $ie) {
-                        $passItems[] = 'Startavgift ' . $ie['name'];
+                        $evtLabel = 'Startavgift ';
+                        if (!empty($ie['series_names'])) {
+                            $evtLabel .= $ie['series_names'] . ' - ';
+                        }
+                        $evtLabel .= $ie['name'];
+                        $passItems[] = '1x ' . $evtLabel;
                     }
                     ?>
                     <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: var(--space-2xs);">

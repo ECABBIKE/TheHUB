@@ -129,10 +129,14 @@ try {
 // Load linked competition events
 $evtStmt = $pdo->prepare("
     SELECT e.id, e.name, e.date, e.location, e.discipline, e.event_format,
-        fe.included_in_pass
+        fe.included_in_pass,
+        GROUP_CONCAT(DISTINCT s.name SEPARATOR ', ') as series_names
     FROM festival_events fe
     JOIN events e ON fe.event_id = e.id
+    LEFT JOIN series_events se ON se.event_id = e.id
+    LEFT JOIN series s ON se.series_id = s.id
     WHERE fe.festival_id = ? AND e.active = 1
+    GROUP BY e.id
     ORDER BY e.date ASC, fe.sort_order ASC
 ");
 $evtStmt->execute([$festivalId]);
@@ -217,17 +221,21 @@ $pageTitle = $passName . ' — ' . $festival['name'];
             $passIncludes = [];
             foreach ($passGroups as $grp) {
                 $grpPc = intval($grp['pass_included_count'] ?? 0);
-                $grpActCount = count($grp['activities'] ?? []);
-                if ($grpPc > 0 && $grpActCount > 0) {
-                    $passIncludes[] = ($grpPc > 1 ? $grpPc . 'x ' : '') . htmlspecialchars($grp['name']) . ($grpActCount > $grpPc ? ' (välj ' . $grpPc . ' av ' . $grpActCount . ')' : '');
+                if ($grpPc > 0) {
+                    $passIncludes[] = $grpPc . 'x ' . htmlspecialchars($grp['name']);
                 }
             }
             foreach ($includedActivities as $ia) {
                 $iaPc = max(1, intval($ia['pass_included_count'] ?? 1));
-                $passIncludes[] = ($iaPc > 1 ? $iaPc . 'x ' : '') . htmlspecialchars($ia['name']);
+                $passIncludes[] = $iaPc . 'x ' . htmlspecialchars($ia['name']);
             }
             foreach ($includedEvents as $ie) {
-                $passIncludes[] = 'Startavgift ' . htmlspecialchars($ie['name']);
+                $evtLabel = 'Startavgift ';
+                if (!empty($ie['series_names'])) {
+                    $evtLabel .= htmlspecialchars($ie['series_names']) . ' - ';
+                }
+                $evtLabel .= htmlspecialchars($ie['name']);
+                $passIncludes[] = '1x ' . $evtLabel;
             }
             if (!empty($passIncludes)): ?>
             <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
