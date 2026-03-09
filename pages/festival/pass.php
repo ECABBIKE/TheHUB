@@ -449,7 +449,8 @@ $pageTitle = $passName . ' — ' . $festival['name'];
                 </div>
                 <?php else: ?>
                 <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: var(--space-2xs); padding-left: 30px;">
-                    Inga klasser tillgängliga ännu
+                    <i data-lucide="info" style="width: 12px; height: 12px; display: inline; vertical-align: -2px;"></i>
+                    Klass väljs vid anmälan till tävlingen
                 </div>
                 <?php endif; ?>
             </div>

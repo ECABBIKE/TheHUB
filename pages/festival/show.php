@@ -534,48 +534,41 @@ $pageTitle = $festival['name'];
                 <?php endif; ?>
                 <div class="festival-pass-card-includes">
                     <?php
-                    // Build pass contents list
+                    // Build pass contents list (same logic as pass.php)
                     $passItems = [];
 
-                    // First: find which groups have pass inclusion
-                    // Either via pass_included_count on group, or via included_in_pass on activities
-                    $groupIdsWithPass = [];
-                    $groupPassInfo = []; // group_id => ['name' => ..., 'count' => ..., 'total' => ...]
-                    foreach ($activityGroups as $grp) {
-                        $gid = (int)$grp['id'];
-                        $grpPc = intval($grp['pass_included_count'] ?? 0);
-                        $grpActCount = intval($grp['activity_count'] ?? 0);
-
-                        if ($grpPc > 0) {
-                            // Group explicitly configured for pass
-                            $groupIdsWithPass[] = $gid;
-                            $groupPassInfo[$gid] = ['name' => $grp['name'], 'count' => $grpPc, 'total' => $grpActCount];
+                    // 1. Groups with pass_included_count > 0
+                    // Use fresh simple query to avoid issues with computed columns
+                    $_passGroupIds = [];
+                    try {
+                        $_pgStmt = $pdo->prepare("SELECT id, name, pass_included_count FROM festival_activity_groups WHERE festival_id = ? AND active = 1 AND pass_included_count > 0");
+                        $_pgStmt->execute([$festivalId]);
+                        foreach ($_pgStmt->fetchAll(PDO::FETCH_ASSOC) as $_pg) {
+                            $passItems[] = intval($_pg['pass_included_count']) . 'x ' . $_pg['name'];
+                            $_passGroupIds[] = (int)$_pg['id'];
                         }
-                    }
-
-                    // Also check if activities in groups have included_in_pass
-                    foreach ($activities as $a) {
-                        if (empty($a['included_in_pass'])) continue;
-                        $aGid = intval($a['group_id'] ?? 0);
-                        if ($aGid && !in_array($aGid, $groupIdsWithPass) && isset($groupsById[$aGid])) {
-                            // Activity in a group has included_in_pass but group doesn't have pass_included_count
-                            $groupIdsWithPass[] = $aGid;
-                            $g = $groupsById[$aGid];
-                            $groupPassInfo[$aGid] = ['name' => $g['name'], 'count' => 1, 'total' => intval($g['activity_count'] ?? 0)];
+                    } catch (PDOException $e) {
+                        // Column doesn't exist - fallback: detect groups via activities
+                        $_passGroupIds = [];
+                        $_fallbackGroups = [];
+                        foreach ($activities as $a) {
+                            if (empty($a['included_in_pass'])) continue;
+                            $aGid = intval($a['group_id'] ?? 0);
+                            if ($aGid && isset($groupsById[$aGid]) && !isset($_fallbackGroups[$aGid])) {
+                                $_fallbackGroups[$aGid] = $groupsById[$aGid]['name'];
+                                $_passGroupIds[] = $aGid;
+                            }
                         }
-                    }
-
-                    // 1. Add groups
-                    foreach ($groupPassInfo as $gid => $gi) {
-                        $cnt = $gi['count'];
-                        $passItems[] = $cnt . 'x ' . $gi['name'];
+                        foreach ($_fallbackGroups as $_fgId => $_fgName) {
+                            $passItems[] = '1x ' . $_fgName;
+                        }
                     }
 
                     // 2. Individual activities (skip those in pass-groups)
                     foreach ($activities as $a) {
                         if (empty($a['included_in_pass'])) continue;
                         $aGid = intval($a['group_id'] ?? 0);
-                        if ($aGid && in_array($aGid, $groupIdsWithPass)) continue;
+                        if ($aGid && in_array($aGid, $_passGroupIds)) continue;
                         $iaPassCount = max(1, intval($a['pass_included_count'] ?? 1));
                         $passItems[] = $iaPassCount . 'x ' . $a['name'];
                     }
