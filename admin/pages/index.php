@@ -62,7 +62,7 @@ include __DIR__ . '/../components/unified-layout.php';
   <!-- Header -->
   <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
     <h1 style="font-size:1.5rem; font-weight:700; margin:0;">Sidor — GravitySeries</h1>
-    <a href="/admin/pages/edit.php" style="background:var(--color-accent,#37d4d6); color:#fff; padding:8px 16px; border-radius:var(--radius-sm,6px); text-decoration:none; font-weight:600; font-size:14px; display:inline-flex; align-items:center; gap:6px;">
+    <a href="/admin/pages/edit.php" style="background:var(--color-accent,#37d4d6); color:#fff !important; padding:8px 16px; border-radius:var(--radius-sm,6px); text-decoration:none; font-weight:600; font-size:14px; display:inline-flex; align-items:center; gap:6px;">
       <i data-lucide="plus" style="width:16px;height:16px;"></i> Skapa ny sida
     </a>
   </div>
@@ -82,13 +82,13 @@ include __DIR__ . '/../components/unified-layout.php';
 
   <!-- Filter -->
   <div style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="?status=all" style="padding:6px 14px; border-radius:4px; text-decoration:none; font-size:13px; font-weight:600; <?= $statusFilter === 'all' ? 'background:var(--color-accent,#37d4d6);color:#fff;' : 'background:var(--color-bg-card,#fff);border:1px solid var(--color-border,#ddd);color:var(--color-text-secondary,#666);' ?>">
+    <a href="?status=all" style="padding:6px 14px; border-radius:4px; text-decoration:none; font-size:13px; font-weight:600; <?= $statusFilter === 'all' ? 'background:var(--color-accent,#37d4d6);color:#fff !important;' : 'background:var(--color-bg-card,#fff);border:1px solid var(--color-border,#ddd);color:var(--color-text-secondary,#666) !important;' ?>">
       Alla (<?= count($pages) ?>)
     </a>
-    <a href="?status=published" style="padding:6px 14px; border-radius:4px; text-decoration:none; font-size:13px; font-weight:600; <?= $statusFilter === 'published' ? 'background:#10b981;color:#fff;' : 'background:var(--color-bg-card,#fff);border:1px solid var(--color-border,#ddd);color:var(--color-text-secondary,#666);' ?>">
+    <a href="?status=published" style="padding:6px 14px; border-radius:4px; text-decoration:none; font-size:13px; font-weight:600; <?= $statusFilter === 'published' ? 'background:#10b981;color:#fff !important;' : 'background:var(--color-bg-card,#fff);border:1px solid var(--color-border,#ddd);color:var(--color-text-secondary,#666) !important;' ?>">
       Publicerade
     </a>
-    <a href="?status=draft" style="padding:6px 14px; border-radius:4px; text-decoration:none; font-size:13px; font-weight:600; <?= $statusFilter === 'draft' ? 'background:#fbbf24;color:#000;' : 'background:var(--color-bg-card,#fff);border:1px solid var(--color-border,#ddd);color:var(--color-text-secondary,#666);' ?>">
+    <a href="?status=draft" style="padding:6px 14px; border-radius:4px; text-decoration:none; font-size:13px; font-weight:600; <?= $statusFilter === 'draft' ? 'background:#fbbf24;color:#000 !important;' : 'background:var(--color-bg-card,#fff);border:1px solid var(--color-border,#ddd);color:var(--color-text-secondary,#666) !important;' ?>">
       Utkast
     </a>
   </div>
