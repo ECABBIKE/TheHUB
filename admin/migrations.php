@@ -319,6 +319,9 @@ $migrationChecks = [
         'tables' => ['festival_products', 'festival_product_sizes', 'festival_product_orders'],
         'columns' => ['order_items.product_order_id']
     ],
+    '094_pages_and_gs_sponsors.sql' => [
+        'tables' => ['pages', 'gs_sponsors']
+    ],
 ];
 
 // ============================================================================

@@ -3,8 +3,7 @@
  * Seed-skript för GravitySeries Pages CMS
  * Skapar 6 grundsidor + sponsors + collaborators
  *
- * Kör via: php admin/migrations/seed_pages.php
- * Eller besök: https://thehub.gravityseries.se/admin/migrations/seed_pages.php
+ * Kör via migrations.php eller: php Tools/migrations/094_seed_pages.php
  */
 
 // Load database config
@@ -38,7 +37,7 @@ if (!$isCli) {
 }
 
 // ─── 1. Create tables if they don't exist ───────────────────
-$sqlFile = __DIR__ . '/create_pages_table.sql';
+$sqlFile = __DIR__ . '/094_pages_and_gs_sponsors.sql';
 if (file_exists($sqlFile)) {
     $sql = file_get_contents($sqlFile);
     $statements = array_filter(array_map('trim', explode(';', $sql)));
