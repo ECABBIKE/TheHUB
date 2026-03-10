@@ -13,7 +13,11 @@ $pagesWithOwnNav = [
     'profile-children',
     'profile-registrations',
     'profile-results',
-    'profile-receipts'
+    'profile-receipts',
+    'festival-show',
+    'festival-pass',
+    'festival-activity',
+    'festival-single-activity'
 ];
 
 // Index pages - no back link needed (they ARE the destination from nav)
@@ -23,7 +27,8 @@ $indexPages = [
     'series-index',
     'database-index',
     'ranking-index',
-    'profile-index'
+    'profile-index',
+    'festival-index'
 ];
 
 // Don't show back link on:

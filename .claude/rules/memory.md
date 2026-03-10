@@ -1,6 +1,6 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-03-09
+> Senast uppdaterad: 2026-03-10
 
 ---
 
@@ -14,6 +14,15 @@
 - Om en ny sida behöver nås: lägg den under befintlig grupp i `pages`-arrayen, och länka från relevant dashboard/grid
 
 ---
+
+## SENASTE FIXAR (2026-03-10, session 67)
+
+### Festival: Navigationsfix + programkonsistens + dropdown-bredd
+- **Dubbla tillbaka-pilar borttagna:** Festival-sidor (show, pass, activity, single-activity) tillagda i `breadcrumb.php` `$pagesWithOwnNav` och `$indexPages` — den globala "← Tillbaka"-länken visas inte längre på festivalsidor som har egen breadcrumb-navigation.
+- **Redundant sidebar-knapp borttagen:** "← Tillbaka till [festival]"-länken i sidebaren på single-activity.php och activity.php borttagen. Breadcrumb-navigationen räcker.
+- **Programvy konsistens:** Standalone-aktiviteter har nu en typfärgad vänsterborder (gul för clinic, grön för XC, etc.) precis som grupper — alla programposter ser nu likadana ut. Grupper har också typfärgad border istället för generisk cyan.
+- **Dropdown-bredd på passsidan:** `padding-left: 30px` borttagen från `.pass-booking-item-config` och inline-stilar — alla dropdowns (tidspass, aktivitet, klass, storlek) har nu samma bredd.
+- **Filer:** `components/breadcrumb.php`, `pages/festival/show.php`, `pages/festival/pass.php`, `pages/festival/single-activity.php`, `pages/festival/activity.php`
 
 ## SENASTE FIXAR (2026-03-09, session 66)
 

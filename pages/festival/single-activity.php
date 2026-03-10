@@ -358,11 +358,6 @@ $pageTitle = $activity['name'] . ' – ' . $festival['name'];
 
         <!-- ============ SIDEBAR ============ -->
         <aside class="festival-sidebar">
-            <!-- Back to festival -->
-            <a href="/festival/<?= $festivalId ?>" class="activity-group-back-link">
-                <i data-lucide="arrow-left"></i> Tillbaka till <?= htmlspecialchars($festival['name']) ?>
-            </a>
-
             <!-- Festival pass CTA -->
             <?php if ($festival['pass_enabled']): ?>
             <div class="festival-pass-card">
