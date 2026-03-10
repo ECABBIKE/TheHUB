@@ -144,19 +144,10 @@ $pageTitle = $activity['name'] . ' – ' . $festival['name'];
 
 <main class="festival-page">
 
-    <!-- ============ BREADCRUMB ============ -->
-    <nav class="festival-breadcrumb">
-        <a href="/festival"><i data-lucide="tent" style="width: 14px; height: 14px;"></i> Festivaler</a>
-        <i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i>
-        <a href="/festival/<?= $festivalId ?>"><?= htmlspecialchars($festival['name']) ?></a>
-        <i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i>
-        <span><?= htmlspecialchars($activity['name']) ?></span>
-    </nav>
-
     <!-- ============ ACTIVITY HEADER ============ -->
     <section class="activity-group-header">
         <div class="activity-group-info">
-            <div class="activity-group-type-badge" style="background: <?= $typeInfo['color'] ?>20; color: <?= $typeInfo['color'] ?>;">
+            <div class="activity-group-type-badge" style="background: color-mix(in srgb, <?= $typeInfo['color'] ?> 15%, transparent); color: <?= $typeInfo['color'] ?>;">
                 <i data-lucide="<?= $typeInfo['icon'] ?>"></i>
                 <?= $typeInfo['label'] ?>
             </div>
@@ -327,7 +318,7 @@ $pageTitle = $activity['name'] . ' – ' . $festival['name'];
                                 <?php if ($slotFull): ?>
                                 <span class="badge badge-warning" style="font-size: 0.75rem;">Fullbokat</span>
                                 <?php else: ?>
-                                <button class="btn btn-primary slot-add-btn" onclick="addSlotToCart(event, <?= (int)$slot['id'] ?>, '<?= htmlspecialchars($slotDate) ?>', '<?= substr($slot['start_time'], 0, 5) ?>')">
+                                <button class="btn btn-primary slot-add-btn" data-slot-gender="<?= htmlspecialchars($slot['gender'] ?? '') ?>" data-slot-min-age="<?= (int)($slot['min_age'] ?? 0) ?>" data-slot-max-age="<?= (int)($slot['max_age'] ?? 0) ?>" onclick="addSlotToCart(event, <?= (int)$slot['id'] ?>, '<?= htmlspecialchars($slotDate) ?>', '<?= substr($slot['start_time'], 0, 5) ?>')">
                                     <i data-lucide="shopping-cart" style="width: 14px; height: 14px;"></i> Välj
                                 </button>
                                 <?php endif; ?>
@@ -394,6 +385,11 @@ $pageTitle = $activity['name'] . ' – ' . $festival['name'];
                 </div>
                 <?php endif; ?>
             </div>
+
+            <!-- Back to festival -->
+            <a href="/festival/<?= $festivalId ?>" style="display: flex; align-items: center; gap: var(--space-2xs); color: var(--color-accent-text); font-size: 0.875rem; font-weight: 600; text-decoration: none; margin-top: var(--space-sm);">
+                <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i> Tillbaka till festivalen
+            </a>
         </aside>
     </div>
 
@@ -411,7 +407,10 @@ const currentActivity = {
     name: <?= json_encode($activity['name'], JSON_UNESCAPED_UNICODE) ?>,
     price: <?= (float)$activity['price'] ?>,
     included_in_pass: <?= $activity['included_in_pass'] ? 'true' : 'false' ?>,
-    has_slots: <?= $hasSlots ? 'true' : 'false' ?>
+    has_slots: <?= $hasSlots ? 'true' : 'false' ?>,
+    gender: <?= json_encode($activity['gender'] ?? '') ?>,
+    min_age: <?= (int)($activity['min_age'] ?? 0) ?>,
+    max_age: <?= (int)($activity['max_age'] ?? 0) ?>
 };
 
 // Pending action — stored while rider search is open
@@ -419,10 +418,52 @@ let _pendingSlot = null;
 let _pendingActivity = null;
 let _pendingPass = false;
 
+/**
+ * Check gender/age restrictions for an activity or slot.
+ * Returns error message string or null if OK.
+ */
+function _checkRestrictions(rider, restrictions) {
+    const rGender = (rider.gender || '').toUpperCase();
+    const rBirthYear = parseInt(rider.birth_year) || 0;
+    const currentYear = new Date().getFullYear();
+    const rAge = rBirthYear ? (currentYear - rBirthYear) : 0;
+
+    // Gender check — normalize K→F (classes use K for women, riders use F)
+    const reqGender = (restrictions.gender || '').toUpperCase();
+    if (reqGender) {
+        const normalizedReq = (reqGender === 'K') ? 'F' : reqGender;
+        const normalizedRider = (rGender === 'K') ? 'F' : rGender;
+        if (normalizedRider && normalizedRider !== normalizedReq) {
+            const label = normalizedReq === 'F' ? 'Damer' : 'Herrar';
+            return 'Denna aktivitet är begränsad till ' + label + '. ' + rider.firstname + ' uppfyller inte kravet.';
+        }
+    }
+
+    // Age check
+    if (rBirthYear && restrictions.min_age && rAge < restrictions.min_age) {
+        return rider.firstname + ' är ' + rAge + ' år, men aktiviteten kräver minst ' + restrictions.min_age + ' år.';
+    }
+    if (rBirthYear && restrictions.max_age && rAge > restrictions.max_age) {
+        return rider.firstname + ' är ' + rAge + ' år, men aktiviteten kräver max ' + restrictions.max_age + ' år.';
+    }
+
+    return null;
+}
+
 function addSlotToCart(evt, slotId, slotDate, slotTime) {
-    // Store the slot row element for visual feedback later
+    const btn = evt.target.closest('.slot-add-btn') || evt.target;
     const slotRow = evt.target.closest('.slot-row');
-    _pendingSlot = { slotId, slotDate, slotTime, slotRow };
+    // Read slot-level restrictions (override activity-level)
+    const slotGender = btn.getAttribute('data-slot-gender') || '';
+    const slotMinAge = parseInt(btn.getAttribute('data-slot-min-age')) || 0;
+    const slotMaxAge = parseInt(btn.getAttribute('data-slot-max-age')) || 0;
+
+    _pendingSlot = {
+        slotId, slotDate, slotTime, slotRow,
+        gender: slotGender || currentActivity.gender,
+        min_age: slotMinAge || currentActivity.min_age,
+        max_age: slotMaxAge || currentActivity.max_age
+    };
     _pendingActivity = null;
     _pendingPass = false;
 
@@ -432,6 +473,10 @@ function addSlotToCart(evt, slotId, slotDate, slotTime) {
 }
 
 function _doAddSlot(rider, slot) {
+    // Check restrictions
+    const err = _checkRestrictions(rider, { gender: slot.gender, min_age: slot.min_age, max_age: slot.max_age });
+    if (err) { alert(err); return; }
+
     const cart = GlobalCart.getCart();
     if (cart.some(ci => ci.type === 'festival_activity' && ci.activity_id === currentActivity.id && ci.slot_id === slot.slotId && ci.rider_id === rider.id)) {
         alert(rider.firstname + ' ' + rider.lastname + ' har redan detta tidspass i kundvagnen');
@@ -453,14 +498,22 @@ function _doAddSlot(rider, slot) {
             included_in_pass: currentActivity.included_in_pass
         });
 
-        // Visual feedback on the slot row
+        // Brief visual feedback then reset button for next participant
         if (slot.slotRow) {
             const btn = slot.slotRow.querySelector('.slot-add-btn');
             if (btn) {
-                btn.innerHTML = '<i data-lucide="check-circle" style="width:14px;height:14px;"></i> ' + rider.firstname;
+                const origHtml = btn.innerHTML;
+                const origBg = btn.style.background;
+                btn.innerHTML = '<i data-lucide="check-circle" style="width:14px;height:14px;"></i> ' + rider.firstname + ' tillagd';
                 btn.style.background = 'var(--color-success)';
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    btn.innerHTML = '<i data-lucide="shopping-cart" style="width: 14px; height: 14px;"></i> Välj';
+                    btn.style.background = '';
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                }, 2000);
             }
-            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     } catch (e) {
         alert('Kunde inte lägga till: ' + e.message);
@@ -478,6 +531,10 @@ function addActivityToCart(activityId) {
 }
 
 function _doAddActivity(rider) {
+    // Check restrictions
+    const err = _checkRestrictions(rider, { gender: currentActivity.gender, min_age: currentActivity.min_age, max_age: currentActivity.max_age });
+    if (err) { alert(err); return; }
+
     const cart = GlobalCart.getCart();
     if (cart.some(ci => ci.type === 'festival_activity' && ci.activity_id === currentActivity.id && ci.rider_id === rider.id)) {
         alert(rider.firstname + ' ' + rider.lastname + ' är redan anmäld till denna aktivitet');
@@ -500,10 +557,18 @@ function _doAddActivity(rider) {
 
         const btn = document.getElementById('registerBtn');
         if (btn) {
+            const origHtml = btn.innerHTML;
             btn.innerHTML = '<i data-lucide="check-circle" style="width:16px;height:16px;"></i> ' + rider.firstname + ' tillagd';
             btn.style.background = 'var(--color-success)';
             btn.style.color = '#fff';
             if (typeof lucide !== 'undefined') lucide.createIcons();
+            // Reset after 2 seconds for next participant
+            setTimeout(() => {
+                btn.innerHTML = '<i data-lucide="shopping-cart" style="width: 16px; height: 16px;"></i> Anmäl dig till denna aktivitet';
+                btn.style.background = '';
+                btn.style.color = '';
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }, 2000);
         }
     } catch (e) {
         alert('Kunde inte lägga till: ' + e.message);
