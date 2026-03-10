@@ -15,6 +15,20 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-10, session 69)
+
+### Festival: Produkter "Lägg i kundvagn" fungerade inte + instruktörsfix
+- **KRITISK BUGG: Produktknappar trasiga:** `addProductToCart()` anropades via inline `onclick` med `json_encode()` som producerade dubbla citattecken inuti HTML-attribut. `onclick="addProductToCart(1, "Keps", 200, false)"` bröt HTML-parsningen → funktionen kördes aldrig. Fix: bytt till data-attribut (`data-product-id`, `data-product-name`, `data-product-price`, `data-has-sizes`) + `onclick="addProductToCart(this)"`. Produktnamnet escapas med `htmlspecialchars()`.
+- **Instruktör bröt programlayout:** När en instruktör kopplades till en rider-profil renderades `<a href="/rider/...">` inuti den klickbara `<a href="/festival/.../activity/...">` raden → ogiltig HTML → webbläsaren splittrade elementet i 3 separata delar. Fix: instruktörsnamn renderas som ren text (utan länk) i programvyn. Profillänk finns på aktivitetens detaljsida.
+- **GlobalCart `festival_product` stöd:** `addItem()`, `removeFestivalItem()` och `getItemsByEvent()` utökade med `festival_product` typ. Dedup på product_id + rider_id + size_id.
+- **Kundvagn `festival_product` rendering:** cart.php visar produktnamn, rider-namn och ta-bort-knapp.
+- **Filer:** `pages/festival/show.php`, `assets/js/global-cart.js`, `pages/cart.php`
+
+### VIKTIGT: json_encode i onclick-attribut
+- **ANVÄND ALDRIG `json_encode()` direkt i `onclick="..."` attribut** — dubbla citattecken bryter HTML-parsningen
+- **Korrekt mönster:** Använd `data-*` attribut med `htmlspecialchars()` + `onclick="fn(this)"`. Läs i JS via `btn.dataset.propertyName`.
+- **Alternativ:** Använd `htmlspecialchars(json_encode(...), ENT_QUOTES)` (men data-attribut är renare)
+
 ## SENASTE FIXAR (2026-03-10, session 68)
 
 ### Festival: Eventnamn, ikonfix, könsvalidering, flerbokning

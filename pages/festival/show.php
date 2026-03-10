@@ -590,7 +590,11 @@ $pageTitle = $festival['name'];
                         </div>
                         <?php endif; ?>
                         <button type="button" class="btn btn-primary" style="width: 100%; margin-top: var(--space-xs); font-size: 0.8rem; min-height: 36px;"
-                            onclick="addProductToCart(<?= $fp['id'] ?>, <?= json_encode($fp['name'], JSON_UNESCAPED_UNICODE) ?>, <?= (float)$fp['price'] ?>, <?= $fp['has_sizes'] ? 'true' : 'false' ?>)">
+                            data-product-id="<?= $fp['id'] ?>"
+                            data-product-name="<?= htmlspecialchars($fp['name']) ?>"
+                            data-product-price="<?= (float)$fp['price'] ?>"
+                            data-has-sizes="<?= $fp['has_sizes'] ? '1' : '0' ?>"
+                            onclick="addProductToCart(this)">
                             <i data-lucide="shopping-cart" style="width: 14px; height: 14px;"></i> Lägg i kundvagn
                         </button>
                     </div>
@@ -789,7 +793,12 @@ function addActivityToCart(activityId, activityName, price) {
 }
 
 // Add product to cart
-function addProductToCart(productId, productName, price, hasSizes) {
+function addProductToCart(btn) {
+    const productId = parseInt(btn.dataset.productId);
+    const productName = btn.dataset.productName;
+    const price = parseFloat(btn.dataset.productPrice);
+    const hasSizes = btn.dataset.hasSizes === '1';
+
     if (hasSizes) {
         const sizeSel = document.querySelector('.product-size-select[data-product-id="' + productId + '"]');
         if (!sizeSel || !sizeSel.value) {
