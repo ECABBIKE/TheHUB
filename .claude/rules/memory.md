@@ -15,6 +15,37 @@
 
 ---
 
+## SENASTE IMPLEMENTATION (2026-03-10, session 70)
+
+### GravitySeries: Standalone-sajt + Pages CMS
+- **Ny funktion:** GravitySeries-sajt (`/gravityseries/`) som komplement till TheHUB. Egen design (Bebas Neue, Barlow, grönt accent), helt frikopplad från TheHUB:s CSS/layout.
+- **Startsida:** `gravityseries/index.php` — hero med animerad text, live stats (riders/events/clubs), 6 serie-kort (GGS, CGS, JGS, GSD, GSE, TOTAL), info-kort (Arrangera, Licenser, Gravity-ID), styrelsesektion, partners/samarbetspartners från `gs_sponsors`-tabellen, TheHUB CTA.
+- **CMS-sidor:** `gravityseries/sida.php?slug=X` — renderar sidor från `pages`-tabellen. Hero-bild med overlay-opacity, template-stöd (default/full-width/landing).
+- **Header/Footer:** `gravityseries/includes/gs-header.php` och `gs-footer.php` — sticky dark header med logo, dynamisk nav (från `pages WHERE show_in_nav=1`), TheHUB-knapp, mobil hamburger-meny.
+- **CSS:** `gravityseries/assets/css/gs-site.css` (~822 rader) — komplett standalone med egna CSS-variabler (`--ink`, `--paper`, `--accent: #61CE70`), Google Fonts (Bebas Neue, Barlow Condensed, Barlow).
+- **Admin Pages CMS:** `admin/pages/index.php` (lista med filter), `admin/pages/edit.php` (TinyMCE 7, hero-uppladdning, slug auto-generering, CSRF), `admin/pages/delete.php` (POST-only radering).
+- **Migration 094:** `pages`-tabell (slug, title, content, template, status, nav, hero_image m.m.) + `gs_sponsors`-tabell (name, type sponsor/collaborator, logo_url, website_url).
+- **Seed 094:** 6 utkast-sidor (om-oss, arrangor-info, licenser, gravity-id, kontakt, allmanna-villkor) + 3 sponsors + 1 collaborator.
+- **Admin-länk:** Tillagd i `admin/tools.php` under System-sektionen ("Sidor — GravitySeries").
+- **VIKTIGT:** `$gsBaseUrl = '/gravityseries'` är hårdkodad i gs-header.php. Ändras i Fas 2 vid domänflytt.
+- **VIKTIGT:** Admin-temats globala `a`-tagstil överskriver inline `color` — använd `!important` på alla textfärger i admin/pages/*.php.
+- **Filer:** `gravityseries/index.php`, `gravityseries/sida.php`, `gravityseries/includes/gs-header.php`, `gravityseries/includes/gs-footer.php`, `gravityseries/assets/css/gs-site.css`, `admin/pages/index.php`, `admin/pages/edit.php`, `admin/pages/delete.php`, `Tools/migrations/094_pages_and_gs_sponsors.sql`, `Tools/migrations/094_seed_pages.php`, `admin/migrations.php`, `admin/tools.php`
+
+### GravitySeries: Fas 2-plan (EJ påbörjad)
+- **Mål:** `gravityseries.se/` = GravitySeries (primär), `/hub/` = TheHUB, `/admin/` = oförändrat
+- **Metod:** Omvänd routing — GravitySeries tar över roten, TheHUB får `/hub/`-prefix
+- **Steg:** Ny rotrouter, .htaccess-ändring, `HUB_PREFIX`-konstant, clean URLs för CMS-sidor, DNS-byte
+- **Status:** Planerad. Inväntar att alla GS-sidor fungerar ordentligt först.
+
+### GravitySeries: Arkitektur
+- **Helt frikopplad från TheHUB:** Egen header/footer, eget CSS, ingen sidebar/navigation-delning
+- **Delad databas:** Samma DB-anslutning via `config.php` + `config/database.php`
+- **Tabeller:** `pages` (CMS), `gs_sponsors` (partners), plus läser från `riders`, `events`, `clubs`, `series`, `series_brands`
+- **Inga dependencies på TheHUB:s CSS/JS:** Fungerar standalone
+- **Routing:** Direkt filexekvering (inte via TheHUB:s SPA-router). `.htaccess` skickar INTE `/gravityseries/` genom index.php
+
+---
+
 ## SENASTE FIXAR (2026-03-10, session 69)
 
 ### Festival: Produkter "Lägg i kundvagn" fungerade inte + instruktörsfix

@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-03-08
+> Senast uppdaterad: 2026-03-10
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -29,6 +29,7 @@
 | TheHUB Promotion | KLAR | Riktade e-postkampanjer med filter på kön, ålder, region | 100% |
 | Klubb/Destination-admin | KLAR | Klubb- och destination-admins kan redigera via profil, multipla roller | 100% |
 | Festival-system | PAGAENDE | Festivaler som paraply over tavlingsevent + egna aktiviteter (clinics, rides). Fas 1: grundstruktur, checkout, grupper. | 45% |
+| GravitySeries-sajt | PAGAENDE | Standalone-sajt for organisationen + Pages CMS. Fas 1: homepage, CMS, admin. Fas 2: primär domän. | 60% |
 
 ---
 
@@ -115,6 +116,37 @@
 ---
 
 # CHANGELOG
+
+### 2026-03-10 (GravitySeries: Standalone-sajt + Pages CMS)
+- **Branch:** claude/build-gravityseries-site-yzvTB
+
+- **Ny funktion: GravitySeries-sajt**
+  - Komplett standalone-sajt under `/gravityseries/` med egen design (Bebas Neue, Barlow, grönt accent)
+  - Startsida med hero, live stats, serie-kort, info-kort, styrelse, partners
+  - CMS-sidvisare med hero-bild och overlay-opacity
+
+- **Ny funktion: Pages CMS (admin)**
+  - Lista/skapa/redigera/radera sidor via `/admin/pages/`
+  - TinyMCE 7 WYSIWYG-editor med GravitySeries-typografi
+  - Hero-bild uppladdning med positionering och overlay-opacity
+  - Slug auto-generering, status (publicerad/utkast), navigationsordning
+  - CSRF-skydd på alla formulär
+
+- **Nya filer:**
+  - `gravityseries/index.php` - Startsida
+  - `gravityseries/sida.php` - CMS-sidvisare
+  - `gravityseries/includes/gs-header.php` - Header med nav
+  - `gravityseries/includes/gs-footer.php` - Footer
+  - `gravityseries/assets/css/gs-site.css` - Komplett CSS (~822 rader)
+  - `admin/pages/index.php` - Admin sidlista
+  - `admin/pages/edit.php` - Admin sidredigering
+  - `admin/pages/delete.php` - Admin sidradering
+  - `Tools/migrations/094_pages_and_gs_sponsors.sql` - Tabeller
+  - `Tools/migrations/094_seed_pages.php` - Grunddata (6 sidor, 4 sponsors)
+
+- **Ändrade filer:**
+  - `admin/migrations.php` - Migration 094 registrerad
+  - `admin/tools.php` - Länk till Pages CMS under System
 
 ### 2026-03-06 (Winback: Externa rabattkoder)
 - **Branch:** claude/winback-discount-codes-L20R9

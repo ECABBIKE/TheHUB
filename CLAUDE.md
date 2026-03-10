@@ -915,5 +915,53 @@ thehub/
 │   ├── dashboard.php
 │   ├── events.php
 │   └── ...
-└── api/                    # API-endpoints
+├── api/                    # API-endpoints
+└── gravityseries/          # GravitySeries standalone-sajt
+    ├── index.php           # Startsida
+    ├── sida.php            # CMS-sidvisare (?slug=X)
+    ├── includes/
+    │   ├── gs-header.php   # Header (egen design)
+    │   └── gs-footer.php   # Footer
+    └── assets/
+        └── css/
+            └── gs-site.css # Komplett CSS (standalone)
 ```
+
+---
+
+## GRAVITYSERIES-SAJTEN
+
+**GravitySeries (`/gravityseries/`) är en HELT FRIKOPPLAD sajt med egen design.**
+
+### Regler
+1. **ANVÄND ALDRIG TheHUB:s CSS-variabler** i GravitySeries-filer — GS har egna (`--ink`, `--paper`, `--accent`)
+2. **INKLUDERA ALDRIG** TheHUB:s header/footer/sidebar i GS-sidor
+3. **GS-sidor inkluderar:** `gs-header.php` och `gs-footer.php` (INTE layout-header/footer)
+4. **Databasanslutning:** Via `config.php` + `config/database.php` (delad med TheHUB)
+5. **Bas-URL:** `$gsBaseUrl = '/gravityseries'` (hårdkodad i gs-header.php)
+6. **Typsnitt:** Bebas Neue (display), Barlow Condensed (condensed), Barlow (body) — INTE Oswald/Manrope
+7. **Accent:** `#61CE70` (grön) — INTE `#37d4d6` (cyan)
+
+### Admin Pages CMS
+- **Lista:** `/admin/pages/` — använder unified-layout (samma som andra admin-sidor)
+- **Redigera:** `/admin/pages/edit.php` — TinyMCE 7 via CDN
+- **Radera:** `/admin/pages/delete.php` — POST-only med CSRF
+- **Länk i:** `admin/tools.php` under System-sektionen
+
+### CSS-variabler (gs-site.css)
+```css
+:root {
+  --ink: #0a0f0d;          /* Mörk text */
+  --paper: #f5f3ef;        /* Ljus bakgrund */
+  --accent: #61CE70;       /* Grön primary */
+  --accent-d: #3fa84d;     /* Mörkare grön */
+  --gs-blue: #004a98;      /* Blå */
+  --font-display: 'Bebas Neue';
+  --font-cond: 'Barlow Condensed';
+  --font-body: 'Barlow';
+}
+```
+
+### Databastabeller
+- **`pages`** — CMS-sidor (slug, title, content, template, status, hero_image, nav-inställningar)
+- **`gs_sponsors`** — Partners och samarbetspartners (name, type, logo_url, website_url)
