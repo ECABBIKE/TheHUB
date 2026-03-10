@@ -219,7 +219,7 @@ require_once __DIR__ . '/../includes/payment.php';
             `;
 
             eventGroup.items.forEach(item => {
-                const isFestivalItem = item.type === 'festival_pass' || item.type === 'festival_activity' || item.festival_pass_event;
+                const isFestivalItem = item.type === 'festival_pass' || item.type === 'festival_activity' || item.type === 'festival_product' || item.festival_pass_event;
                 const itemKey = `${item.event_id}_${item.rider_id}_${item.class_id}`;
                 const seriesDiscPerItem = isFestivalItem ? 0 : (itemSeriesDiscounts[itemKey] || 0);
 
@@ -229,6 +229,8 @@ require_once __DIR__ . '/../includes/payment.php';
                     itemLabel = item.pass_name || 'Festivalpass';
                 } else if (item.type === 'festival_activity') {
                     itemLabel = item.activity_name || 'Aktivitet';
+                } else if (item.type === 'festival_product') {
+                    itemLabel = item.product_name || 'Produkt';
                 } else {
                     itemLabel = (item.class_name || 'Klass') + (item.club_name ? ' &middot; ' + item.club_name : '');
                 }
@@ -267,6 +269,11 @@ require_once __DIR__ . '/../includes/payment.php';
                 } else if (item.type === 'festival_activity') {
                     removeBtn = `<button class="btn btn--danger btn--sm remove-festival-item"
                         data-type="festival_activity" data-id="${item.activity_id}" data-riderid="${item.rider_id}" data-slotid="${item.slot_id || ''}"
+                        style="padding: var(--space-2xs) var(--space-xs);" title="Ta bort">
+                        <i data-lucide="x" style="width: 16px; height: 16px;"></i></button>`;
+                } else if (item.type === 'festival_product') {
+                    removeBtn = `<button class="btn btn--danger btn--sm remove-festival-item"
+                        data-type="festival_product" data-id="${item.product_id}" data-riderid="${item.rider_id}" data-slotid="${item.size_id || ''}"
                         style="padding: var(--space-2xs) var(--space-xs);" title="Ta bort">
                         <i data-lucide="x" style="width: 16px; height: 16px;"></i></button>`;
                 } else {
