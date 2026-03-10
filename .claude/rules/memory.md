@@ -15,6 +15,16 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-10, session 68)
+
+### Festival: Eventnamn, ikonfix, könsvalidering, flerbokning
+- **Eventnamn i program:** Tävlingsevent visar nu "Serie – Eventnamn" (t.ex. "SweCup Downhill – Åre") istället för bara eventnamnet. Använder `series_names` från GROUP_CONCAT.
+- **Trasig CSS-färg fixad:** `background: var(--series-enduro)20` var ogiltig CSS — hex-alpha kan inte appendas till CSS-variabler. Bytt till `color-mix(in srgb, var(--series-enduro) 15%, transparent)` i show.php, single-activity.php, activity.php. Fixar tomma/vita ikonrutor i programmet.
+- **Breadcrumb borttagen från single-activity:** Hela breadcrumb-navigationen borttagen från toppen av aktivitetssidor. "Tillbaka till festivalen"-länk placerad under sidofältet (höger sida), under infokortet.
+- **Köns-/åldersvalidering vid bokning:** `_checkRestrictions(rider, restrictions)` JS-funktion validerar kön och ålder vid bokning på single-activity.php. Normaliserar K→F (klasser vs riders). Blockerar med tydligt felmeddelande om deltagaren inte uppfyller krav. Stödjer även slot-nivå-restriktioner (via data-attribut).
+- **Flerbokning:** Knappar ("Välj" för slots, "Anmäl dig" för aktivitet) återställs automatiskt efter 2 sekunder istället för att låsas. Användaren kan direkt söka och lägga till nästa deltagare.
+- **Filer:** `pages/festival/show.php`, `pages/festival/single-activity.php`, `pages/festival/activity.php`
+
 ## SENASTE FIXAR (2026-03-10, session 67)
 
 ### Festival: Navigationsfix + programkonsistens + dropdown-bredd

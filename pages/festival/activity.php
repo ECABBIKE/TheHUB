@@ -194,7 +194,7 @@ $pageTitle = $group['name'] . ' – ' . $festival['name'];
         <?php endif; ?>
 
         <div class="activity-group-info">
-            <div class="activity-group-type-badge" style="background: <?= $typeInfo['color'] ?>20; color: <?= $typeInfo['color'] ?>;">
+            <div class="activity-group-type-badge" style="background: color-mix(in srgb, <?= $typeInfo['color'] ?> 15%, transparent); color: <?= $typeInfo['color'] ?>;">
                 <i data-lucide="<?= $typeInfo['icon'] ?>"></i>
                 <?= $typeInfo['label'] ?>
             </div>
@@ -281,7 +281,7 @@ $pageTitle = $group['name'] . ' – ' . $festival['name'];
                     <div class="activity-list-item">
                         <?php $actSlots = $slotsByActivity[$act['id']] ?? []; $hasActSlots = !empty($actSlots); ?>
                         <div class="activity-list-item-header">
-                            <div class="activity-list-item-icon" style="background: <?= $aType['color'] ?>20; color: <?= $aType['color'] ?>;">
+                            <div class="activity-list-item-icon" style="background: color-mix(in srgb, <?= $aType['color'] ?> 15%, transparent); color: <?= $aType['color'] ?>;">
                                 <i data-lucide="<?= $aType['icon'] ?>"></i>
                             </div>
                             <div class="activity-list-item-info">

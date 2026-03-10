@@ -424,7 +424,7 @@ $pageTitle = $festival['name'];
                                 <i data-lucide="<?= $discIcon ?>"></i>
                             </div>
                             <div class="festival-item-body">
-                                <div class="festival-item-title"><?= htmlspecialchars($e['name']) ?></div>
+                                <div class="festival-item-title"><?= $e['series_names'] ? htmlspecialchars($e['series_names']) . ' – ' : '' ?><?= htmlspecialchars($e['name']) ?></div>
                                 <div class="festival-item-meta">
                                     <?php if ($e['discipline']): ?>
                                     <span><?= htmlspecialchars($e['discipline']) ?></span>
@@ -454,7 +454,7 @@ $pageTitle = $festival['name'];
                             $gRegCount = (int)($g['total_reg_count'] ?? 0);
                         ?>
                         <a href="/festival/<?= $festivalId ?>/activity/<?= $g['id'] ?>" class="festival-item festival-item--group" style="border-left-color: <?= $gTypeInfo['color'] ?>;">
-                            <div class="festival-item-icon" style="background: <?= $gTypeInfo['color'] ?>20; color: <?= $gTypeInfo['color'] ?>;">
+                            <div class="festival-item-icon" style="background: color-mix(in srgb, <?= $gTypeInfo['color'] ?> 15%, transparent); color: <?= $gTypeInfo['color'] ?>;">
                                 <i data-lucide="<?= $gTypeInfo['icon'] ?>"></i>
                             </div>
                             <div class="festival-item-body">
@@ -495,7 +495,7 @@ $pageTitle = $festival['name'];
                             $spotsFull = $a['max_participants'] && $a['reg_count'] >= $a['max_participants'];
                         ?>
                         <a href="/festival/<?= $festivalId ?>/aktivitet/<?= $a['id'] ?>" class="festival-item festival-item--activity" style="border-left: 3px solid <?= $typeInfo['color'] ?>;">
-                            <div class="festival-item-icon" style="background: <?= $typeInfo['color'] ?>20; color: <?= $typeInfo['color'] ?>;">
+                            <div class="festival-item-icon" style="background: color-mix(in srgb, <?= $typeInfo['color'] ?> 15%, transparent); color: <?= $typeInfo['color'] ?>;">
                                 <i data-lucide="<?= $typeInfo['icon'] ?>"></i>
                             </div>
                             <div class="festival-item-body">
