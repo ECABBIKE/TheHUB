@@ -1194,7 +1194,7 @@ function searchRiders(query) {
 
     searchTimeout = setTimeout(async () => {
         try {
-            const response = await fetch('/api/search.php?type=riders&q=' + encodeURIComponent(query) + '&limit=8');
+            const response = await fetch('/api/search.php?type=riders&filter=all&q=' + encodeURIComponent(query) + '&limit=8');
             const data = await response.json();
             const riders = data.results || data.data || data;
 
