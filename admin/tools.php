@@ -1204,6 +1204,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Pages CMS (GravitySeries) -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="file-text"></i></div>
+            <div>
+                <h4 class="tool-title">Sidor — GravitySeries</h4>
+                <p class="tool-description">Hantera statiska sidor för GravitySeries-sajten</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/pages/" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
     <!-- Reset Data -->
     <div class="card">
         <div class="tool-header">
