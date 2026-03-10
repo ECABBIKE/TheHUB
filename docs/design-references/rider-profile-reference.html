@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zakarias Blom Johansen — TheHUB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --white:    #ffffff;
+  --off:      #f4f3f0;
+  --paper:    #faf9f7;
+  --ink:      #111111;
+  --ink-2:    #333333;
+  --ink-3:    #666666;
+  --ink-4:    #999999;
+  --rule:     #e0ddd8;
+  --accent:   #61CE70;
+  --accent-d: #3fa84d;
+  --gs-blue:  #004a98;
+  --ggs:      #8A9A5B;
+  --ges:      #EF761F;
+  --yellow:   #FFE009;
+  --gold:     #c9a84c;
+  --silver:   #8d9ba8;
+  --bronze:   #a06d42;
+
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-condensed: 'Barlow Condensed', sans-serif;
+  --font-body: 'Barlow', sans-serif;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ── TOP BAR ─────────────────────────────── */
+.topbar {
+  background: var(--ink);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 48px;
+  font-family: var(--font-condensed);
+  font-size: 13px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.topbar-logo {
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: .06em;
+  color: var(--accent);
+}
+.topbar-nav { display: flex; gap: 24px; }
+.topbar-nav a { color: #aaa; text-decoration: none; }
+.topbar-nav a:hover { color: var(--white); }
+
+/* ── HERO ─────────────────────────────────── */
+.hero {
+  background: var(--white);
+  border-bottom: 3px solid var(--ink);
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  min-height: 320px;
+  overflow: hidden;
+}
+
+.hero-left {
+  padding: 40px 48px 40px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+}
+
+.hero-left::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--accent);
+}
+
+.rider-number {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: .15em;
+  color: var(--ink-4);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.rider-name {
+  font-family: var(--font-display);
+  font-size: clamp(52px, 6vw, 88px);
+  line-height: .92;
+  letter-spacing: .01em;
+  color: var(--ink);
+  margin-bottom: 20px;
+}
+
+.rider-meta {
+  display: flex;
+  gap: 0;
+  flex-wrap: wrap;
+}
+.meta-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-condensed);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  padding: 6px 14px 6px 0;
+  margin-right: 14px;
+  border-right: 1px solid var(--rule);
+}
+.meta-pill:last-child { border-right: none; }
+.meta-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid var(--rule);
+  padding-top: 20px;
+  margin-top: 20px;
+}
+.hstat {
+  flex: 1;
+  padding-right: 24px;
+  margin-right: 24px;
+  border-right: 1px solid var(--rule);
+}
+.hstat:last-child { border-right: none; padding-right: 0; margin-right: 0; }
+.hstat-value {
+  font-family: var(--font-display);
+  font-size: 40px;
+  color: var(--ink);
+  line-height: 1;
+}
+.hstat-label {
+  font-family: var(--font-condensed);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-top: 2px;
+}
+
+/* ── HERO RIGHT (Foto) ───────────────────── */
+.hero-right {
+  position: relative;
+  background: var(--off);
+  overflow: hidden;
+}
+.hero-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+.hero-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #e8e4dc 0%, #d4d0c8 100%);
+}
+.hero-photo-placeholder svg {
+  width: 120px;
+  height: 120px;
+  opacity: .25;
+}
+.hero-series-badge {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  background: var(--ink);
+  color: var(--white);
+  font-family: var(--font-condensed);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+}
+
+/* ── LAYOUT ───────────────────────────────── */
+.content-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 32px;
+  padding: 32px 0;
+  align-items: start;
+}
+
+/* ── SECTION HEADERS ───────────────────── */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 6px;
+  margin-bottom: 20px;
+}
+.section-head h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: .04em;
+  color: var(--ink);
+}
+.section-head .sub {
+  font-family: var(--font-condensed);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+/* ── RANKING CHART ────────────────────── */
+.chart-wrap {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  padding: 24px;
+  margin-bottom: 28px;
+}
+.chart-wrap canvas { display: block; }
+
+/* ── RESULTS TABLE ────────────────────── */
+.results-section { margin-bottom: 32px; }
+
+.event-block {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.event-block-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--off);
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer;
+}
+.event-series-stripe {
+  width: 4px;
+  height: 36px;
+  border-radius: 2px;
+}
+.event-name {
+  font-family: var(--font-condensed);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--ink);
+}
+.event-date-loc {
+  font-size: 12px;
+  color: var(--ink-4);
+  font-family: var(--font-condensed);
+  letter-spacing: .04em;
+}
+.event-result-badge {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--ink);
+  line-height: 1;
+}
+.event-result-badge.gold   { color: var(--gold); }
+.event-result-badge.silver { color: var(--silver); }
+.event-result-badge.bronze { color: var(--bronze); }
+.event-pts {
+  font-family: var(--font-condensed);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-d);
+  background: rgba(97,206,112,.12);
+  padding: 3px 10px;
+  letter-spacing: .06em;
+}
+
+.ss-row {
+  display: grid;
+  grid-template-columns: 120px repeat(5, 1fr);
+  font-family: var(--font-condensed);
+  font-size: 13px;
+  border-bottom: 1px solid var(--rule);
+}
+.ss-row:last-child { border-bottom: none; }
+.ss-cell {
+  padding: 8px 12px;
+  color: var(--ink-2);
+  border-right: 1px solid var(--rule);
+}
+.ss-cell:last-child { border-right: none; }
+.ss-cell.label {
+  font-weight: 700;
+  color: var(--ink-4);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  background: var(--paper);
+}
+.ss-cell.best {
+  color: var(--accent-d);
+  font-weight: 700;
+  background: rgba(97,206,112,.08);
+}
+.ss-cell.total {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ── SIDEBAR ──────────────────────────── */
+.sidebar { display: flex; flex-direction: column; gap: 20px; }
+
+.side-card {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  overflow: hidden;
+}
+.side-card-head {
+  background: var(--ink);
+  color: var(--white);
+  font-family: var(--font-condensed);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 8px 16px;
+}
+.side-card-body { padding: 16px; }
+
+/* Donut */
+.donut-wrap {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin: 0 auto 16px;
+}
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.donut-total {
+  font-family: var(--font-display);
+  font-size: 32px;
+  color: var(--ink);
+  line-height: 1;
+}
+.donut-sub {
+  font-family: var(--font-condensed);
+  font-size: 11px;
+  color: var(--ink-4);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.series-legend { display: flex; flex-direction: column; gap: 8px; }
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.legend-name {
+  font-family: var(--font-condensed);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.legend-pts {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--ink);
+}
+
+/* Standing rows */
+.standing-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.standing-row:last-child { border-bottom: none; }
+.standing-pos {
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: var(--ink-4);
+  width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.standing-pos.p1 { color: var(--gold); }
+.standing-pos.p2 { color: var(--silver); }
+.standing-pos.p3 { color: var(--bronze); }
+.standing-info { flex: 1; }
+.standing-series {
+  font-family: var(--font-condensed);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+.standing-class {
+  font-size: 12px;
+  color: var(--ink-4);
+  font-family: var(--font-condensed);
+}
+.standing-pts {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--accent-d);
+}
+
+/* Info rows */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-condensed);
+}
+.info-row:last-child { border-bottom: none; }
+.info-label {
+  font-size: 12px;
+  color: var(--ink-4);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.info-val {
+  font-size: 14px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* ── RANKINGS DETAIL TABLE ────────────── */
+.rank-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-condensed);
+  font-size: 14px;
+}
+.rank-table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--ink);
+  background: var(--off);
+}
+.rank-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-2);
+}
+.rank-table tr:last-child td { border-bottom: none; }
+.rank-table tr:hover td { background: var(--off); }
+.rank-change {
+  font-family: var(--font-condensed);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 6px;
+}
+.rank-change.up   { color: var(--accent-d); }
+.rank-change.down { color: #e03; }
+.rank-change.same { color: var(--ink-4); }
+.rank-pos {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--ink);
+}
+.formula-chip {
+  display: inline-block;
+  background: var(--off);
+  border: 1px solid var(--rule);
+  font-family: var(--font-condensed);
+  font-size: 11px;
+  color: var(--ink-3);
+  padding: 2px 8px;
+  border-radius: 3px;
+  letter-spacing: .04em;
+}
+
+/* ── FOOTER ───────────────────────────── */
+.page-footer {
+  background: var(--ink);
+  color: #666;
+  font-family: var(--font-condensed);
+  font-size: 12px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 16px;
+  margin-top: 48px;
+}
+
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero-right { height: 220px; }
+  .main-grid { grid-template-columns: 1fr; }
+  .hero-left { padding: 28px 24px; }
+  .rider-name { font-size: 52px; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-logo">TheHUB</div>
+  <nav class="topbar-nav">
+    <a href="#">Tävlingar</a>
+    <a href="#">Resultat</a>
+    <a href="#">Serier</a>
+    <a href="#">Åkare</a>
+  </nav>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-left">
+    <div>
+      <div class="rider-number">Åkare #19997 &nbsp;·&nbsp; GravitySeries</div>
+      <h1 class="rider-name">Zakarias<br>Blom<br>Johansen</h1>
+      <div class="rider-meta">
+        <span class="meta-pill"><span class="meta-dot"></span>Herrar Elit</span>
+        <span class="meta-pill"><span class="meta-dot" style="background:var(--gs-blue)"></span>Enduro</span>
+        <span class="meta-pill"><span class="meta-dot" style="background:var(--ggs)"></span>Rullbo CK</span>
+        <span class="meta-pill">1998 &nbsp;·&nbsp; 27 år</span>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <div class="hstat">
+        <div class="hstat-value">312</div>
+        <div class="hstat-label">Totala poäng</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-value">#4</div>
+        <div class="hstat-label">GGS ranking</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-value">18</div>
+        <div class="hstat-label">Starter 2025</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-value">3</div>
+        <div class="hstat-label">Segrar</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="hero-photo-placeholder">
+      <svg viewBox="0 0 100 100" fill="none">
+        <circle cx="50" cy="35" r="20" fill="#999"/>
+        <ellipse cx="50" cy="85" rx="35" ry="25" fill="#999"/>
+      </svg>
+    </div>
+    <div class="hero-series-badge">GGS 2025</div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="content-wrap">
+  <div class="main-grid">
+
+    <!-- LEFT COLUMN -->
+    <div>
+
+      <!-- Rankingutveckling -->
+      <div class="section-head">
+        <h2>Rankingutveckling</h2>
+        <span class="sub">GGS Herrar Elit 2025</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="rankChart" height="180"></canvas>
+      </div>
+
+      <!-- Rankingberäkning -->
+      <div class="results-section">
+        <div class="section-head">
+          <h2>Rankingberäkning</h2>
+          <span class="sub">GGS 2025 — Bästa 5 av 8 resultat</span>
+        </div>
+
+        <table class="rank-table" style="background:var(--white); border: 1px solid var(--rule);">
+          <thead>
+            <tr>
+              <th>Tävling</th>
+              <th>Plac.</th>
+              <th>Poäng</th>
+              <th>Räknas</th>
+              <th>Formel</th>
+              <th>Trend</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Gesunda Enduro</td>
+              <td><span class="rank-pos">1</span></td>
+              <td><strong>100</strong></td>
+              <td><span class="badge-yes">✓</span></td>
+              <td><span class="formula-chip">P1 × 1.0</span></td>
+              <td><span class="rank-change up">↑ +3</span></td>
+            </tr>
+            <tr>
+              <td>Romme Enduro</td>
+              <td><span class="rank-pos">2</span></td>
+              <td><strong>80</strong></td>
+              <td><span class="badge-yes">✓</span></td>
+              <td><span class="formula-chip">P2 × 1.0</span></td>
+              <td><span class="rank-change up">↑ +1</span></td>
+            </tr>
+            <tr>
+              <td>Åre Enduro</td>
+              <td><span class="rank-pos">3</span></td>
+              <td><strong>60</strong></td>
+              <td><span class="badge-yes">✓</span></td>
+              <td><span class="formula-chip">P3 × 1.0</span></td>
+              <td><span class="rank-change same">→ 0</span></td>
+            </tr>
+            <tr>
+              <td>Väsjön CGS</td>
+              <td><span class="rank-pos">5</span></td>
+              <td><strong>45</strong></td>
+              <td><span class="badge-yes">✓</span></td>
+              <td><span class="formula-chip">P5 × 1.0</span></td>
+              <td><span class="rank-change down">↓ −2</span></td>
+            </tr>
+            <tr>
+              <td>Branäs Enduro</td>
+              <td><span class="rank-pos">4</span></td>
+              <td><strong>50</strong></td>
+              <td><span class="badge-yes">✓</span></td>
+              <td><span class="formula-chip">P4 × 1.0</span></td>
+              <td><span class="rank-change up">↑ +2</span></td>
+            </tr>
+            <tr style="opacity:.55">
+              <td>Sälen Enduro</td>
+              <td><span class="rank-pos">7</span></td>
+              <td>36</td>
+              <td><span style="color:var(--ink-4)">—</span></td>
+              <td><span class="formula-chip">Räknas ej</span></td>
+              <td><span class="rank-change down">↓ −1</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Resultathistorik -->
+      <div class="results-section">
+        <div class="section-head">
+          <h2>Resultathistorik</h2>
+          <span class="sub">2025</span>
+        </div>
+
+        <!-- Event 1 -->
+        <div class="event-block">
+          <div class="event-block-head">
+            <div class="event-series-stripe" style="background:var(--ggs)"></div>
+            <div>
+              <div class="event-name">Gesunda Enduro 2025</div>
+              <div class="event-date-loc">14 jun 2025 &nbsp;·&nbsp; Gesundaberget, Mora</div>
+            </div>
+            <div class="event-result-badge gold">1</div>
+            <div class="event-pts">100 p</div>
+          </div>
+          <div>
+            <div class="ss-row">
+              <div class="ss-cell label">Sträcka</div>
+              <div class="ss-cell label">SS1</div>
+              <div class="ss-cell label">SS2</div>
+              <div class="ss-cell label">SS3</div>
+              <div class="ss-cell label">SS4</div>
+              <div class="ss-cell label">Total</div>
+            </div>
+            <div class="ss-row">
+              <div class="ss-cell label">Tid</div>
+              <div class="ss-cell best">2:14.3</div>
+              <div class="ss-cell">3:42.8</div>
+              <div class="ss-cell best">1:58.1</div>
+              <div class="ss-cell">4:11.2</div>
+              <div class="ss-cell total">12:06.4</div>
+            </div>
+            <div class="ss-row">
+              <div class="ss-cell label">Placering</div>
+              <div class="ss-cell best" style="color:var(--accent-d)">1:a</div>
+              <div class="ss-cell">3:e</div>
+              <div class="ss-cell best" style="color:var(--accent-d)">1:a</div>
+              <div class="ss-cell">4:e</div>
+              <div class="ss-cell total">1:a</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Event 2 -->
+        <div class="event-block">
+          <div class="event-block-head">
+            <div class="event-series-stripe" style="background:var(--gs-blue)"></div>
+            <div>
+              <div class="event-name">Väsjön Capital Gravity Series 2025</div>
+              <div class="event-date-loc">21 sep 2025 &nbsp;·&nbsp; Väsjöbacken, Sollentuna</div>
+            </div>
+            <div class="event-result-badge bronze">5</div>
+            <div class="event-pts">45 p</div>
+          </div>
+          <div>
+            <div class="ss-row">
+              <div class="ss-cell label">Sträcka</div>
+              <div class="ss-cell label">SS1</div>
+              <div class="ss-cell label">SS2</div>
+              <div class="ss-cell label">SS3</div>
+              <div class="ss-cell label">SS4</div>
+              <div class="ss-cell label">Total</div>
+            </div>
+            <div class="ss-row">
+              <div class="ss-cell label">Tid</div>
+              <div class="ss-cell">1:44.2</div>
+              <div class="ss-cell best">2:31.7</div>
+              <div class="ss-cell">3:18.4</div>
+              <div class="ss-cell">1:52.0</div>
+              <div class="ss-cell total">9:26.3</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+      <!-- Seriepoäng -->
+      <div class="side-card">
+        <div class="side-card-head">Seriepoäng 2025</div>
+        <div class="side-card-body">
+          <div class="donut-wrap">
+            <canvas id="donutChart"></canvas>
+            <div class="donut-center">
+              <div class="donut-total">312</div>
+              <div class="donut-sub">poäng</div>
+            </div>
+          </div>
+          <div class="series-legend">
+            <div class="legend-row">
+              <div class="legend-dot" style="background:var(--ggs)"></div>
+              <div class="legend-name">GGS</div>
+              <div class="legend-pts">185</div>
+            </div>
+            <div class="legend-row">
+              <div class="legend-dot" style="background:var(--gs-blue)"></div>
+              <div class="legend-name">CGS</div>
+              <div class="legend-pts">87</div>
+            </div>
+            <div class="legend-row">
+              <div class="legend-dot" style="background:var(--ges)"></div>
+              <div class="legend-name">GES</div>
+              <div class="legend-pts">40</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Serierankingar -->
+      <div class="side-card">
+        <div class="side-card-head">Serierankingar</div>
+        <div class="side-card-body">
+          <div class="standing-row">
+            <div class="standing-pos p1">4</div>
+            <div class="standing-info">
+              <div class="standing-series">GGS 2025</div>
+              <div class="standing-class">Herrar Elit</div>
+            </div>
+            <div class="standing-pts">185p</div>
+          </div>
+          <div class="standing-row">
+            <div class="standing-pos p2">7</div>
+            <div class="standing-info">
+              <div class="standing-series">CGS 2025</div>
+              <div class="standing-class">Herrar Elit</div>
+            </div>
+            <div class="standing-pts">87p</div>
+          </div>
+          <div class="standing-row">
+            <div class="standing-pos">12</div>
+            <div class="standing-info">
+              <div class="standing-series">GES 2025</div>
+              <div class="standing-class">Herrar Elit</div>
+            </div>
+            <div class="standing-pts">40p</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info -->
+      <div class="side-card">
+        <div class="side-card-head">Åkarinformation</div>
+        <div class="side-card-body">
+          <div class="info-row">
+            <span class="info-label">Födelseår</span>
+            <span class="info-val">1998</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Klubb</span>
+            <span class="info-val">Rullbo CK</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Licens</span>
+            <span class="info-val">Elite MTB</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Distrikt</span>
+            <span class="info-val">Dalarna</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Aktiv sedan</span>
+            <span class="info-val">2018</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Karriärstatistik -->
+      <div class="side-card">
+        <div class="side-card-head">Karriärstatistik</div>
+        <div class="side-card-body">
+          <div class="info-row">
+            <span class="info-label">Totala starter</span>
+            <span class="info-val">87</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Segrar</span>
+            <span class="info-val" style="color:var(--gold)">14</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Pallplatser</span>
+            <span class="info-val">31</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Fullföljt</span>
+            <span class="info-val">94%</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="page-footer">
+  TheHUB — GravitySeries &copy; 2025 &nbsp;·&nbsp; thehub.gravityseries.se
+</div>
+
+<script>
+// Ranking line chart
+const rankCtx = document.getElementById('rankChart').getContext('2d');
+new Chart(rankCtx, {
+  type: 'line',
+  data: {
+    labels: ['Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt'],
+    datasets: [{
+      label: 'GGS Ranking',
+      data: [12, 9, 7, 5, 4, 4, 4, 4],
+      borderColor: '#004a98',
+      backgroundColor: 'rgba(0,74,152,0.08)',
+      borderWidth: 2.5,
+      pointBackgroundColor: '#004a98',
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      fill: true,
+      tension: 0.3
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: {
+        reverse: true,
+        min: 1,
+        ticks: {
+          stepSize: 2,
+          callback: v => '#' + v,
+          font: { family: "'Barlow Condensed'", size: 12 },
+          color: '#999'
+        },
+        grid: { color: '#e8e4dc' }
+      },
+      x: {
+        ticks: {
+          font: { family: "'Barlow Condensed'", size: 12 },
+          color: '#999'
+        },
+        grid: { display: false }
+      }
+    }
+  }
+});
+
+// Donut chart
+const donutCtx = document.getElementById('donutChart').getContext('2d');
+new Chart(donutCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['GGS', 'CGS', 'GES'],
+    datasets: [{
+      data: [185, 87, 40],
+      backgroundColor: ['#8A9A5B', '#004a98', '#EF761F'],
+      borderWidth: 2,
+      borderColor: '#ffffff'
+    }]
+  },
+  options: {
+    cutout: '68%',
+    plugins: { legend: { display: false }, tooltip: {
+      callbacks: { label: ctx => ' ' + ctx.label + ': ' + ctx.raw + 'p' }
+    }}
+  }
+});
+</script>
+</body>
+</html>

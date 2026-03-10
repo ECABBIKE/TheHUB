@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Partners & Sponsors — GravitySeries</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink:      #0a0f0d;
+  --ink-2:    #1e2420;
+  --ink-3:    #4a5550;
+  --ink-4:    #8a9490;
+  --paper:    #f5f3ef;
+  --white:    #ffffff;
+  --rule:     #e0ddd8;
+  --accent:   #61CE70;
+  --accent-d: #3fa84d;
+  --gs-blue:  #004a98;
+  --ggs:      #8A9A5B;
+  --ges:      #EF761F;
+  --cgs:      #1a7abf;
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-cond:    'Barlow Condensed', sans-serif;
+  --font-body:    'Barlow', sans-serif;
+}
+html { scroll-behavior: smooth; }
+body { background: var(--paper); font-family: var(--font-body); color: var(--ink); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+
+/* HEADER */
+.site-header { background: var(--ink); position: sticky; top: 0; z-index: 200; border-bottom: 1px solid rgba(255,255,255,.06); }
+.header-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; height: 56px; display: flex; align-items: center; gap: 32px; }
+.site-logo { font-family: var(--font-display); font-size: 22px; color: #fff; letter-spacing: .04em; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+.logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.site-nav { display: flex; align-items: center; gap: 4px; flex: 1; }
+.site-nav a { font-family: var(--font-cond); font-size: 14px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #888; text-decoration: none; padding: 6px 12px; border-radius: 4px; transition: color .15s, background .15s; }
+.site-nav a:hover { color: #fff; background: rgba(255,255,255,.08); }
+.site-nav a.active { color: #fff; }
+.hub-btn { margin-left: auto; background: var(--accent); color: var(--ink) !important; font-family: var(--font-cond); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 8px 16px !important; border-radius: 4px; text-decoration: none; display: flex; align-items: center; gap: 7px; flex-shrink: 0; transition: filter .15s !important; }
+.hub-btn:hover { filter: brightness(1.08); }
+.hub-btn svg { width: 14px; height: 14px; stroke: var(--ink); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* PAGE HERO */
+.page-hero { background: var(--ink); padding: 64px 24px 56px; position: relative; overflow: hidden; }
+.page-hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--ggs), var(--ges), var(--cgs), var(--gs-blue), var(--accent)); }
+.page-hero-inner { max-width: 1200px; margin: 0 auto; }
+.page-eyebrow { font-family: var(--font-cond); font-size: 12px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+.page-eyebrow::before { content: ''; display: inline-block; width: 24px; height: 2px; background: var(--accent); }
+.page-title { font-family: var(--font-display); font-size: clamp(52px, 8vw, 96px); color: #fff; line-height: .9; letter-spacing: .01em; margin-bottom: 20px; }
+.page-intro { font-family: var(--font-cond); font-size: 20px; color: #778; max-width: 560px; line-height: 1.5; font-weight: 400; }
+
+/* CONTENT */
+.content-wrap { max-width: 1200px; margin: 0 auto; padding: 64px 24px; }
+
+/* TIER LABEL */
+.tier-label { font-family: var(--font-cond); font-size: 12px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+.tier-label::before { content: ''; display: inline-block; width: 24px; height: 2px; background: var(--accent); }
+.tier-title { font-family: var(--font-display); font-size: clamp(32px, 4vw, 48px); color: var(--ink); letter-spacing: .01em; margin-bottom: 32px; }
+
+/* MAIN SPONSORS */
+.sponsors-main { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; background: var(--rule); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin-bottom: 64px; }
+.sponsor-main-card { background: var(--white); padding: 40px 32px; display: flex; flex-direction: column; align-items: center; text-align: center; text-decoration: none; color: inherit; transition: background .2s; }
+.sponsor-main-card:hover { background: #fafaf8; }
+.sponsor-logo-box { width: 160px; height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+.sponsor-logo-text { font-family: var(--font-display); font-size: 36px; color: var(--ink-3); letter-spacing: .04em; }
+.sponsor-name { font-family: var(--font-display); font-size: 24px; color: var(--ink); letter-spacing: .03em; margin-bottom: 6px; }
+.sponsor-tagline { font-family: var(--font-cond); font-size: 14px; color: var(--ink-4); font-weight: 400; line-height: 1.4; margin-bottom: 16px; }
+.sponsor-link { font-family: var(--font-cond); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-d); display: flex; align-items: center; gap: 4px; }
+.sponsor-link svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* PARTNER GRID */
+.partners-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 64px; }
+.partner-card { background: var(--white); border: 1px solid var(--rule); border-radius: 8px; padding: 28px 20px; display: flex; flex-direction: column; align-items: center; text-align: center; text-decoration: none; color: inherit; transition: box-shadow .2s, transform .2s; }
+.partner-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,.08); transform: translateY(-2px); }
+.partner-logo-text { font-family: var(--font-display); font-size: 28px; color: var(--ink-3); letter-spacing: .04em; margin-bottom: 8px; }
+.partner-desc { font-family: var(--font-cond); font-size: 13px; color: var(--ink-4); font-weight: 400; line-height: 1.4; }
+
+/* CTA */
+.collab-cta { background: var(--ink); border-radius: 8px; padding: 48px 40px; display: flex; align-items: center; justify-content: space-between; gap: 32px; flex-wrap: wrap; }
+.collab-cta-text {}
+.collab-cta-label { font-family: var(--font-cond); font-size: 12px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.collab-cta-title { font-family: var(--font-display); font-size: clamp(28px, 3vw, 42px); color: #fff; letter-spacing: .02em; line-height: .95; margin-bottom: 8px; }
+.collab-cta-sub { font-family: var(--font-cond); font-size: 16px; color: #556; font-weight: 400; }
+.btn-accent { background: var(--accent); color: var(--ink); font-family: var(--font-cond); font-size: 14px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 14px 28px; border-radius: 4px; text-decoration: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; transition: filter .15s; flex-shrink: 0; }
+.btn-accent:hover { filter: brightness(1.08); }
+.btn-accent svg { width: 15px; height: 15px; stroke: var(--ink); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* DIVIDER */
+.section-divider { border: none; border-top: 1px solid var(--rule); margin: 0 0 48px; }
+
+/* FOOTER */
+.site-footer { background: #060a08; color: #445; padding: 40px 24px 32px; margin-top: 80px; }
+.footer-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.footer-logo { font-family: var(--font-display); font-size: 20px; color: #334; letter-spacing: .04em; }
+.footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+.footer-links a { font-family: var(--font-cond); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #445; text-decoration: none; transition: color .15s; }
+.footer-links a:hover { color: var(--accent); }
+.footer-copy { font-family: var(--font-cond); font-size: 12px; color: #334; }
+
+@keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+.page-eyebrow { animation: fadeUp .4s ease both .1s; }
+.page-title   { animation: fadeUp .4s ease both .2s; }
+.page-intro   { animation: fadeUp .4s ease both .3s; }
+
+@media (max-width: 900px) {
+  .sponsors-main { grid-template-columns: 1fr; }
+  .partners-grid { grid-template-columns: repeat(2, 1fr); }
+  .site-nav { display: none; }
+  .hub-btn { display: none; }
+}
+@media (max-width: 500px) {
+  .partners-grid { grid-template-columns: 1fr; }
+  .collab-cta { padding: 32px 24px; }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a class="site-logo" href="https://gravityseries.se">
+      <span class="logo-dot"></span>GravitySeries
+    </a>
+    <nav class="site-nav">
+      <a href="https://gravityseries.se/">Start</a>
+      <a href="https://gravityseries.se/serier/">Serier</a>
+      <a href="https://gravityseries.se/info/arrangor-info/">Arrangera</a>
+      <a href="https://gravityseries.se/info/licens/">Licenser</a>
+      <a href="https://gravityseries.se/info/id/">Gravity-ID</a>
+      <a href="#" class="active">Partners</a>
+      <a href="https://gravityseries.se/info/kontakt/">Kontakt</a>
+    </nav>
+    <a class="hub-btn" href="https://thehub.gravityseries.se">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      TheHUB
+    </a>
+  </div>
+</header>
+
+<section class="page-hero">
+  <div class="page-hero-inner">
+    <div class="page-eyebrow">Samarbetspartners</div>
+    <h1 class="page-title">Våra<br>Partners</h1>
+    <p class="page-intro">Tillsammans med våra partners och leverantörer kan vi erbjuda fler åkare bättre tävlingar, år efter år.</p>
+  </div>
+</section>
+
+<div class="content-wrap">
+
+  <!-- HUVUDSPONSORER -->
+  <div class="tier-label">Huvudsponsorer</div>
+  <div class="tier-title">Dessa företag gör det möjligt</div>
+
+  <div class="sponsors-main">
+    <a class="sponsor-main-card" href="https://www.sportson.se" target="_blank" rel="noopener">
+      <div class="sponsor-logo-box">
+        <div class="sponsor-logo-text">Sportson</div>
+      </div>
+      <div class="sponsor-name">Sportson</div>
+      <p class="sponsor-tagline">Sveriges ledande cykelhandlare med ett brett sortiment för alla typer av cykling.</p>
+      <span class="sponsor-link">sportson.se <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+    </a>
+    <a class="sponsor-main-card" href="https://zeeksack.se" target="_blank" rel="noopener">
+      <div class="sponsor-logo-box">
+        <div class="sponsor-logo-text">Zeeksack</div>
+      </div>
+      <div class="sponsor-name">Zeeksack</div>
+      <p class="sponsor-tagline">Ryggsäckar och väskor designade för aktiva — byggda för att hålla i terrängen.</p>
+      <span class="sponsor-link">zeeksack.se <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+    </a>
+    <a class="sponsor-main-card" href="https://tershine.com" target="_blank" rel="noopener">
+      <div class="sponsor-logo-box">
+        <div class="sponsor-logo-text">Tershine</div>
+      </div>
+      <div class="sponsor-name">Tershine</div>
+      <p class="sponsor-tagline">Rengöring och skötsel för cyklar — håller din maskin i toppskick inför varje lopp.</p>
+      <span class="sponsor-link">tershine.com <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+    </a>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- PARTNERS -->
+  <div class="tier-label">Leverantörer & Partners</div>
+  <div class="tier-title">Fler som stöttar sporten</div>
+
+  <div class="partners-grid">
+    <a class="partner-card" href="#" target="_blank">
+      <div class="partner-logo-text">Partner</div>
+      <div class="partner-desc">Plats för nästa samarbetspartner</div>
+    </a>
+    <a class="partner-card" href="#" target="_blank">
+      <div class="partner-logo-text">Partner</div>
+      <div class="partner-desc">Plats för nästa samarbetspartner</div>
+    </a>
+    <a class="partner-card" href="#" target="_blank">
+      <div class="partner-logo-text">Partner</div>
+      <div class="partner-desc">Plats för nästa samarbetspartner</div>
+    </a>
+    <a class="partner-card" href="#" target="_blank">
+      <div class="partner-logo-text">Partner</div>
+      <div class="partner-desc">Plats för nästa samarbetspartner</div>
+    </a>
+  </div>
+
+  <!-- COLLAB CTA -->
+  <div class="collab-cta">
+    <div class="collab-cta-text">
+      <div class="collab-cta-label">Bli partner</div>
+      <div class="collab-cta-title">Vill ditt företag<br>synas här?</div>
+      <div class="collab-cta-sub">Vi har sponsorpaket för alla storlekar — från lokala events till hela serien.</div>
+    </div>
+    <a class="btn-accent" href="https://gravityseries.se/info/kontakt/">
+      <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      Kontakta oss
+    </a>
+  </div>
+
+</div>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-logo">GravitySeries</div>
+    <div class="footer-links">
+      <a href="https://gravityseries.se/serier/">Serier</a>
+      <a href="https://gravityseries.se/info/arrangor-info/">Arrangera</a>
+      <a href="https://gravityseries.se/info/licens/">Licenser</a>
+      <a href="https://gravityseries.se/info/kontakt/">Kontakt</a>
+      <a href="https://gravityseries.se/info/al/">Villkor</a>
+      <a href="https://thehub.gravityseries.se">TheHUB</a>
+    </div>
+    <div class="footer-copy">© 2026 GravitySeries</div>
+  </div>
+</footer>
+
+</body>
+</html>
