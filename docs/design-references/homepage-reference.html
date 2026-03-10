@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheHUB — GravitySeries</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;1,600&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --paper:  #f5f3ef;
+  --white:  #ffffff;
+  --ink:    #0f0f0f;
+  --ink-2:  #2a2a2a;
+  --ink-3:  #555;
+  --ink-4:  #999;
+  --rule:   #e2dfd9;
+  --gs:     #004a98;
+  --ggs:    #8A9A5B;
+  --ges:    #EF761F;
+  --cgs:    #1a7abf;
+  --accent: #61CE70;
+  --sm:     #d4a017;
+  --font-display:  'Bebas Neue', sans-serif;
+  --font-cond:     'Barlow Condensed', sans-serif;
+  --font-body:     'Barlow', sans-serif;
+}
+body {
+  background: var(--paper);
+  font-family: var(--font-body);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  background: var(--ink);
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.topbar-logo { font-family: var(--font-display); font-size: 24px; color: var(--accent); letter-spacing: .04em; }
+.topbar-icons { display: flex; gap: 18px; align-items: center; }
+.topbar-icons svg { width: 22px; height: 22px; stroke: #aaa; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--gs); color: #fff; font-family: var(--font-cond); font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+
+/* ── HERO ── */
+.hero {
+  background: var(--ink);
+  padding: 28px 16px 24px;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--ggs) 0%, var(--cgs) 33%, var(--ges) 66%, var(--gs) 100%);
+}
+.hero-eyebrow {
+  font-family: var(--font-cond);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.hero-title {
+  font-family: var(--font-display);
+  font-size: 52px;
+  color: #fff;
+  line-height: .92;
+  letter-spacing: .02em;
+  margin-bottom: 12px;
+}
+.hero-title span { color: var(--accent); }
+.hero-desc {
+  font-family: var(--font-cond);
+  font-size: 16px;
+  color: #aaa;
+  font-weight: 400;
+  line-height: 1.4;
+  max-width: 300px;
+}
+
+/* ── STATS STRIP ── */
+.stats-strip {
+  background: var(--white);
+  border-bottom: 1px solid var(--rule);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.stat-cell {
+  padding: 14px 8px;
+  text-align: center;
+  border-right: 1px solid var(--rule);
+}
+.stat-cell:last-child { border-right: none; }
+.stat-val {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--ink);
+  line-height: 1;
+  display: block;
+}
+.stat-label {
+  font-family: var(--font-cond);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  display: block;
+  margin-top: 2px;
+}
+
+/* ── SECTION HEADS ── */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 20px 16px 8px;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  letter-spacing: .02em;
+}
+.section-link {
+  font-family: var(--font-cond);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--gs);
+  text-decoration: none;
+}
+
+/* ── NEXT EVENT HERO CARD ── */
+.next-event-card {
+  margin: 0 16px 8px;
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: box-shadow .15s;
+  animation: fadeUp .3s ease both;
+}
+.next-event-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.1); }
+.next-event-header {
+  padding: 14px 16px 12px;
+  border-left: 5px solid var(--ggs);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 12px;
+}
+.next-label {
+  font-family: var(--font-cond);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ggs);
+  margin-bottom: 4px;
+}
+.next-name {
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: .02em;
+  color: var(--ink);
+  line-height: 1;
+}
+.next-meta {
+  font-family: var(--font-cond);
+  font-size: 14px;
+  color: var(--ink-4);
+  margin-top: 4px;
+}
+.next-countdown {
+  text-align: right;
+  flex-shrink: 0;
+}
+.next-days {
+  font-family: var(--font-display);
+  font-size: 44px;
+  color: var(--ink);
+  line-height: 1;
+  display: block;
+}
+.next-days-label {
+  font-family: var(--font-cond);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.next-footer {
+  background: var(--paper);
+  border-top: 1px solid var(--rule);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.next-footer-info {
+  font-family: var(--font-cond);
+  font-size: 13px;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.anmalan-btn {
+  background: var(--accent);
+  color: var(--ink);
+  font-family: var(--font-cond);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 4px;
+  text-decoration: none;
+  display: inline-block;
+}
+
+/* ── UPCOMING LIST ── */
+.event-row {
+  display: grid;
+  grid-template-columns: 5px 64px 1fr auto 36px;
+  align-items: center;
+  min-height: 60px;
+  background: var(--white);
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none;
+  color: inherit;
+  transition: background .12s;
+  animation: fadeUp .3s ease both;
+}
+.event-row:first-of-type { border-top: 1px solid var(--rule); }
+.event-row:hover { background: #fafaf8; }
+.event-stripe { height: 100%; min-height: 60px; }
+.event-date { padding: 0 8px 0 12px; text-align: center; }
+.event-date-day { font-family: var(--font-display); font-size: 20px; color: var(--ink); line-height: 1; display: block; }
+.event-date-day.range { font-size: 15px; }
+.event-date-month { font-family: var(--font-cond); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4); display: block; margin-top: 1px; }
+.event-info { padding: 8px; min-width: 0; }
+.event-name { font-family: var(--font-cond); font-size: 15px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.event-sub { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+.event-location { font-family: var(--font-cond); font-size: 12px; color: var(--ink-4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.serie-tag { flex-shrink: 0; font-family: var(--font-cond); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 2px 6px; border-radius: 3px; color: #fff; }
+.event-aside { padding: 0 4px; text-align: right; }
+.event-countdown { font-family: var(--font-cond); font-size: 12px; color: var(--ink-4); font-weight: 600; white-space: nowrap; }
+.event-chevron { display: flex; align-items: center; justify-content: center; color: var(--rule); }
+.event-chevron svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── SERIES MINI CARDS ── */
+.series-scroll {
+  display: flex;
+  gap: 10px;
+  padding: 0 16px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.series-scroll::-webkit-scrollbar { display: none; }
+.serie-mini {
+  flex-shrink: 0;
+  width: 150px;
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow .15s;
+  animation: fadeUp .3s ease both;
+}
+.serie-mini:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+.serie-mini-top {
+  height: 6px;
+}
+.serie-mini-body { padding: 12px 12px 10px; }
+.serie-mini-abbr {
+  font-family: var(--font-display);
+  font-size: 26px;
+  letter-spacing: .03em;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+.serie-mini-name {
+  font-family: var(--font-cond);
+  font-size: 11px;
+  color: var(--ink-4);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.serie-mini-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+.serie-mini-stat-val {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--ink);
+  line-height: 1;
+  display: block;
+}
+.serie-mini-stat-label {
+  font-family: var(--font-cond);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.serie-mini-progress {
+  height: 3px;
+  background: var(--rule);
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.serie-mini-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width .4s ease;
+}
+
+/* ── RECENT RESULT ── */
+.recent-result {
+  margin: 0 16px 12px;
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  animation: fadeUp .35s ease both;
+}
+.recent-result-head {
+  padding: 12px 14px 10px;
+  border-left: 5px solid var(--ggs);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.recent-name {
+  font-family: var(--font-cond);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.recent-date {
+  font-family: var(--font-cond);
+  font-size: 12px;
+  color: var(--ink-4);
+  font-weight: 600;
+}
+.recent-tag {
+  font-family: var(--font-cond);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 3px;
+  color: #fff;
+  flex-shrink: 0;
+}
+.podium-row {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid var(--rule);
+}
+.podium-cell {
+  flex: 1;
+  padding: 10px 12px;
+  border-right: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.podium-cell:last-child { border-right: none; }
+.podium-pos {
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.p1 { color: #c9a84c; }
+.p2 { color: #8d9ba8; }
+.p3 { color: #a06d42; }
+.podium-name {
+  font-family: var(--font-cond);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+  line-height: 1.2;
+}
+.podium-class {
+  font-family: var(--font-cond);
+  font-size: 11px;
+  color: var(--ink-4);
+}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--white);
+  border-top: 1px solid var(--rule);
+  display: flex;
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 4px 6px;
+  text-decoration: none;
+  color: var(--ink-4);
+  font-family: var(--font-cond);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.nav-item.active { color: var(--gs); }
+.nav-item svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nav-item.active svg { stroke-width: 2.2; }
+
+.main { padding-bottom: 100px; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.stats-strip { animation: fadeUp .2s ease both; }
+.next-event-card { animation-delay: .05s; }
+.event-row:nth-child(1) { animation-delay: .08s; }
+.event-row:nth-child(2) { animation-delay: .11s; }
+.event-row:nth-child(3) { animation-delay: .14s; }
+.serie-mini:nth-child(1) { animation-delay: .06s; }
+.serie-mini:nth-child(2) { animation-delay: .09s; }
+.serie-mini:nth-child(3) { animation-delay: .12s; }
+.serie-mini:nth-child(4) { animation-delay: .15s; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">TheHUB</div>
+  <div class="topbar-icons">
+    <svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <div class="avatar">R</div>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Svensk Gravity Cycling</div>
+  <div class="hero-title">Gravity<br><span>Series</span><br>TheHUB</div>
+  <div class="hero-desc">Kalender, resultat, serieställningar och ranking för svensk gravitycykling.</div>
+</div>
+
+<!-- STATS STRIP -->
+<div class="stats-strip">
+  <div class="stat-cell">
+    <span class="stat-val">3 917</span>
+    <span class="stat-label">Åkare</span>
+  </div>
+  <div class="stat-cell">
+    <span class="stat-val">107</span>
+    <span class="stat-label">Tävlingar</span>
+  </div>
+  <div class="stat-cell">
+    <span class="stat-val">5</span>
+    <span class="stat-label">Serier</span>
+  </div>
+  <div class="stat-cell">
+    <span class="stat-val">582</span>
+    <span class="stat-label">Klubbar</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- NÄSTA TÄVLING -->
+  <div class="section-head">
+    <span class="section-title">Nästa tävling</span>
+    <a class="section-link" href="#">Hela kalendern →</a>
+  </div>
+
+  <a class="next-event-card" href="#">
+    <div class="next-event-header" style="border-left-color: var(--ggs)">
+      <div>
+        <div class="next-label">Götaland Gravity Series</div>
+        <div class="next-name">Vallåsen Enduro</div>
+        <div class="next-meta">11–12 apr · Vallåsen Bike Park</div>
+      </div>
+      <div class="next-countdown">
+        <span class="next-days">32</span>
+        <span class="next-days-label">dagar</span>
+      </div>
+    </div>
+    <div class="next-footer">
+      <span class="next-footer-info">Anmälan öppen · 84 anmälda</span>
+      <a class="anmalan-btn" href="#">Anmäl dig</a>
+    </div>
+  </a>
+
+  <!-- KOMMANDE -->
+  <div class="section-head" style="padding-top:16px">
+    <span class="section-title" style="font-size:20px; color: var(--ink-3)">Fler kommande</span>
+  </div>
+
+  <a class="event-row" href="#">
+    <div class="event-stripe" style="background:var(--gs)"></div>
+    <div class="event-date">
+      <span class="event-date-day range">25–26</span>
+      <span class="event-date-month">Apr</span>
+    </div>
+    <div class="event-info">
+      <div class="event-name">SweCup Enduro Göteborg</div>
+      <div class="event-sub">
+        <span class="event-location">Göteborg</span>
+        <span class="serie-tag" style="background:var(--gs)">GS</span>
+      </div>
+    </div>
+    <div class="event-aside"><span class="event-countdown">53 dgr</span></div>
+    <div class="event-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+  </a>
+
+  <a class="event-row" href="#">
+    <div class="event-stripe" style="background:var(--ggs)"></div>
+    <div class="event-date">
+      <span class="event-date-day range">9–10</span>
+      <span class="event-date-month">Maj</span>
+    </div>
+    <div class="event-info">
+      <div class="event-name">GGS Ulricehamn</div>
+      <div class="event-sub">
+        <span class="event-location">SkiBikeHike Ulricehamn</span>
+        <span class="serie-tag" style="background:var(--ggs)">GGS</span>
+      </div>
+    </div>
+    <div class="event-aside"><span class="event-countdown">67 dgr</span></div>
+    <div class="event-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+  </a>
+
+  <a class="event-row" href="#">
+    <div class="event-stripe" style="background:var(--ges)"></div>
+    <div class="event-date">
+      <span class="event-date-day range">23–24</span>
+      <span class="event-date-month">Maj</span>
+    </div>
+    <div class="event-info">
+      <div class="event-name">GES Sundsvall</div>
+      <div class="event-sub">
+        <span class="event-location">Norra berget, Sundsvall</span>
+        <span class="serie-tag" style="background:var(--ges)">GES</span>
+      </div>
+    </div>
+    <div class="event-aside"><span class="event-countdown">81 dgr</span></div>
+    <div class="event-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+  </a>
+
+  <!-- SERIER -->
+  <div class="section-head">
+    <span class="section-title">Serier 2026</span>
+    <a class="section-link" href="#">Alla serier →</a>
+  </div>
+
+  <div class="series-scroll">
+    <a class="serie-mini" href="#">
+      <div class="serie-mini-top" style="background:var(--ggs)"></div>
+      <div class="serie-mini-body">
+        <div class="serie-mini-abbr" style="color:var(--ggs)">GGS</div>
+        <div class="serie-mini-name">Götaland Gravity Series</div>
+        <div class="serie-mini-stats">
+          <div>
+            <span class="serie-mini-stat-val">8</span>
+            <span class="serie-mini-stat-label">deltävl.</span>
+          </div>
+          <div style="text-align:right">
+            <span class="serie-mini-stat-val">312</span>
+            <span class="serie-mini-stat-label">åkare</span>
+          </div>
+        </div>
+        <div class="serie-mini-progress">
+          <div class="serie-mini-progress-fill" style="width:75%; background:var(--ggs)"></div>
+        </div>
+      </div>
+    </a>
+
+    <a class="serie-mini" href="#">
+      <div class="serie-mini-top" style="background:var(--ges)"></div>
+      <div class="serie-mini-body">
+        <div class="serie-mini-abbr" style="color:var(--ges)">GES</div>
+        <div class="serie-mini-name">Götaland Enduro Series</div>
+        <div class="serie-mini-stats">
+          <div>
+            <span class="serie-mini-stat-val">6</span>
+            <span class="serie-mini-stat-label">deltävl.</span>
+          </div>
+          <div style="text-align:right">
+            <span class="serie-mini-stat-val">198</span>
+            <span class="serie-mini-stat-label">åkare</span>
+          </div>
+        </div>
+        <div class="serie-mini-progress">
+          <div class="serie-mini-progress-fill" style="width:67%; background:var(--ges)"></div>
+        </div>
+      </div>
+    </a>
+
+    <a class="serie-mini" href="#">
+      <div class="serie-mini-top" style="background:var(--cgs)"></div>
+      <div class="serie-mini-body">
+        <div class="serie-mini-abbr" style="color:var(--cgs)">CGS</div>
+        <div class="serie-mini-name">Capital Gravity Series</div>
+        <div class="serie-mini-stats">
+          <div>
+            <span class="serie-mini-stat-val">5</span>
+            <span class="serie-mini-stat-label">deltävl.</span>
+          </div>
+          <div style="text-align:right">
+            <span class="serie-mini-stat-val">124</span>
+            <span class="serie-mini-stat-label">åkare</span>
+          </div>
+        </div>
+        <div class="serie-mini-progress">
+          <div class="serie-mini-progress-fill" style="width:80%; background:var(--cgs)"></div>
+        </div>
+      </div>
+    </a>
+
+    <a class="serie-mini" href="#">
+      <div class="serie-mini-top" style="background:var(--gs)"></div>
+      <div class="serie-mini-body">
+        <div class="serie-mini-abbr" style="color:var(--gs)">GS</div>
+        <div class="serie-mini-name">GravitySeries Downhill</div>
+        <div class="serie-mini-stats">
+          <div>
+            <span class="serie-mini-stat-val">7</span>
+            <span class="serie-mini-stat-label">deltävl.</span>
+          </div>
+          <div style="text-align:right">
+            <span class="serie-mini-stat-val">276</span>
+            <span class="serie-mini-stat-label">åkare</span>
+          </div>
+        </div>
+        <div class="serie-mini-progress">
+          <div class="serie-mini-progress-fill" style="width:71%; background:var(--gs)"></div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- SENASTE RESULTAT -->
+  <div class="section-head" style="padding-top:20px">
+    <span class="section-title">Senaste resultat</span>
+    <a class="section-link" href="#">Alla resultat →</a>
+  </div>
+
+  <a class="recent-result" href="#">
+    <div class="recent-result-head" style="border-left-color:var(--ggs)">
+      <div>
+        <div class="recent-name">GGS Vallåsen</div>
+        <div class="recent-date">19 okt 2025 · Vallåsen Bikepark</div>
+      </div>
+      <span class="recent-tag" style="background:var(--ggs)">GGS</span>
+    </div>
+    <div class="podium-row">
+      <div class="podium-cell">
+        <span class="podium-pos p1">1</span>
+        <div>
+          <div class="podium-name">Erik Svensson</div>
+          <div class="podium-class">H Elit</div>
+        </div>
+      </div>
+      <div class="podium-cell">
+        <span class="podium-pos p2">2</span>
+        <div>
+          <div class="podium-name">Johan Berg</div>
+          <div class="podium-class">H Elit</div>
+        </div>
+      </div>
+      <div class="podium-cell">
+        <span class="podium-pos p3">3</span>
+        <div>
+          <div class="podium-name">Linus Holm</div>
+          <div class="podium-class">H Elit</div>
+        </div>
+      </div>
+    </div>
+  </a>
+
+  <a class="recent-result" href="#" style="animation-delay:.05s">
+    <div class="recent-result-head" style="border-left-color:var(--gs)">
+      <div>
+        <div class="recent-name">GS Isaberg DH</div>
+        <div class="recent-date">28 sep 2025 · Isaberg Mountain Resort</div>
+      </div>
+      <span class="recent-tag" style="background:var(--gs)">GS</span>
+    </div>
+    <div class="podium-row">
+      <div class="podium-cell">
+        <span class="podium-pos p1">1</span>
+        <div>
+          <div class="podium-name">Anton Karlsson</div>
+          <div class="podium-class">H Elit</div>
+        </div>
+      </div>
+      <div class="podium-cell">
+        <span class="podium-pos p2">2</span>
+        <div>
+          <div class="podium-name">Sara Nilsson</div>
+          <div class="podium-class">D Elit</div>
+        </div>
+      </div>
+      <div class="podium-cell">
+        <span class="podium-pos p3">3</span>
+        <div>
+          <div class="podium-name">Maja Lindqvist</div>
+          <div class="podium-class">D Elit</div>
+        </div>
+      </div>
+    </div>
+  </a>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <a class="nav-item active" href="#">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Hem
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Kalender
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Resultat
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Serier
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    Databas
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    Ranking
+  </a>
+</nav>
+
+</body>
+</html>
