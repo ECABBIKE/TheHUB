@@ -192,8 +192,10 @@ $pageTitle = $activity['name'] . ' – ' . $festival['name'];
                 <?php else: ?>
                 <span style="color: var(--color-success);"><i data-lucide="tag"></i> Gratis</span>
                 <?php endif; ?>
-                <?php if ($activity['included_in_pass'] && $festival['pass_enabled']): ?>
-                <span class="festival-pass-badge"><i data-lucide="ticket" style="width: 10px; height: 10px;"></i> Ingår i pass</span>
+                <?php if (!empty($activity['pass_included_count']) && $festival['pass_enabled']): ?>
+                <span class="festival-pass-badge"><i data-lucide="ticket" style="width: 10px; height: 10px;"></i> <?= (int)$activity['pass_included_count'] ?> tillfälle<?= (int)$activity['pass_included_count'] > 1 ? 'n' : '' ?> ingår i festivalpass</span>
+                <?php elseif ($activity['included_in_pass'] && $festival['pass_enabled']): ?>
+                <span class="festival-pass-badge"><i data-lucide="ticket" style="width: 10px; height: 10px;"></i> Ingår i festivalpass</span>
                 <?php endif; ?>
                 <?php if (!empty($activity['difficulty_level']) && isset($diffLabels[$activity['difficulty_level']])): ?>
                 <span><i data-lucide="signal"></i> <?= $diffLabels[$activity['difficulty_level']] ?></span>
@@ -348,7 +350,7 @@ $pageTitle = $activity['name'] . ' – ' . $festival['name'];
         </section>
 
         <!-- ============ SIDEBAR ============ -->
-        <aside class="festival-sidebar">
+        <aside class="festival-sidebar" style="order: unset;">
             <!-- Festival pass CTA -->
             <?php if ($festival['pass_enabled']): ?>
             <div class="festival-pass-card">

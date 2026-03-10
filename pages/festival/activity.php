@@ -358,7 +358,7 @@ $pageTitle = $group['name'] . ' – ' . $festival['name'];
         </section>
 
         <!-- ============ SIDEBAR ============ -->
-        <aside class="festival-sidebar">
+        <aside class="festival-sidebar" style="order: unset;">
             <!-- Festival pass CTA -->
             <?php if ($festival['pass_enabled']): ?>
             <div class="festival-pass-card">

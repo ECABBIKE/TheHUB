@@ -65,6 +65,22 @@ const GlobalCart = (function() {
             } else {
                 cart.push(item);
             }
+        } else if (item.type === 'festival_product') {
+            if (!item.product_id || !item.rider_id || !item.festival_id) {
+                throw new Error('Invalid festival product item: missing required fields');
+            }
+            // Dedup: same product + size + rider
+            const existingIndex = cart.findIndex(i =>
+                i.type === 'festival_product' &&
+                i.product_id === item.product_id &&
+                i.rider_id === item.rider_id &&
+                (i.size_id || null) === (item.size_id || null)
+            );
+            if (existingIndex >= 0) {
+                cart[existingIndex] = item;
+            } else {
+                cart.push(item);
+            }
         } else {
             // Event/series registration - original validation
             if (!item.type || !item.event_id || !item.rider_id || !item.class_id) {
@@ -117,6 +133,12 @@ const GlobalCart = (function() {
                 if (item.festival_pass_event && item.festival_id === id && item.rider_id === riderId) return false;
                 return true;
             });
+        } else if (type === 'festival_product') {
+            cart = cart.filter(item => {
+                if (item.type !== 'festival_product' || item.product_id !== id || item.rider_id !== riderId) return true;
+                if (slotId !== undefined) return (item.size_id || null) !== slotId;
+                return false;
+            });
         }
         saveCart(cart);
         return cart;
@@ -144,7 +166,7 @@ const GlobalCart = (function() {
 
         cart.forEach(item => {
             // Festival items group by festival_id with 'festival_' prefix
-            if (item.type === 'festival_activity' || item.type === 'festival_pass' || item.festival_pass_event) {
+            if (item.type === 'festival_activity' || item.type === 'festival_pass' || item.type === 'festival_product' || item.festival_pass_event) {
                 const key = 'festival_' + (item.festival_id || 0);
                 if (!grouped[key]) {
                     grouped[key] = {
