@@ -65,16 +65,12 @@ try {
 // Load nav pages for footer links
 $footerPages = $gsNavPages;
 
-// Series color/discipline mapping
-$seriesStyles = [
-    'ggs'     => ['color' => '#8A9A5B', 'discipline' => 'Enduro', 'region' => 'Götaland'],
-    'cgs'     => ['color' => '#1a7abf', 'discipline' => 'Enduro', 'region' => 'Mälardalen'],
-    'capital' => ['color' => '#1a7abf', 'discipline' => 'Enduro', 'region' => 'Mälardalen'],
-    'jgs'     => ['color' => '#EF761F', 'discipline' => 'Enduro', 'region' => 'Jämtland'],
-    'gsd'     => ['color' => '#004a98', 'discipline' => 'Downhill', 'region' => 'Nationell'],
-    'gse'     => ['color' => '#61CE70', 'discipline' => 'Enduro', 'region' => 'Nationell'],
-    'gstotal' => ['color' => '#1e2420', 'discipline' => 'Enduro + DH', 'region' => 'Alla serier samlat'],
-];
+// Build slug→series_id lookup from DB series
+$seriesIdBySlug = [];
+foreach ($series as $s) {
+    $slug = strtolower($s['brand_slug'] ?? '');
+    if ($slug) $seriesIdBySlug[$slug] = $s['id'];
+}
 
 // Map pin SVG (reused)
 $mapPinSvg = '<svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
@@ -153,7 +149,8 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
           $abbrColor = $sc['abbrColor'] ?? $sc['color'];
           $discBg = $sc['discBg'] ?? $sc['color'];
       ?>
-        <a class="serie-card" href="https://thehub.gravityseries.se/series">
+        <?php $seriesId = $seriesIdBySlug[$sc['slug']] ?? 0; ?>
+        <a class="serie-card" href="<?= $seriesId ? 'https://thehub.gravityseries.se/series/' . $seriesId : '#' ?>">
           <div class="serie-card-top" style="background:<?= $sc['color'] ?>"></div>
           <div class="serie-card-body">
             <div class="serie-abbr" style="color:<?= $abbrColor ?>"><?= $sc['abbr'] ?></div>
@@ -175,7 +172,7 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
       <h2 class="section-title">För åkare<br>&amp; arrangörer</h2>
     </div>
     <div class="info-grid">
-      <a class="info-card" href="<?= $gsBaseUrl ?>/sida.php?slug=arrangor-info">
+      <a class="info-card" href="<?= $gsBaseUrl ?>/arrangor-info">
         <div class="info-icon">
           <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
@@ -183,7 +180,7 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
         <p class="info-desc">Vill du arrangera en tävling inom GravitySeries? Här hittar du allt från ansökan till banprojektering och praktisk info.</p>
         <span class="info-link">Arrangörsinformation <?= $chevronSvg ?></span>
       </a>
-      <a class="info-card" href="<?= $gsBaseUrl ?>/sida.php?slug=licenser">
+      <a class="info-card" href="<?= $gsBaseUrl ?>/licenser">
         <div class="info-icon">
           <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
         </div>
@@ -191,7 +188,7 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
         <p class="info-desc">För att tävla i GravitySeries behöver du en giltig SCF-licens. Här förklarar vi hur du skaffar en och vad den kostar.</p>
         <span class="info-link">Licensinfo <?= $chevronSvg ?></span>
       </a>
-      <a class="info-card" href="<?= $gsBaseUrl ?>/sida.php?slug=gravity-id">
+      <a class="info-card" href="<?= $gsBaseUrl ?>/gravity-id">
         <div class="info-icon">
           <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
         </div>
@@ -300,3 +297,17 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
 </div>
 
 <?php require_once __DIR__ . '/includes/gs-footer.php'; ?>
+<?php if (!empty($gsIsAdmin)): ?>
+<style>
+.gs-admin-bar{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;gap:8px;align-items:center;}
+.gs-admin-btn{background:var(--ink,#0a0f0d);color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-family:'Barlow',sans-serif;font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;box-shadow:0 4px 16px rgba(0,0,0,.3);transition:background .2s;}
+.gs-admin-btn:hover{background:#333;}
+.gs-admin-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+</style>
+<div class="gs-admin-bar">
+  <a class="gs-admin-btn" href="/admin/pages/">
+    <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+    Hantera sidor
+  </a>
+</div>
+<?php endif; ?>

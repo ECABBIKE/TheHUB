@@ -146,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Preview redirect
         if (!empty($_POST['save_preview'])) {
             $_SESSION['gs_flash'] = ['type' => 'success', 'message' => 'Sidan sparad.'];
-            header('Location: /gravityseries/sida.php?slug=' . urlencode($slug));
+            header('Location: /gravityseries/' . urlencode($slug));
             exit;
         }
 
@@ -203,7 +203,7 @@ include __DIR__ . '/../components/unified-layout.php';
       </h1>
     </div>
     <?php if ($isEdit): ?>
-      <a href="/gravityseries/sida.php?slug=<?= htmlspecialchars($page['slug']) ?>" target="_blank" style="font-size:13px; color:var(--color-text-muted,#888); text-decoration:none; display:flex; align-items:center; gap:4px;">
+      <a href="/gravityseries/<?= htmlspecialchars($page['slug']) ?>" target="_blank" style="font-size:13px; color:var(--color-text-muted,#888); text-decoration:none; display:flex; align-items:center; gap:4px;">
         <i data-lucide="external-link" style="width:14px;height:14px;"></i> Förhandsgranska
       </a>
     <?php endif; ?>
@@ -239,7 +239,7 @@ include __DIR__ . '/../components/unified-layout.php';
       <div style="margin-bottom:16px;">
         <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--color-text-secondary,#555);">Slug</label>
         <div style="display:flex; align-items:center; gap:4px;">
-          <span style="color:var(--color-text-muted,#888); font-family:monospace; font-size:14px;">/gravityseries/sida.php?slug=</span>
+          <span style="color:var(--color-text-muted,#888); font-family:monospace; font-size:14px;">/gravityseries/</span>
           <input type="text" name="slug" id="slugInput" value="<?= htmlspecialchars($page['slug']) ?>"
             style="flex:1; padding:10px 14px; border:1px solid var(--color-border,#ddd); border-radius:6px; font-size:14px; font-family:monospace;"
             pattern="^[a-z0-9-]+$" maxlength="100">

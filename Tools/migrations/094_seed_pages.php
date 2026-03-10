@@ -170,7 +170,7 @@ $pages = [
 
 $insertStmt = $pdo->prepare("
     INSERT INTO pages (slug, title, meta_description, content, template, status, show_in_nav, nav_order, nav_label)
-    VALUES (?, ?, ?, ?, 'default', 'draft', ?, ?, ?)
+    VALUES (?, ?, ?, ?, 'default', 'published', ?, ?, ?)
     ON DUPLICATE KEY UPDATE title = VALUES(title)
 ");
 
@@ -198,7 +198,7 @@ foreach ($pages as $p) {
 }
 
 out("", $isCli);
-out("{$count} sidor skapade som utkast. Publicera dem via admin/pages/.", $isCli);
+out("{$count} sidor skapade som publicerade.", $isCli);
 
 // ─── 3. Seed sponsors ───────────────────────────────────────
 $sponsors = [
@@ -242,8 +242,19 @@ if ($hasSponsorTable) {
     out("Tabellen gs_sponsors saknas — hoppar över sponsors.", $isCli);
 }
 
+// ─── 4. Publish any draft seed pages ────────────────────────
+try {
+    $seedSlugs = array_column($pages, 'slug');
+    $placeholders = implode(',', array_fill(0, count($seedSlugs), '?'));
+    $pdo->prepare("UPDATE pages SET status = 'published' WHERE slug IN ($placeholders) AND status = 'draft'")
+        ->execute($seedSlugs);
+    out("Alla grundsidor publicerade.", $isCli);
+} catch (PDOException $e) {
+    out("Kunde inte publicera sidor: " . $e->getMessage(), $isCli);
+}
+
 out("", $isCli);
-out("Klart! Besök /admin/pages/ för att redigera och publicera sidorna.", $isCli);
+out("Klart! Besök /admin/pages/ för att redigera sidorna.", $isCli);
 
 if (!$isCli) {
     echo '<p style="margin-top:20px;"><a href="/admin/pages/" style="color:#3fa84d;">Gå till sidhanteringen &rarr;</a></p>';

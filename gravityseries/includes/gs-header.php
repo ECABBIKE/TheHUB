@@ -46,6 +46,15 @@ $gsCurrentSlug = $gsCurrentSlug ?? '';
 
 // Determine base URL
 $gsBaseUrl = '/gravityseries';
+
+// Check if current user is admin (for edit pencil)
+$gsIsAdmin = false;
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+if (!empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin') {
+    $gsIsAdmin = true;
+}
 ?>
 <!DOCTYPE html>
 <html lang="sv">
@@ -72,7 +81,7 @@ $gsBaseUrl = '/gravityseries';
       <a href="<?= $gsBaseUrl ?>/"<?= $gsActiveNav === 'start' ? ' class="active"' : '' ?>>Start</a>
       <a href="<?= $gsBaseUrl ?>/#serier"<?= $gsActiveNav === 'serier' ? ' class="active"' : '' ?>>Serier</a>
       <?php foreach ($gsNavPages as $navPage): ?>
-        <a href="<?= $gsBaseUrl ?>/sida.php?slug=<?= htmlspecialchars($navPage['slug']) ?>"<?= $gsCurrentSlug === $navPage['slug'] ? ' class="active"' : '' ?>>
+        <a href="<?= $gsBaseUrl ?>/<?= htmlspecialchars($navPage['slug']) ?>"<?= $gsCurrentSlug === $navPage['slug'] ? ' class="active"' : '' ?>>
           <?= htmlspecialchars($navPage['nav_label'] ?: $navPage['title']) ?>
         </a>
       <?php endforeach; ?>
@@ -93,7 +102,7 @@ $gsBaseUrl = '/gravityseries';
   <a href="<?= $gsBaseUrl ?>/"<?= $gsActiveNav === 'start' ? ' class="active"' : '' ?>>Start</a>
   <a href="<?= $gsBaseUrl ?>/#serier"<?= $gsActiveNav === 'serier' ? ' class="active"' : '' ?>>Serier</a>
   <?php foreach ($gsNavPages as $navPage): ?>
-    <a href="<?= $gsBaseUrl ?>/sida.php?slug=<?= htmlspecialchars($navPage['slug']) ?>"<?= $gsCurrentSlug === $navPage['slug'] ? ' class="active"' : '' ?>>
+    <a href="<?= $gsBaseUrl ?>/<?= htmlspecialchars($navPage['slug']) ?>"<?= $gsCurrentSlug === $navPage['slug'] ? ' class="active"' : '' ?>>
       <?= htmlspecialchars($navPage['nav_label'] ?: $navPage['title']) ?>
     </a>
   <?php endforeach; ?>
