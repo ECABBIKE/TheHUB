@@ -468,13 +468,7 @@ $pageTitle = $festival['name'];
                                     <span class="festival-item-type"><?= $gTypeInfo['label'] ?></span>
                                     <span class="festival-group-count"><?= $gActCount ?> aktivitet<?= $gActCount !== 1 ? 'er' : '' ?></span>
                                     <?php if ($g['instructor_name']): ?>
-                                    <span><i data-lucide="user" style="width: 12px; height: 12px;"></i>
-                                    <?php if (!empty($g['instructor_rider_id'])): ?>
-                                        <a href="/rider/<?= intval($g['instructor_rider_id']) ?>" class="rider-link"><?= htmlspecialchars($g['instructor_name']) ?></a>
-                                    <?php else: ?>
-                                        <?= htmlspecialchars($g['instructor_name']) ?>
-                                    <?php endif; ?>
-                                    </span>
+                                    <span><i data-lucide="user" style="width: 12px; height: 12px;"></i> <?= htmlspecialchars($g['instructor_name']) ?></span>
                                     <?php endif; ?>
                                     <?php if ($gRegCount > 0): ?>
                                     <span><i data-lucide="users" style="width: 12px; height: 12px;"></i> <?= $gRegCount ?> anmälda</span>
@@ -512,13 +506,7 @@ $pageTitle = $festival['name'];
                                     <?php endif; ?>
                                     <span class="festival-item-type"><?= $typeInfo['label'] ?></span>
                                     <?php if ($a['instructor_name']): ?>
-                                    <span><i data-lucide="user" style="width: 12px; height: 12px;"></i>
-                                    <?php if (!empty($a['instructor_rider_id'])): ?>
-                                        <a href="/rider/<?= intval($a['instructor_rider_id']) ?>" class="rider-link"><?= htmlspecialchars($a['instructor_name']) ?></a>
-                                    <?php else: ?>
-                                        <?= htmlspecialchars($a['instructor_name']) ?>
-                                    <?php endif; ?>
-                                    </span>
+                                    <span><i data-lucide="user" style="width: 12px; height: 12px;"></i> <?= htmlspecialchars($a['instructor_name']) ?></span>
                                     <?php endif; ?>
                                     <?php if (!empty($activitySlotCounts[$a['id']])): ?>
                                     <span style="color: var(--color-accent);"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> <?= $activitySlotCounts[$a['id']] ?> tidspass</span>
