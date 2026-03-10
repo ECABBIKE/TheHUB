@@ -453,7 +453,7 @@ $pageTitle = $festival['name'];
                             $gActCount = (int)($g['activity_count'] ?? 0);
                             $gRegCount = (int)($g['total_reg_count'] ?? 0);
                         ?>
-                        <a href="/festival/<?= $festivalId ?>/activity/<?= $g['id'] ?>" class="festival-item festival-item--group">
+                        <a href="/festival/<?= $festivalId ?>/activity/<?= $g['id'] ?>" class="festival-item festival-item--group" style="border-left-color: <?= $gTypeInfo['color'] ?>;">
                             <div class="festival-item-icon" style="background: <?= $gTypeInfo['color'] ?>20; color: <?= $gTypeInfo['color'] ?>;">
                                 <i data-lucide="<?= $gTypeInfo['icon'] ?>"></i>
                             </div>
@@ -494,7 +494,7 @@ $pageTitle = $festival['name'];
                             $typeInfo = $actTypes[$a['activity_type']] ?? $actTypes['other'];
                             $spotsFull = $a['max_participants'] && $a['reg_count'] >= $a['max_participants'];
                         ?>
-                        <a href="/festival/<?= $festivalId ?>/aktivitet/<?= $a['id'] ?>" class="festival-item festival-item--activity">
+                        <a href="/festival/<?= $festivalId ?>/aktivitet/<?= $a['id'] ?>" class="festival-item festival-item--activity" style="border-left: 3px solid <?= $typeInfo['color'] ?>;">
                             <div class="festival-item-icon" style="background: <?= $typeInfo['color'] ?>20; color: <?= $typeInfo['color'] ?>;">
                                 <i data-lucide="<?= $typeInfo['icon'] ?>"></i>
                             </div>

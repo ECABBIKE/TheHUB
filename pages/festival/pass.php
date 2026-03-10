@@ -399,7 +399,7 @@ $pageTitle = $passName . ' — ' . $festival['name'];
                 <?php for ($autoIdx = 0; $autoIdx < $iaPassCount; $autoIdx++): ?>
                 <input type="hidden" class="pass-activity-auto" data-activity-id="<?= $ia['id'] ?>" data-activity-name="<?= htmlspecialchars($ia['name']) ?>" value="1">
                 <?php endfor; ?>
-                <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: var(--space-2xs); padding-left: 30px;">
+                <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: var(--space-2xs); ">
                     <?= $iaPassCount > 1 ? $iaPassCount . ' tillfällen ingår' : 'Ingår automatiskt' ?>
                 </div>
                 <?php endif; ?>
@@ -558,7 +558,7 @@ $pageTitle = $passName . ' — ' . $festival['name'];
                 <?php for ($autoIdx = 0; $autoIdx < $ppPassCount; $autoIdx++): ?>
                 <input type="hidden" class="pass-product-auto" data-product-id="<?= $pp['id'] ?>" data-product-name="<?= htmlspecialchars($pp['name']) ?>" value="1">
                 <?php endfor; ?>
-                <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: var(--space-2xs); padding-left: 30px;">
+                <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: var(--space-2xs); ">
                     <?= $ppPassCount > 1 ? $ppPassCount . ' st ingår' : 'Ingår automatiskt' ?>
                 </div>
                 <?php endif; ?>
@@ -638,7 +638,6 @@ $pageTitle = $passName . ' — ' . $festival['name'];
 .pass-booking-item-config {
     margin-top: var(--space-sm);
     padding-top: var(--space-sm);
-    padding-left: 30px;
     border-top: 1px solid var(--color-border);
 }
 @media (max-width: 767px) {
