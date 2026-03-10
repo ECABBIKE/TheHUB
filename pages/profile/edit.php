@@ -169,8 +169,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Get active clubs for dropdown
-$clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+// Get current user's club name (if any) — no need to load all clubs since we use typeahead search
+$currentClubName = '';
+if (!empty($currentUser['club_id'])) {
+    $clubStmt = $pdo->prepare("SELECT name FROM clubs WHERE id = ?");
+    $clubStmt->execute([$currentUser['club_id']]);
+    $currentClubName = $clubStmt->fetchColumn() ?: '';
+}
 ?>
 
 <div class="page-header">
@@ -364,29 +369,29 @@ $clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name"
         <h2>Klubb</h2>
 
         <div class="form-group">
-            <label for="club_id">Cykelklubb</label>
+            <label for="club_search">Cykelklubb</label>
             <?php if (!empty($currentUser['club_id'])): ?>
-            <?php
-                $currentClubName = '';
-                foreach ($clubs as $club) {
-                    if ($club['id'] == $currentUser['club_id']) {
-                        $currentClubName = $club['name'];
-                        break;
-                    }
-                }
-            ?>
-            <input type="text" value="<?= htmlspecialchars($currentClubName) ?>" readonly disabled class="input-disabled">
-            <input type="hidden" name="club_id" value="<?= $currentUser['club_id'] ?>">
-            <small class="form-help">Klubb kan inte ändras. Kontakta admin vid behov.</small>
+            <div style="display: flex; align-items: center; gap: var(--space-xs);">
+                <input type="text" value="<?= htmlspecialchars($currentClubName) ?>" readonly disabled class="input-disabled" style="flex: 1;">
+                <button type="button" onclick="enableClubChange()" class="btn btn-ghost" style="white-space: nowrap; font-size: var(--text-sm);">
+                    <i data-lucide="pencil" style="width: 14px; height: 14px;"></i> Byt
+                </button>
+            </div>
+            <input type="hidden" name="club_id" id="club_id" value="<?= $currentUser['club_id'] ?>">
+            <div id="clubSearchWrapper" style="display: none; margin-top: var(--space-xs);">
+                <div style="position: relative;">
+                    <input type="text" id="club_search" placeholder="Sök klubb..." autocomplete="off" style="width: 100;">
+                    <div id="clubSearchResults" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 100; background: var(--color-bg-card); border: 1px solid var(--color-border); border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); max-height: 200px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3);"></div>
+                </div>
+                <small class="form-help">Skriv minst 2 tecken för att söka. <a href="#" onclick="cancelClubChange(); return false;">Avbryt</a></small>
+            </div>
             <?php else: ?>
-            <select id="club_id" name="club_id">
-                <option value="">Ingen klubb</option>
-                <?php foreach ($clubs as $club): ?>
-                    <option value="<?= $club['id'] ?>">
-                        <?= htmlspecialchars($club['name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+            <div style="position: relative;">
+                <input type="text" id="club_search" placeholder="Sök klubb..." autocomplete="off">
+                <input type="hidden" name="club_id" id="club_id" value="">
+                <div id="clubSearchResults" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 100; background: var(--color-bg-card); border: 1px solid var(--color-border); border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); max-height: 200px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3);"></div>
+            </div>
+            <small class="form-help">Lämna tomt om du inte tillhör någon klubb.</small>
             <?php endif; ?>
         </div>
     </div>
@@ -1191,6 +1196,77 @@ function escH(s) {
     var d = document.createElement('div');
     d.textContent = s;
     return d.innerHTML;
+}
+
+// Club typeahead search
+(function() {
+    const clubInput = document.getElementById('club_search');
+    const clubIdInput = document.getElementById('club_id');
+    const clubResults = document.getElementById('clubSearchResults');
+    if (!clubInput || !clubResults) return;
+
+    let clubTimer = null;
+
+    clubInput.addEventListener('input', function() {
+        clearTimeout(clubTimer);
+        const q = this.value.trim();
+        if (q.length < 2) {
+            clubResults.style.display = 'none';
+            return;
+        }
+        clubTimer = setTimeout(async () => {
+            try {
+                const resp = await fetch('/api/search.php?q=' + encodeURIComponent(q) + '&type=clubs&limit=10');
+                const data = await resp.json();
+                const items = data.results || [];
+                if (items.length > 0) {
+                    clubResults.innerHTML = items.map(c =>
+                        '<div style="padding: var(--space-sm) var(--space-md); cursor: pointer; font-size: 0.9rem; border-bottom: 1px solid var(--color-border);"' +
+                        ' onmouseover="this.style.background=\'var(--color-bg-hover)\'" onmouseout="this.style.background=\'none\'"' +
+                        ' data-club-id="' + c.id + '" data-club-name="' + (c.name || '').replace(/"/g, '&quot;') + '">' +
+                        '<strong>' + escH(c.name) + '</strong>' +
+                        (c.member_count ? ' <span style="color: var(--color-text-muted); font-size: 0.8rem;">(' + c.member_count + ' medlemmar)</span>' : '') +
+                        '</div>'
+                    ).join('');
+                    clubResults.style.display = 'block';
+                    clubResults.querySelectorAll('[data-club-id]').forEach(el => {
+                        el.addEventListener('click', function() {
+                            clubInput.value = this.dataset.clubName;
+                            clubIdInput.value = this.dataset.clubId;
+                            clubResults.style.display = 'none';
+                        });
+                    });
+                } else {
+                    clubResults.innerHTML = '<div style="padding: var(--space-sm) var(--space-md); color: var(--color-text-muted); font-size: 0.875rem;">Ingen klubb hittades</div>';
+                    clubResults.style.display = 'block';
+                }
+            } catch(e) { clubResults.style.display = 'none'; }
+        }, 300);
+    });
+
+    clubInput.addEventListener('keydown', function() {
+        if (clubIdInput.value) clubIdInput.value = '';
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!clubInput.contains(e.target) && !clubResults.contains(e.target)) {
+            clubResults.style.display = 'none';
+        }
+    });
+})();
+
+function enableClubChange() {
+    const wrapper = document.getElementById('clubSearchWrapper');
+    if (wrapper) {
+        wrapper.style.display = 'block';
+        const input = document.getElementById('club_search');
+        if (input) input.focus();
+    }
+}
+
+function cancelClubChange() {
+    const wrapper = document.getElementById('clubSearchWrapper');
+    if (wrapper) wrapper.style.display = 'none';
 }
 </script>
 
