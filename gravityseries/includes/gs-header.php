@@ -82,7 +82,8 @@ if (function_exists('hub_is_logged_in') && hub_is_logged_in()) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="<?= $gsBaseUrl ?>/assets/css/gs-site.css">
+<?php $_gsCssPath = __DIR__ . '/../assets/css/gs-site.css'; $_gsCssVer = file_exists($_gsCssPath) ? filemtime($_gsCssPath) : time(); ?>
+<link rel="stylesheet" href="<?= $gsBaseUrl ?>/assets/css/gs-site.css?v=<?= $_gsCssVer ?>">
 </head>
 <body>
 
