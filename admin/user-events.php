@@ -78,6 +78,60 @@ function syncPaymentRecipientForPromotor($db, $promotorUserId) {
     }
 }
 
+// Handle: auto-create payment recipient from promotor's self-service data
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'create_recipient_from_promotor') {
+    checkCsrf();
+    try {
+        // Check if columns exist
+        $colCheck = $db->getAll("SHOW COLUMNS FROM admin_users LIKE 'swish_number'");
+        if (!empty($colCheck)) {
+            $pData = $db->getRow("
+                SELECT full_name, email, org_number, contact_phone,
+                       swish_number, swish_name, bankgiro, plusgiro,
+                       bank_account, bank_name, bank_clearing
+                FROM admin_users WHERE id = ?
+            ", [$id]);
+
+            if ($pData) {
+                $gatewayType = 'swish';
+                if (empty($pData['swish_number']) && (!empty($pData['bankgiro']) || !empty($pData['plusgiro']) || !empty($pData['bank_account']))) {
+                    $gatewayType = 'bank';
+                }
+
+                $recipientData = [
+                    'name' => $pData['full_name'] ?: ($user['full_name'] ?: $user['username']),
+                    'org_number' => $pData['org_number'] ?: null,
+                    'contact_email' => $pData['email'] ?: null,
+                    'contact_phone' => $pData['contact_phone'] ?: null,
+                    'swish_number' => $pData['swish_number'] ?: '',
+                    'swish_name' => $pData['swish_name'] ?: '',
+                    'gateway_type' => $gatewayType,
+                    'bankgiro' => $pData['bankgiro'] ?: null,
+                    'plusgiro' => $pData['plusgiro'] ?: null,
+                    'bank_account' => $pData['bank_account'] ?: null,
+                    'bank_name' => $pData['bank_name'] ?: null,
+                    'bank_clearing' => $pData['bank_clearing'] ?: null,
+                    'platform_fee_type' => 'percent',
+                    'platform_fee_percent' => 2.00,
+                    'platform_fee_fixed' => 0,
+                    'admin_user_id' => $id,
+                    'active' => 1
+                ];
+
+                $newRecId = $db->insert('payment_recipients', $recipientData);
+                if ($newRecId) {
+                    syncPaymentRecipientForPromotor($db, $id);
+                    $message = 'Betalningsmottagare skapad från promotorns uppgifter!';
+                    $messageType = 'success';
+                }
+            }
+        }
+    } catch (Exception $e) {
+        $message = 'Kunde inte skapa betalningsmottagare: ' . $e->getMessage();
+        $messageType = 'error';
+    }
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
@@ -324,6 +378,65 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="alert alert--<?= $messageType === 'error' ? 'error' : ($messageType === 'success' ? 'success' : 'info') ?> mb-lg">
     <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
     <?= h($message) ?>
+</div>
+<?php endif; ?>
+
+<?php
+// Check payment recipient status
+$hasRecipient = false;
+$hasPaymentData = false;
+try {
+    $existingRecipient = $db->getRow("SELECT id, name FROM payment_recipients WHERE admin_user_id = ? AND active = 1 LIMIT 1", [$id]);
+    $hasRecipient = !empty($existingRecipient);
+
+    if (!$hasRecipient) {
+        $colCheck = $db->getAll("SHOW COLUMNS FROM admin_users LIKE 'swish_number'");
+        if (!empty($colCheck)) {
+            $pd = $db->getRow("SELECT swish_number, bankgiro, plusgiro, bank_account FROM admin_users WHERE id = ?", [$id]);
+            $hasPaymentData = !empty($pd['swish_number']) || !empty($pd['bankgiro']) || !empty($pd['plusgiro']) || !empty($pd['bank_account']);
+        }
+    }
+} catch (Exception $e) {}
+?>
+
+<?php if ($hasRecipient): ?>
+<div class="admin-card" style="margin-bottom:var(--space-lg);">
+    <div class="admin-card-body" style="display:flex;align-items:center;gap:var(--space-md);padding:var(--space-md) var(--space-lg);">
+        <i data-lucide="check-circle" style="width:20px;height:20px;color:var(--color-success);flex-shrink:0;"></i>
+        <div style="flex:1;">
+            <strong>Betalningsmottagare:</strong> <?= h($existingRecipient['name']) ?>
+        </div>
+        <a href="/admin/payment-recipients.php?edit=<?= $existingRecipient['id'] ?>" class="btn btn-ghost" style="flex-shrink:0;">
+            <i data-lucide="pencil" style="width:14px;height:14px;"></i> Redigera
+        </a>
+    </div>
+</div>
+<?php elseif ($hasPaymentData): ?>
+<div class="admin-card" style="margin-bottom:var(--space-lg);border-color:var(--color-accent);">
+    <div class="admin-card-body" style="display:flex;align-items:center;gap:var(--space-md);padding:var(--space-md) var(--space-lg);flex-wrap:wrap;">
+        <i data-lucide="credit-card" style="width:20px;height:20px;color:var(--color-accent);flex-shrink:0;"></i>
+        <div style="flex:1;min-width:200px;">
+            <strong>Promotorn har fyllt i betalningsuppgifter</strong>
+            <div style="color:var(--color-text-secondary);font-size:var(--text-sm);">Ingen betalningsmottagare kopplad ännu</div>
+        </div>
+        <form method="POST" style="flex-shrink:0;">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="create_recipient_from_promotor">
+            <button type="submit" class="btn btn-primary">
+                <i data-lucide="plus" style="width:14px;height:14px;"></i> Skapa betalningsmottagare
+            </button>
+        </form>
+    </div>
+</div>
+<?php else: ?>
+<div class="admin-card" style="margin-bottom:var(--space-lg);">
+    <div class="admin-card-body" style="display:flex;align-items:center;gap:var(--space-md);padding:var(--space-md) var(--space-lg);">
+        <i data-lucide="alert-triangle" style="width:20px;height:20px;color:var(--color-warning);flex-shrink:0;"></i>
+        <div>
+            <strong>Ingen betalningsmottagare kopplad</strong>
+            <div style="color:var(--color-text-secondary);font-size:var(--text-sm);">Promotorn har inte fyllt i betalningsuppgifter ännu. Be dem göra det under Betalning-fliken.</div>
+        </div>
+    </div>
 </div>
 <?php endif; ?>
 

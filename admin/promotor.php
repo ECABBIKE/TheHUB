@@ -49,6 +49,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $isAdmin
 }
 
 // ============================================================
+// PROMOTOR: Save payment details (self-service)
+// ============================================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isAdmin && isset($_POST['action']) && $_POST['action'] === 'save_payment_details') {
+    checkCsrf();
+    $paymentMsg = '';
+    $paymentErr = '';
+
+    // Check if columns exist
+    $hasPaymentCols = false;
+    try {
+        $colCheck = $db->getAll("SHOW COLUMNS FROM admin_users LIKE 'swish_number'");
+        $hasPaymentCols = !empty($colCheck);
+    } catch (Exception $e) {}
+
+    if ($hasPaymentCols) {
+        try {
+            $db->execute("
+                UPDATE admin_users SET
+                    org_number = ?,
+                    contact_phone = ?,
+                    swish_number = ?,
+                    swish_name = ?,
+                    bankgiro = ?,
+                    plusgiro = ?,
+                    bank_account = ?,
+                    bank_name = ?,
+                    bank_clearing = ?
+                WHERE id = ?
+            ", [
+                trim($_POST['org_number'] ?? '') ?: null,
+                trim($_POST['contact_phone'] ?? '') ?: null,
+                trim($_POST['swish_number'] ?? '') ?: null,
+                trim($_POST['swish_name'] ?? '') ?: null,
+                trim($_POST['bankgiro'] ?? '') ?: null,
+                trim($_POST['plusgiro'] ?? '') ?: null,
+                trim($_POST['bank_account'] ?? '') ?: null,
+                trim($_POST['bank_name'] ?? '') ?: null,
+                trim($_POST['bank_clearing'] ?? '') ?: null,
+                $userId
+            ]);
+
+            // Also save settlement_frequency preference on linked payment_recipient if exists
+            $settlementFreq = $_POST['settlement_frequency'] ?? 'monthly';
+            if (in_array($settlementFreq, ['monthly', 'after_close'])) {
+                try {
+                    $db->execute("
+                        UPDATE payment_recipients SET settlement_frequency = ?
+                        WHERE admin_user_id = ?
+                    ", [$settlementFreq, $userId]);
+                } catch (Exception $e) {
+                    // Column might not exist yet
+                }
+            }
+
+            set_flash('success', 'Betalningsuppgifter sparade');
+        } catch (Exception $e) {
+            set_flash('error', 'Kunde inte spara: ' . $e->getMessage());
+        }
+    } else {
+        set_flash('error', 'Kör migration 095 först');
+    }
+
+    header('Location: /admin/promotor.php?tab=betalning');
+    exit;
+}
+
+// ============================================================
 // HELPER: Split series orders into per-event rows
 // ============================================================
 require_once __DIR__ . '/../includes/economy-helpers.php';
@@ -1470,6 +1537,9 @@ function cancelFeeEdit(recipientId, originalText) {
     <a href="?tab=media" class="promotor-tab <?= $promotorTab === 'media' ? 'active' : '' ?>">
         <i data-lucide="image"></i> Media
     </a>
+    <a href="?tab=betalning" class="promotor-tab <?= $promotorTab === 'betalning' ? 'active' : '' ?>">
+        <i data-lucide="credit-card"></i> Betalning
+    </a>
     <a href="/admin/promotor-guide.php" class="promotor-tab promotor-tab--guide" title="Arrangörsguide">
         <i data-lucide="book-open"></i> <span class="guide-label">Guide</span>
     </a>
@@ -1913,6 +1983,189 @@ function cancelFeeEdit(recipientId, originalText) {
         </div>
     </div>
 </div>
+
+<?php elseif ($promotorTab === 'betalning'): ?>
+<!-- =============== BETALNING TAB =============== -->
+<?php
+// Load promotor's payment details
+$paymentData = [];
+$hasPaymentCols = false;
+try {
+    $colCheck = $db->getAll("SHOW COLUMNS FROM admin_users LIKE 'swish_number'");
+    $hasPaymentCols = !empty($colCheck);
+} catch (Exception $e) {}
+
+if ($hasPaymentCols) {
+    $paymentData = $db->getRow("
+        SELECT org_number, contact_phone, swish_number, swish_name,
+               bankgiro, plusgiro, bank_account, bank_name, bank_clearing
+        FROM admin_users WHERE id = ?
+    ", [$userId]) ?: [];
+}
+
+// Check linked payment recipient for settlement_frequency
+$linkedRecipient = null;
+try {
+    $linkedRecipient = $db->getRow("
+        SELECT id, name, settlement_frequency, active
+        FROM payment_recipients WHERE admin_user_id = ?
+    ", [$userId]);
+} catch (Exception $e) {}
+
+$settlementFreq = $linkedRecipient['settlement_frequency'] ?? 'monthly';
+
+// Check if payment info is complete
+$hasSwish = !empty($paymentData['swish_number']);
+$hasBank = !empty($paymentData['bankgiro']) || !empty($paymentData['plusgiro']) || !empty($paymentData['bank_account']);
+$isComplete = $hasSwish || $hasBank;
+?>
+
+<?php if ($linkedRecipient): ?>
+<div class="admin-card" style="margin-bottom:var(--space-lg);">
+    <div class="admin-card-body" style="display:flex;align-items:center;gap:var(--space-md);padding:var(--space-md) var(--space-lg);">
+        <i data-lucide="check-circle" style="width:20px;height:20px;color:var(--color-success);flex-shrink:0;"></i>
+        <div>
+            <strong>Kopplad som betalningsmottagare:</strong> <?= h($linkedRecipient['name']) ?>
+            <?php if ($linkedRecipient['active']): ?>
+                <span class="badge badge-success" style="margin-left:var(--space-xs);">Aktiv</span>
+            <?php else: ?>
+                <span class="badge badge-warning" style="margin-left:var(--space-xs);">Inaktiv</span>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php elseif ($isComplete): ?>
+<div class="admin-card" style="margin-bottom:var(--space-lg);">
+    <div class="admin-card-body" style="display:flex;align-items:center;gap:var(--space-md);padding:var(--space-md) var(--space-lg);">
+        <i data-lucide="info" style="width:20px;height:20px;color:var(--color-info);flex-shrink:0;"></i>
+        <div>
+            <strong>Dina betalningsuppgifter är ifyllda.</strong>
+            <span style="color:var(--color-text-secondary);">Kontakta administratören för att koppla dig som betalningsmottagare.</span>
+        </div>
+    </div>
+</div>
+<?php else: ?>
+<div class="admin-card" style="margin-bottom:var(--space-lg);">
+    <div class="admin-card-body" style="display:flex;align-items:center;gap:var(--space-md);padding:var(--space-md) var(--space-lg);">
+        <i data-lucide="alert-triangle" style="width:20px;height:20px;color:var(--color-warning);flex-shrink:0;"></i>
+        <div>
+            <strong>Betalningsuppgifter saknas.</strong>
+            <span style="color:var(--color-text-secondary);">Fyll i dina uppgifter nedan så att du kan ta emot utbetalningar.</span>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<form method="POST" action="/admin/promotor.php?tab=betalning">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="save_payment_details">
+
+    <div class="admin-card" style="margin-bottom:var(--space-lg);">
+        <div class="admin-card-header"><h2>Organisation</h2></div>
+        <div class="admin-card-body">
+            <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);">
+                <div class="form-group">
+                    <label class="form-label">Organisationsnummer</label>
+                    <input type="text" name="org_number" class="form-input" placeholder="XXXXXX-XXXX"
+                           value="<?= h($paymentData['org_number'] ?? '') ?>">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kontakttelefon</label>
+                    <input type="tel" name="contact_phone" class="form-input" placeholder="070-XXX XX XX"
+                           value="<?= h($paymentData['contact_phone'] ?? '') ?>">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-card" style="margin-bottom:var(--space-lg);">
+        <div class="admin-card-header"><h2>Swish</h2></div>
+        <div class="admin-card-body">
+            <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);">
+                <div class="form-group">
+                    <label class="form-label">Swish-nummer</label>
+                    <input type="text" name="swish_number" class="form-input" placeholder="123 XXX XX XX"
+                           value="<?= h($paymentData['swish_number'] ?? '') ?>">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Swish-namn (visas för betalare)</label>
+                    <input type="text" name="swish_name" class="form-input" placeholder="Klubbnamn / Företagsnamn"
+                           value="<?= h($paymentData['swish_name'] ?? '') ?>">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-card" style="margin-bottom:var(--space-lg);">
+        <div class="admin-card-header"><h2>Bankuppgifter</h2></div>
+        <div class="admin-card-body">
+            <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);">
+                <div class="form-group">
+                    <label class="form-label">Bankgiro</label>
+                    <input type="text" name="bankgiro" class="form-input" placeholder="XXXX-XXXX"
+                           value="<?= h($paymentData['bankgiro'] ?? '') ?>">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Plusgiro</label>
+                    <input type="text" name="plusgiro" class="form-input" placeholder="XXXX XX-X"
+                           value="<?= h($paymentData['plusgiro'] ?? '') ?>">
+                </div>
+            </div>
+            <div class="form-row" style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:var(--space-md);margin-top:var(--space-md);">
+                <div class="form-group">
+                    <label class="form-label">Banknamn</label>
+                    <input type="text" name="bank_name" class="form-input" placeholder="T.ex. Nordea, Handelsbanken"
+                           value="<?= h($paymentData['bank_name'] ?? '') ?>">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Clearingnummer</label>
+                    <input type="text" name="bank_clearing" class="form-input" placeholder="XXXX"
+                           value="<?= h($paymentData['bank_clearing'] ?? '') ?>">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kontonummer</label>
+                    <input type="text" name="bank_account" class="form-input" placeholder="XXX XXX XXX"
+                           value="<?= h($paymentData['bank_account'] ?? '') ?>">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-card" style="margin-bottom:var(--space-lg);">
+        <div class="admin-card-header"><h2>Avräkning</h2></div>
+        <div class="admin-card-body">
+            <p style="color:var(--color-text-secondary);margin-bottom:var(--space-md);">Välj hur ofta du vill få avräkning och utbetalning.</p>
+            <div style="display:flex;flex-direction:column;gap:var(--space-sm);">
+                <label style="display:flex;align-items:center;gap:var(--space-sm);cursor:pointer;padding:var(--space-sm) var(--space-md);border:1px solid var(--color-border);border-radius:var(--radius-md);<?= $settlementFreq === 'monthly' ? 'border-color:var(--color-accent);background:var(--color-accent-light);' : '' ?>">
+                    <input type="radio" name="settlement_frequency" value="monthly" <?= $settlementFreq === 'monthly' ? 'checked' : '' ?>>
+                    <div>
+                        <strong>Månadsvis</strong>
+                        <div style="color:var(--color-text-secondary);font-size:var(--text-sm);">Avräkning 1:e varje månad</div>
+                    </div>
+                </label>
+                <label style="display:flex;align-items:center;gap:var(--space-sm);cursor:pointer;padding:var(--space-sm) var(--space-md);border:1px solid var(--color-border);border-radius:var(--radius-md);<?= $settlementFreq === 'after_close' ? 'border-color:var(--color-accent);background:var(--color-accent-light);' : '' ?>">
+                    <input type="radio" name="settlement_frequency" value="after_close" <?= $settlementFreq === 'after_close' ? 'checked' : '' ?>>
+                    <div>
+                        <strong>Efter stängd anmälan</strong>
+                        <div style="color:var(--color-text-secondary);font-size:var(--text-sm);">Avräkning görs efter att anmälningsperioden stängt för varje event</div>
+                    </div>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:var(--space-md);">
+        <button type="submit" class="btn btn-primary">
+            <i data-lucide="save"></i> Spara betalningsuppgifter
+        </button>
+    </div>
+</form>
+
+<style>
+@media(max-width:767px) {
+    .form-row { grid-template-columns: 1fr !important; }
+}
+</style>
 
 <?php endif; // end promotor tabs ?>
 

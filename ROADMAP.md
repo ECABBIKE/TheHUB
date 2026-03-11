@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-03-10
+> Senast uppdaterad: 2026-03-11
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -11,7 +11,7 @@
 | Omrade | Status | Beskrivning | Progress |
 |--------|--------|-------------|----------|
 | Analytics Platform | KLAR | Statistik, KPI:er, trender, rapporter | 100% |
-| Betalningssystem | KLAR | Stripe (single account, kort), ordrar, checkout. Swedbank Pay planerat. | 100% |
+| Betalningssystem | KLAR | Stripe (single account, kort), ordrar, checkout, self-service betalningsuppgifter, avräkningsfrekvens. Swedbank Pay planerat. | 100% |
 | Event Ratings | KLAR | Deltagarfeedback pa events | 100% |
 | Win-Back System | KLAR | Aterengagera churnade deltagare | 100% |
 | Klubb RF-Registrering | KLAR | SCF/NCF/DCU-synk och stavningskontroll | 100% |
@@ -116,6 +116,30 @@
 ---
 
 # CHANGELOG
+
+### 2026-03-11 (Betalningsmottagare: Self-service + avräkningsfrekvens)
+- **Branch:** claude/review-license-api-XcPWX
+
+- **Ny funktion: Promotor self-service betalningsuppgifter**
+  - Ny "Betalning"-flik i promotor-panelen med org.nr, Swish, bankuppgifter
+  - Auto-fill i payment-recipients.php från promotorns data via AJAX
+  - Quick-create betalningsmottagare direkt från user-events.php
+
+- **Ny funktion: Avräkningsfrekvens**
+  - Betalningsmottagare väljer "Månadsvis" eller "Efter stängd anmälan"
+  - Visas som badge i settlements.php
+  - Dashboard-notis (amber) när avräkningar väntar
+
+- **Nya filer:**
+  - `Tools/migrations/095_payment_recipient_self_service.sql` - admin_users betalningskolumner + settlement_frequency
+
+- **Ändrade filer:**
+  - `admin/promotor.php` - Ny Betalning-flik + POST-handler
+  - `admin/payment-recipients.php` - AJAX auto-fill + settlement frequency
+  - `admin/user-events.php` - Quick-create recipient + statussektion
+  - `admin/settlements.php` - Settlement frequency badge
+  - `admin/dashboard.php` - Pending settlements notis
+  - `admin/migrations.php` - Migration 095 registrerad
 
 ### 2026-03-10 (GravitySeries: Standalone-sajt + Pages CMS)
 - **Branch:** claude/build-gravityseries-site-yzvTB

@@ -322,6 +322,9 @@ $migrationChecks = [
     '094_pages_and_gs_sponsors.sql' => [
         'tables' => ['pages', 'gs_sponsors']
     ],
+    '095_payment_recipient_self_service.sql' => [
+        'columns' => ['admin_users.org_number', 'admin_users.swish_number', 'payment_recipients.settlement_frequency']
+    ],
 ];
 
 // ============================================================================
