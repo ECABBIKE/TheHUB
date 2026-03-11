@@ -113,6 +113,37 @@ body {
 .hub-btn:hover { filter: brightness(1.08); background: var(--accent) !important; }
 .hub-btn svg { width: 14px; height: 14px; stroke: var(--ink); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 
+/* Header actions group (icons + TheHUB btn) */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.header-actions .hub-btn { margin-left: 8px; }
+.header-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  transition: color .15s, background .15s;
+  text-decoration: none;
+}
+.header-icon-btn:hover { color: var(--white); background: rgba(255,255,255,.1); }
+.header-icon-btn svg { width: 18px; height: 18px; }
+
+/* Mobile nav divider */
+.mobile-nav-divider {
+  height: 1px;
+  background: var(--rule);
+  margin: 8px 0;
+}
+.mobile-nav-menu .mobile-nav-icon { vertical-align: -3px; margin-right: 6px; }
+
 /* Mobile nav toggle */
 .nav-toggle {
   display: none;
@@ -802,7 +833,7 @@ body {
 @media (max-width: 900px) {
   .site-nav { display: none; }
   .nav-toggle { display: flex; }
-  .hub-btn { display: none; }
+  .header-actions { display: none; }
   .info-grid { grid-template-columns: 1fr; }
   .board-grid { grid-template-columns: 1fr; }
   .hub-cta-inner { grid-template-columns: 1fr; }
@@ -819,4 +850,49 @@ body {
   .page-content-wrap { padding: 40px 16px 60px; }
   .partners-list { gap: 24px; }
   .partners-list a { font-size: 22px; }
+}
+
+/* ─── Admin toolbar (only visible for admins) ─── */
+.gs-admin-bar {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.gs-admin-btn {
+  background: var(--accent, #61CE70);
+  color: var(--ink, #0a0f0d);
+  padding: 12px 18px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-family: var(--font-body, 'Barlow', sans-serif);
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.25);
+  transition: transform .15s, box-shadow .15s;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+.gs-admin-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0,0,0,.35);
+}
+.gs-admin-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+@media (max-width: 600px) {
+  .gs-admin-bar { bottom: 16px; right: 12px; flex-direction: column; }
+  .gs-admin-btn { padding: 10px 14px; font-size: 13px; }
 }
