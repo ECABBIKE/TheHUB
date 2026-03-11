@@ -9,7 +9,7 @@
  *   $gsNavPages    — Array of nav pages from DB (optional, auto-loaded)
  */
 
-// Load TheHUB config (gives us session, $pdo, hub_is_logged_in(), hub_current_user())
+// Database connection only — NO hub-config.php (it loads TinyMCE and other unwanted stuff)
 if (!isset($pdo)) {
     require_once __DIR__ . '/../../config.php';
     require_once __DIR__ . '/../../config/database.php';
@@ -25,10 +25,6 @@ if (!isset($pdo)) {
             die('Databasanslutning misslyckades.');
         }
     }
-}
-// Load hub-config for user functions
-if (!function_exists('hub_is_logged_in')) {
-    require_once __DIR__ . '/../../hub-config.php';
 }
 
 // Load nav pages from DB
@@ -53,7 +49,7 @@ $gsCurrentSlug = $gsCurrentSlug ?? '';
 // Determine base URL
 $gsBaseUrl = '/gravityseries';
 
-// Check user status
+// Check user status via session (no hub-config dependency)
 $gsIsAdmin = false;
 $gsIsLoggedIn = false;
 $gsUserName = '';
@@ -64,12 +60,10 @@ $_adminRole = $_SESSION['admin_role'] ?? '';
 if (in_array($_adminRole, ['admin', 'super_admin'], true)) {
     $gsIsAdmin = true;
 }
-if (function_exists('hub_is_logged_in') && hub_is_logged_in()) {
+// Check if rider is logged in via session variables
+if (!empty($_SESSION['hub_user_id']) || !empty($_SESSION['rider_id']) || !empty($_SESSION['admin_logged_in'])) {
     $gsIsLoggedIn = true;
-    if (function_exists('hub_current_user')) {
-        $gsUser = hub_current_user();
-        $gsUserName = ($gsUser['firstname'] ?? '') ?: ($_SESSION['hub_user_name'] ?? '');
-    }
+    $gsUserName = $_SESSION['hub_user_name'] ?? $_SESSION['rider_firstname'] ?? '';
 }
 ?>
 <!DOCTYPE html>
@@ -82,7 +76,8 @@ if (function_exists('hub_is_logged_in') && hub_is_logged_in()) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="<?= $gsBaseUrl ?>/assets/css/gs-site.css">
+<?php $_gsCssPath = __DIR__ . '/../assets/css/gs-site.css'; $_gsCssVer = file_exists($_gsCssPath) ? filemtime($_gsCssPath) : time(); ?>
+<link rel="stylesheet" href="<?= $gsBaseUrl ?>/assets/css/gs-site.css?v=<?= $_gsCssVer ?>">
 </head>
 <body>
 
@@ -105,16 +100,16 @@ if (function_exists('hub_is_logged_in') && hub_is_logged_in()) {
     <div class="header-actions">
       <?php if ($gsIsAdmin): ?>
         <a class="header-icon-btn" href="/admin/pages/" title="Hantera sidor">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         </a>
       <?php endif; ?>
       <?php if ($gsIsLoggedIn): ?>
         <a class="header-icon-btn" href="https://thehub.gravityseries.se/profile" title="Min profil">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </a>
         <?php if ($gsIsAdmin): ?>
           <a class="header-icon-btn" href="https://thehub.gravityseries.se/admin/dashboard.php" title="Admin">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </a>
         <?php endif; ?>
       <?php endif; ?>

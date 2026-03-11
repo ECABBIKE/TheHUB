@@ -343,7 +343,7 @@ include __DIR__ . '/../components/unified-layout.php';
 </div>
 
 <!-- TinyMCE -->
-<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+<script src="https://cdn.tiny.cloud/1/c596deswjoxxx0j9h1jw03pny7idcbcwtgowqh6jjgtn6xqk/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
 <script>
 tinymce.init({
   selector: '#tinymce-editor',
