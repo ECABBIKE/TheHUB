@@ -9,7 +9,7 @@
  *   $gsNavPages    — Array of nav pages from DB (optional, auto-loaded)
  */
 
-// Load TheHUB config (gives us session, $pdo, hub_is_logged_in(), hub_current_user())
+// Database connection only — NO hub-config.php (it loads TinyMCE and other unwanted stuff)
 if (!isset($pdo)) {
     require_once __DIR__ . '/../../config.php';
     require_once __DIR__ . '/../../config/database.php';
@@ -25,10 +25,6 @@ if (!isset($pdo)) {
             die('Databasanslutning misslyckades.');
         }
     }
-}
-// Load hub-config for user functions
-if (!function_exists('hub_is_logged_in')) {
-    require_once __DIR__ . '/../../hub-config.php';
 }
 
 // Load nav pages from DB
@@ -53,7 +49,7 @@ $gsCurrentSlug = $gsCurrentSlug ?? '';
 // Determine base URL
 $gsBaseUrl = '/gravityseries';
 
-// Check user status
+// Check user status via session (no hub-config dependency)
 $gsIsAdmin = false;
 $gsIsLoggedIn = false;
 $gsUserName = '';
@@ -64,12 +60,10 @@ $_adminRole = $_SESSION['admin_role'] ?? '';
 if (in_array($_adminRole, ['admin', 'super_admin'], true)) {
     $gsIsAdmin = true;
 }
-if (function_exists('hub_is_logged_in') && hub_is_logged_in()) {
+// Check if rider is logged in via session variables
+if (!empty($_SESSION['hub_user_id']) || !empty($_SESSION['rider_id']) || !empty($_SESSION['admin_logged_in'])) {
     $gsIsLoggedIn = true;
-    if (function_exists('hub_current_user')) {
-        $gsUser = hub_current_user();
-        $gsUserName = ($gsUser['firstname'] ?? '') ?: ($_SESSION['hub_user_name'] ?? '');
-    }
+    $gsUserName = $_SESSION['hub_user_name'] ?? $_SESSION['rider_firstname'] ?? '';
 }
 ?>
 <!DOCTYPE html>
