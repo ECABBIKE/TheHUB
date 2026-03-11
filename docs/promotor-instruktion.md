@@ -390,7 +390,9 @@ Under Ekonomi-fliken hittar du knappen **Betalningsuppgifter** bredvid "Hantera 
 
 | Sektion | Fält | Beskrivning |
 |---------|------|-------------|
-| **Organisation** | Organisationsnummer | Ditt org.nr (XXXXXX-XXXX) |
+| **Organisation** | Organisationsnummer | Ditt org.nr (XXXXXX-XXXX). Tryck **Sök** för att hämta företagsnamn och adress automatiskt via Bolagsverket |
+| **Organisation** | Företagsnamn | Hämtas automatiskt vid sökning, eller fyll i manuellt |
+| **Organisation** | Adress, Postnummer, Ort | Hämtas automatiskt vid sökning, eller fyll i manuellt |
 | **Organisation** | Kontakttelefon | Telefonnummer för ekonomifrågor |
 | **Swish** | Swish-nummer | Ditt Swish-nummer för utbetalningar |
 | **Swish** | Swish-namn | Namn som visas vid Swish-betalning |

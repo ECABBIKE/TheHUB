@@ -325,6 +325,9 @@ $migrationChecks = [
     '095_payment_recipient_self_service.sql' => [
         'columns' => ['admin_users.org_number', 'admin_users.swish_number', 'payment_recipients.settlement_frequency']
     ],
+    '096_org_company_fields.sql' => [
+        'columns' => ['admin_users.org_name', 'admin_users.org_address', 'payment_recipients.org_address']
+    ],
 ];
 
 // ============================================================================

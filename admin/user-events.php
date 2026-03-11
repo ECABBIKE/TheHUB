@@ -85,12 +85,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
         // Check if columns exist
         $colCheck = $db->getAll("SHOW COLUMNS FROM admin_users LIKE 'swish_number'");
         if (!empty($colCheck)) {
-            $pData = $db->getRow("
-                SELECT full_name, email, org_number, contact_phone,
+            // Check if org detail fields exist (migration 096)
+            $hasOrgName = false;
+            try {
+                $hasOrgName = !empty($db->getAll("SHOW COLUMNS FROM admin_users LIKE 'org_name'"));
+            } catch (Exception $e) {}
+
+            $cols = "full_name, email, org_number, contact_phone,
                        swish_number, swish_name, bankgiro, plusgiro,
-                       bank_account, bank_name, bank_clearing
-                FROM admin_users WHERE id = ?
-            ", [$id]);
+                       bank_account, bank_name, bank_clearing";
+            if ($hasOrgName) {
+                $cols .= ", org_name, org_address, org_postal_code, org_city";
+            }
+
+            $pData = $db->getRow("SELECT {$cols} FROM admin_users WHERE id = ?", [$id]);
 
             if ($pData) {
                 $gatewayType = 'swish';
@@ -99,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
                 }
 
                 $recipientData = [
-                    'name' => $pData['full_name'] ?: ($user['full_name'] ?: $user['username']),
+                    'name' => ($hasOrgName && !empty($pData['org_name'])) ? $pData['org_name'] : ($pData['full_name'] ?: ($user['full_name'] ?: $user['username'])),
                     'org_number' => $pData['org_number'] ?: null,
                     'contact_email' => $pData['email'] ?: null,
                     'contact_phone' => $pData['contact_phone'] ?: null,
@@ -117,6 +125,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
                     'admin_user_id' => $id,
                     'active' => 1
                 ];
+
+                // Add org detail fields if columns exist on payment_recipients
+                if ($hasOrgName) {
+                    try {
+                        $hasRecAddr = !empty($db->getAll("SHOW COLUMNS FROM payment_recipients LIKE 'org_address'"));
+                        if ($hasRecAddr) {
+                            $recipientData['org_address'] = $pData['org_address'] ?? null;
+                            $recipientData['org_postal_code'] = $pData['org_postal_code'] ?? null;
+                            $recipientData['org_city'] = $pData['org_city'] ?? null;
+                        }
+                    } catch (Exception $e) {}
+                }
 
                 $newRecId = $db->insert('payment_recipients', $recipientData);
                 if ($newRecId) {
