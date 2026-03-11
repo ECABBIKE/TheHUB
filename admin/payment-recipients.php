@@ -20,7 +20,7 @@ $db = getDB();
 function _syncRecipientToPromotorAssets($db, int $recipientId, int $adminUserId): void {
     try {
         // Set payment_recipient_id on events assigned to this promotor
-        $db->execute("
+        $db->query("
             UPDATE events e
             JOIN promotor_events pe ON pe.event_id = e.id
             SET e.payment_recipient_id = ?
@@ -28,7 +28,7 @@ function _syncRecipientToPromotorAssets($db, int $recipientId, int $adminUserId)
         ", [$recipientId, $adminUserId]);
 
         // Set payment_recipient_id on series assigned to this promotor
-        $db->execute("
+        $db->query("
             UPDATE series s
             JOIN promotor_series ps ON ps.series_id = s.id
             SET s.payment_recipient_id = ?
@@ -36,14 +36,14 @@ function _syncRecipientToPromotorAssets($db, int $recipientId, int $adminUserId)
         ", [$recipientId, $adminUserId]);
 
         // Also set on events in promotor's series (via series_events)
-        $db->execute("
+        $db->query("
             UPDATE events e
             JOIN series_events se ON se.event_id = e.id
             JOIN promotor_series ps ON ps.series_id = se.series_id
             SET e.payment_recipient_id = ?
             WHERE ps.user_id = ? AND (e.payment_recipient_id IS NULL OR e.payment_recipient_id = 0)
         ", [$recipientId, $adminUserId]);
-    } catch (Exception $e) {
+    } catch (\Throwable $e) {
         error_log("_syncRecipientToPromotorAssets error: " . $e->getMessage());
     }
 }
@@ -88,7 +88,10 @@ $message = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    checkCsrf();
+    try { checkCsrf(); } catch (\Throwable $e) {
+        error_log("payment-recipients CSRF error: " . $e->getMessage());
+        die('CSRF-fel: ' . htmlspecialchars($e->getMessage()));
+    }
     $action = $_POST['action'] ?? '';
 
     if ($action === 'create' || $action === 'update') {
@@ -153,8 +156,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $settlementFreq = $_POST['settlement_frequency'] ?? 'monthly';
             if (in_array($settlementFreq, ['monthly', 'after_close'])) {
                 try {
-                    $db->getAll("SHOW COLUMNS FROM payment_recipients LIKE 'settlement_frequency'");
-                    $data['settlement_frequency'] = $settlementFreq;
+                    $hasSettlement = !empty($db->getAll("SHOW COLUMNS FROM payment_recipients LIKE 'settlement_frequency'"));
+                    if ($hasSettlement) {
+                        $data['settlement_frequency'] = $settlementFreq;
+                    }
                 } catch (Exception $e) {}
             }
 
@@ -183,7 +188,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
+                error_log("payment-recipients save error: " . $e->getMessage());
                 $error = 'Fel: ' . $e->getMessage();
             }
         }
