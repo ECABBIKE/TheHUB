@@ -64,12 +64,15 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'promotor_payment_data' && isset($
         try {
             $colCheck = $db->getAll("SHOW COLUMNS FROM admin_users LIKE 'swish_number'");
             if (!empty($colCheck)) {
-                $row = $db->getRow("
-                    SELECT full_name, email, org_number, contact_phone,
-                           swish_number, swish_name, bankgiro, plusgiro,
-                           bank_account, bank_name, bank_clearing
-                    FROM admin_users WHERE id = ?
-                ", [$uid]);
+                $cols = 'full_name, email, org_number, contact_phone, swish_number, swish_name, bankgiro, plusgiro, bank_account, bank_name, bank_clearing';
+                // Include org detail fields if migration 096 has been run
+                try {
+                    $hasOrgName = !empty($db->getAll("SHOW COLUMNS FROM admin_users LIKE 'org_name'"));
+                    if ($hasOrgName) {
+                        $cols .= ', org_name, org_address, org_postal_code, org_city';
+                    }
+                } catch (Exception $e) {}
+                $row = $db->getRow("SELECT {$cols} FROM admin_users WHERE id = ?", [$uid]);
                 if ($row) {
                     $data = ['success' => true, 'data' => $row];
                 }
@@ -111,6 +114,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($name)) {
             $error = 'Namn är obligatoriskt';
         } else {
+            // Include org detail fields if migration 096 has been run
+            $orgAddress = trim($_POST['org_address'] ?? '');
+            $orgPostalCode = trim($_POST['org_postal_code'] ?? '');
+            $orgCity = trim($_POST['org_city'] ?? '');
+
             $data = [
                 'name' => $name,
                 'description' => $description,
@@ -130,6 +138,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'platform_fee_fixed' => $platformFeeFixed,
                 'active' => $active
             ];
+
+            // Add org detail fields if columns exist (migration 096)
+            try {
+                $hasOrgAddr = !empty($db->getAll("SHOW COLUMNS FROM payment_recipients LIKE 'org_address'"));
+                if ($hasOrgAddr) {
+                    $data['org_address'] = $orgAddress ?: null;
+                    $data['org_postal_code'] = $orgPostalCode ?: null;
+                    $data['org_city'] = $orgCity ?: null;
+                }
+            } catch (Exception $e) {}
 
             // Add settlement_frequency if column exists
             $settlementFreq = $_POST['settlement_frequency'] ?? 'monthly';
@@ -460,6 +478,7 @@ include __DIR__ . '/components/unified-layout.php';
 <?php
 $r = $editRecipient ?: [
     'id' => 0, 'name' => '', 'description' => '', 'org_number' => '',
+    'org_address' => '', 'org_postal_code' => '', 'org_city' => '',
     'contact_email' => '', 'contact_phone' => '',
     'swish_number' => '', 'swish_name' => '', 'gateway_type' => 'swish',
     'bankgiro' => '', 'plusgiro' => '', 'bank_account' => '', 'bank_name' => '', 'bank_clearing' => '',
@@ -485,11 +504,25 @@ $isNew = empty($editRecipient);
             <div class="form-grid-2">
                 <div class="form-group">
                     <label class="form-label">Namn *</label>
-                    <input type="text" name="name" class="form-input" value="<?= htmlspecialchars($r['name']) ?>" required>
+                    <input type="text" name="name" id="recipientName" class="form-input" value="<?= htmlspecialchars($r['name']) ?>" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Org.nummer</label>
-                    <input type="text" name="org_number" class="form-input" value="<?= htmlspecialchars($r['org_number'] ?? '') ?>" placeholder="XXXXXX-XXXX">
+                    <input type="text" name="org_number" id="recipientOrgNumber" class="form-input" value="<?= htmlspecialchars($r['org_number'] ?? '') ?>" placeholder="XXXXXX-XXXX">
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:var(--space-md);">
+                <div class="form-group">
+                    <label class="form-label">Adress</label>
+                    <input type="text" name="org_address" id="recipientOrgAddress" class="form-input" value="<?= htmlspecialchars($r['org_address'] ?? '') ?>" placeholder="Gatuadress">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Postnummer</label>
+                    <input type="text" name="org_postal_code" id="recipientOrgPostal" class="form-input" value="<?= htmlspecialchars($r['org_postal_code'] ?? '') ?>" placeholder="XXX XX">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ort</label>
+                    <input type="text" name="org_city" id="recipientOrgCity" class="form-input" value="<?= htmlspecialchars($r['org_city'] ?? '') ?>" placeholder="Ort">
                 </div>
             </div>
             <div class="form-group">
@@ -728,15 +761,21 @@ function autofillFromPromotor() {
                 'plusgiro': d.plusgiro,
                 'bank_account': d.bank_account,
                 'bank_name': d.bank_name,
-                'bank_clearing': d.bank_clearing
+                'bank_clearing': d.bank_clearing,
+                'org_address': d.org_address,
+                'org_postal_code': d.org_postal_code,
+                'org_city': d.org_city
             };
             for (var name in fields) {
                 var input = document.querySelector('input[name="' + name + '"]');
                 if (input && fields[name]) input.value = fields[name];
             }
-            // Auto-fill name if empty
+            // Auto-fill name from org_name or full_name
             var nameInput = document.querySelector('input[name="name"]');
-            if (nameInput && !nameInput.value && d.full_name) nameInput.value = d.full_name;
+            if (nameInput && !nameInput.value) {
+                if (d.org_name) nameInput.value = d.org_name;
+                else if (d.full_name) nameInput.value = d.full_name;
+            }
             // Auto-fill contact email
             var emailInput = document.querySelector('input[name="contact_email"]');
             if (emailInput && !emailInput.value && d.email) emailInput.value = d.email;

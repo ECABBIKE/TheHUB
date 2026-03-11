@@ -65,30 +65,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isAdmin && isset($_POST['action']
 
     if ($hasPaymentCols) {
         try {
+            // Build dynamic SET clause - only include columns that exist
+            $fields = [
+                'org_number' => trim($_POST['org_number'] ?? '') ?: null,
+                'contact_phone' => trim($_POST['contact_phone'] ?? '') ?: null,
+                'swish_number' => trim($_POST['swish_number'] ?? '') ?: null,
+                'swish_name' => trim($_POST['swish_name'] ?? '') ?: null,
+                'bankgiro' => trim($_POST['bankgiro'] ?? '') ?: null,
+                'plusgiro' => trim($_POST['plusgiro'] ?? '') ?: null,
+                'bank_account' => trim($_POST['bank_account'] ?? '') ?: null,
+                'bank_name' => trim($_POST['bank_name'] ?? '') ?: null,
+                'bank_clearing' => trim($_POST['bank_clearing'] ?? '') ?: null,
+            ];
+
+            // Add org detail fields if migration 096 has been run
+            $hasOrgName = !empty($db->getAll("SHOW COLUMNS FROM admin_users LIKE 'org_name'"));
+            if ($hasOrgName) {
+                $fields['org_name'] = trim($_POST['org_name'] ?? '') ?: null;
+                $fields['org_address'] = trim($_POST['org_address'] ?? '') ?: null;
+                $fields['org_postal_code'] = trim($_POST['org_postal_code'] ?? '') ?: null;
+                $fields['org_city'] = trim($_POST['org_city'] ?? '') ?: null;
+            }
+
+            $setClauses = [];
+            $params = [];
+            foreach ($fields as $col => $val) {
+                $setClauses[] = "{$col} = ?";
+                $params[] = $val;
+            }
+            $params[] = $userId;
+
             $db->execute("
-                UPDATE admin_users SET
-                    org_number = ?,
-                    contact_phone = ?,
-                    swish_number = ?,
-                    swish_name = ?,
-                    bankgiro = ?,
-                    plusgiro = ?,
-                    bank_account = ?,
-                    bank_name = ?,
-                    bank_clearing = ?
+                UPDATE admin_users SET " . implode(', ', $setClauses) . "
                 WHERE id = ?
-            ", [
-                trim($_POST['org_number'] ?? '') ?: null,
-                trim($_POST['contact_phone'] ?? '') ?: null,
-                trim($_POST['swish_number'] ?? '') ?: null,
-                trim($_POST['swish_name'] ?? '') ?: null,
-                trim($_POST['bankgiro'] ?? '') ?: null,
-                trim($_POST['plusgiro'] ?? '') ?: null,
-                trim($_POST['bank_account'] ?? '') ?: null,
-                trim($_POST['bank_name'] ?? '') ?: null,
-                trim($_POST['bank_clearing'] ?? '') ?: null,
-                $userId
-            ]);
+            ", $params);
 
             // Also save settlement_frequency preference on linked payment_recipient if exists
             $settlementFreq = $_POST['settlement_frequency'] ?? 'monthly';
@@ -1997,11 +2007,15 @@ try {
 } catch (Exception $e) {}
 
 if ($hasPaymentCols) {
-    $paymentData = $db->getRow("
-        SELECT org_number, contact_phone, swish_number, swish_name,
-               bankgiro, plusgiro, bank_account, bank_name, bank_clearing
-        FROM admin_users WHERE id = ?
-    ", [$userId]) ?: [];
+    // Build SELECT dynamically to include org detail fields if they exist
+    $selectCols = 'org_number, contact_phone, swish_number, swish_name, bankgiro, plusgiro, bank_account, bank_name, bank_clearing';
+    try {
+        $hasOrgName = !empty($db->getAll("SHOW COLUMNS FROM admin_users LIKE 'org_name'"));
+        if ($hasOrgName) {
+            $selectCols .= ', org_name, org_address, org_postal_code, org_city';
+        }
+    } catch (Exception $e) {}
+    $paymentData = $db->getRow("SELECT {$selectCols} FROM admin_users WHERE id = ?", [$userId]) ?: [];
 }
 
 // Check linked payment recipient for settlement_frequency
@@ -2064,17 +2078,43 @@ $isComplete = $hasSwish || $hasBank;
     <div class="admin-card" style="margin-bottom:var(--space-lg);">
         <div class="admin-card-header"><h2>Organisation</h2></div>
         <div class="admin-card-body">
-            <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);">
+            <div class="form-group">
+                <label class="form-label">Organisationsnummer</label>
+                <div style="display:flex;gap:var(--space-sm);">
+                    <input type="text" name="org_number" id="orgNumberInput" class="form-input" placeholder="XXXXXX-XXXX"
+                           value="<?= h($paymentData['org_number'] ?? '') ?>" style="flex:1;">
+                    <button type="button" id="orgLookupBtn" class="btn btn-secondary" onclick="lookupOrgNumber()" style="white-space:nowrap;">
+                        <i data-lucide="search"></i> Sök
+                    </button>
+                </div>
+                <div id="orgLookupStatus" style="margin-top:var(--space-xs);font-size:var(--text-sm);display:none;"></div>
+            </div>
+            <div class="form-group" style="margin-top:var(--space-md);">
+                <label class="form-label">Företagsnamn</label>
+                <input type="text" name="org_name" id="orgNameInput" class="form-input" placeholder="Fylls i automatiskt vid sökning"
+                       value="<?= h($paymentData['org_name'] ?? '') ?>">
+            </div>
+            <div class="form-row" style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:var(--space-md);margin-top:var(--space-md);">
                 <div class="form-group">
-                    <label class="form-label">Organisationsnummer</label>
-                    <input type="text" name="org_number" class="form-input" placeholder="XXXXXX-XXXX"
-                           value="<?= h($paymentData['org_number'] ?? '') ?>">
+                    <label class="form-label">Adress</label>
+                    <input type="text" name="org_address" id="orgAddressInput" class="form-input" placeholder="Gatuadress"
+                           value="<?= h($paymentData['org_address'] ?? '') ?>">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Kontakttelefon</label>
-                    <input type="tel" name="contact_phone" class="form-input" placeholder="070-XXX XX XX"
-                           value="<?= h($paymentData['contact_phone'] ?? '') ?>">
+                    <label class="form-label">Postnummer</label>
+                    <input type="text" name="org_postal_code" id="orgPostalInput" class="form-input" placeholder="XXX XX"
+                           value="<?= h($paymentData['org_postal_code'] ?? '') ?>">
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Ort</label>
+                    <input type="text" name="org_city" id="orgCityInput" class="form-input" placeholder="Ort"
+                           value="<?= h($paymentData['org_city'] ?? '') ?>">
+                </div>
+            </div>
+            <div class="form-group" style="margin-top:var(--space-md);">
+                <label class="form-label">Kontakttelefon</label>
+                <input type="tel" name="contact_phone" class="form-input" placeholder="070-XXX XX XX"
+                       value="<?= h($paymentData['contact_phone'] ?? '') ?>">
             </div>
         </div>
     </div>
@@ -2162,7 +2202,65 @@ $isComplete = $hasSwish || $hasBank;
     </div>
 </form>
 
+<script>
+async function lookupOrgNumber() {
+    const orgInput = document.getElementById('orgNumberInput');
+    const btn = document.getElementById('orgLookupBtn');
+    const status = document.getElementById('orgLookupStatus');
+    const orgNumber = orgInput.value.trim();
+
+    if (!orgNumber) {
+        status.style.display = 'block';
+        status.style.color = 'var(--color-warning)';
+        status.textContent = 'Ange ett organisationsnummer först';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Söker...';
+    status.style.display = 'block';
+    status.style.color = 'var(--color-text-secondary)';
+    status.textContent = 'Söker hos Bolagsverket...';
+    if (window.lucide) lucide.createIcons();
+
+    try {
+        const resp = await fetch('/api/org-lookup.php?org_number=' + encodeURIComponent(orgNumber));
+        const data = await resp.json();
+
+        if (data.success && data.data) {
+            const d = data.data;
+            if (d.org_name) document.getElementById('orgNameInput').value = d.org_name;
+            if (d.org_address) document.getElementById('orgAddressInput').value = d.org_address;
+            if (d.org_postal_code) document.getElementById('orgPostalInput').value = d.org_postal_code;
+            if (d.org_city) document.getElementById('orgCityInput').value = d.org_city;
+
+            status.style.color = 'var(--color-success)';
+            status.textContent = 'Hittade: ' + (d.org_name || 'Okänt företag');
+        } else {
+            status.style.color = data.not_configured ? 'var(--color-info)' : 'var(--color-warning)';
+            status.textContent = data.error || 'Ingen träff';
+        }
+    } catch (e) {
+        status.style.color = 'var(--color-error)';
+        status.textContent = 'Nätverksfel — fyll i uppgifterna manuellt';
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="search"></i> Sök';
+    if (window.lucide) lucide.createIcons();
+}
+
+// Allow Enter key in org number field to trigger search
+document.getElementById('orgNumberInput')?.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        lookupOrgNumber();
+    }
+});
+</script>
 <style>
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 1s linear infinite; }
 @media(max-width:767px) {
     .form-row { grid-template-columns: 1fr !important; }
 }

@@ -11,7 +11,7 @@
 | Omrade | Status | Beskrivning | Progress |
 |--------|--------|-------------|----------|
 | Analytics Platform | KLAR | Statistik, KPI:er, trender, rapporter | 100% |
-| Betalningssystem | KLAR | Stripe (single account, kort), ordrar, checkout, self-service betalningsuppgifter, avräkningsfrekvens. Swedbank Pay planerat. | 100% |
+| Betalningssystem | KLAR | Stripe (single account, kort), ordrar, checkout, self-service betalningsuppgifter, avräkningsfrekvens, Bolagsverket org-sökning. Swedbank Pay planerat. | 100% |
 | Event Ratings | KLAR | Deltagarfeedback pa events | 100% |
 | Win-Back System | KLAR | Aterengagera churnade deltagare | 100% |
 | Klubb RF-Registrering | KLAR | SCF/NCF/DCU-synk och stavningskontroll | 100% |
@@ -116,6 +116,37 @@
 ---
 
 # CHANGELOG
+
+### 2026-03-11 (Bolagsverket API + företagsuppgifter + ikonfix)
+- **Branch:** claude/review-license-api-XcPWX
+
+- **Ny funktion: Organisationsnummer-sökning via Bolagsverket**
+  - "Sök"-knapp vid org.nummer hämtar företagsnamn och adress automatiskt
+  - OAuth 2.0 client credentials flow, gratis EU-API
+  - Graceful fallback om API inte konfigurerat
+
+- **Ny funktion: Företagsuppgifter på promotor + betalningsmottagare**
+  - Nya fält: Företagsnamn, Adress, Postnummer, Ort
+  - Auto-fill kedja: promotor → payment-recipients → betalningsmottagare
+  - Quick-create i user-events.php inkluderar org_name som namn
+
+- **Ikonfix + UX-förbättring**
+  - Ekonomi-ikon bytt från `circle-dollar-sign` till `banknote`
+  - Betalningsflik borttagen, åtkomlig via knapp i Ekonomi-fliken
+
+- **Nya filer:**
+  - `Tools/migrations/096_org_company_fields.sql` - org_name/address/postal/city
+  - `includes/BolagsverketService.php` - OAuth 2.0 API-klient
+  - `api/org-lookup.php` - Org number lookup endpoint
+
+- **Ändrade filer:**
+  - `admin/promotor.php` - Företagsfält + sök-knapp + ikonfix
+  - `admin/payment-recipients.php` - Auto-fill org-fält + POST-handler
+  - `admin/user-events.php` - Quick-create med org-fält
+  - `admin/migrations.php` - Migration 096 registrerad
+  - `components/sidebar.php` - Ekonomi-ikon banknote
+  - `admin/components/admin-mobile-nav.php` - Ekonomi-ikon banknote
+  - `docs/promotor-instruktion.md` - Bolagsverket-sökning dokumenterad
 
 ### 2026-03-11 (Betalningsmottagare: Self-service + avräkningsfrekvens)
 - **Branch:** claude/review-license-api-XcPWX

@@ -15,6 +15,23 @@
 
 ---
 
+## SENASTE IMPLEMENTATION (2026-03-11, session 72)
+
+### Bolagsverket API-integration + företagsuppgifter + ikonfix
+- **Ny funktion: Organisationsnummer-sökning via Bolagsverket** — Promotorer kan skriva in sitt org.nummer och trycka "Sök" för att automatiskt hämta företagsnamn, adress, postnummer och ort från Bolagsverkets API (Värdefulla datamängder, gratis EU-krav).
+- **BolagsverketService:** OAuth 2.0 client credentials flow. Env-variabler: `BOLAGSVERKET_CLIENT_ID`, `BOLAGSVERKET_CLIENT_SECRET`, `BOLAGSVERKET_TOKEN_URL`, `BOLAGSVERKET_API_URL`. Tokencaching, rate limit 60 req/min.
+- **API endpoint:** `/api/org-lookup.php?org_number=XXXXXX-XXXX` — kräver admin-login, returnerar JSON med org_name, org_address, org_postal_code, org_city.
+- **Promotor betalningsflik:** Nya fält: Företagsnamn, Adress, Postnummer, Ort. "Sök"-knapp vid org.nummer anropar API:t och fyller i fälten. Enter-tangent stödjs. Graceful fallback om API inte konfigurerat.
+- **Payment-recipients.php:** Auto-fill från promotor inkluderar nu org_name → namn, org_address, org_postal_code, org_city. POST-handler sparar adressfält. Default $r-array utökad.
+- **User-events.php:** Quick-create inkluderar org_name som namn på betalningsmottagare + adressfält.
+- **Migration 096:** `admin_users` + `payment_recipients` utökade med org_name, org_address, org_postal_code, org_city.
+- **Ekonomi-ikon:** Bytt från `circle-dollar-sign` (såg ut som "I" på mobil) till `banknote` i sidebar, mobilnav och promotor-flikar.
+- **Betalningsflik flyttad:** Borttagen som egen flik i promotor-nav, åtkomlig via knapp "Betalningsuppgifter" i Ekonomi-fliken (fungerar på mobil).
+- **VIKTIGT:** Kör migration 096 via `/admin/migrations.php`. Kontakta Bolagsverket för API-credentials.
+- **Filer:** `Tools/migrations/096_org_company_fields.sql`, `includes/BolagsverketService.php`, `api/org-lookup.php`, `admin/promotor.php`, `admin/payment-recipients.php`, `admin/user-events.php`, `admin/migrations.php`, `components/sidebar.php`, `admin/components/admin-mobile-nav.php`, `docs/promotor-instruktion.md`
+
+---
+
 ## SENASTE IMPLEMENTATION (2026-03-11, session 71)
 
 ### Betalningsmottagare: Self-service för promotorer + avräkningsfrekvens + dashboard-notis
