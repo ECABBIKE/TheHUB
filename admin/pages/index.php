@@ -1,7 +1,7 @@
 <?php
 /**
  * Admin — Sidhantering (Pages CMS)
- * Lista alla sidor
+ * Lista alla sidor (CMS-sidor + fasta sidor)
  */
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../config/database.php';
@@ -23,6 +23,7 @@ try {
 }
 
 // Check if table exists
+$tableError = false;
 try {
     $pdo->query("SELECT 1 FROM pages LIMIT 1");
 } catch (PDOException $e) {
@@ -52,6 +53,22 @@ if (empty($tableError)) {
     $pages = $stmt->fetchAll();
 }
 
+// CSRF token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Fixed pages (hardcoded PHP pages that are part of GravitySeries)
+$fixedPages = [
+    [
+        'title' => 'Startsida',
+        'slug' => '/',
+        'edit_url' => '/admin/pages/gs-homepage.php',
+        'preview_url' => '/gravityseries/',
+        'type' => 'fast',
+    ],
+];
+
 $page_title = 'Sidor (GravitySeries)';
 $current_admin_page = 'pages';
 include __DIR__ . '/../components/unified-layout.php';
@@ -70,7 +87,7 @@ include __DIR__ . '/../components/unified-layout.php';
   <?php if (!empty($tableError)): ?>
     <div style="background:#fef3cd; border:1px solid #ffc107; border-radius:var(--radius-sm,6px); padding:16px; margin-bottom:24px;">
       <strong>Tabellen <code>pages</code> saknas.</strong><br>
-      Kör migreringen <code>admin/migrations/create_pages_table.sql</code> och sedan <code>admin/migrations/seed_pages.php</code> för att skapa tabellen och grundsidorna.
+      Kör migration 094 via <a href="/admin/migrations.php">migrationsverktyget</a>.
     </div>
   <?php endif; ?>
 
@@ -83,7 +100,7 @@ include __DIR__ . '/../components/unified-layout.php';
   <!-- Filter -->
   <div style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="?status=all" style="padding:6px 14px; border-radius:4px; text-decoration:none; font-size:13px; font-weight:600; <?= $statusFilter === 'all' ? 'background:var(--color-accent,#37d4d6);color:#fff !important;' : 'background:var(--color-bg-card,#fff);border:1px solid var(--color-border,#ddd);color:var(--color-text-secondary,#666) !important;' ?>">
-      Alla (<?= count($pages) ?>)
+      Alla
     </a>
     <a href="?status=published" style="padding:6px 14px; border-radius:4px; text-decoration:none; font-size:13px; font-weight:600; <?= $statusFilter === 'published' ? 'background:#10b981;color:#fff !important;' : 'background:var(--color-bg-card,#fff);border:1px solid var(--color-border,#ddd);color:var(--color-text-secondary,#666) !important;' ?>">
       Publicerade
@@ -93,7 +110,6 @@ include __DIR__ . '/../components/unified-layout.php';
     </a>
   </div>
 
-  <?php if (empty($tableError)): ?>
   <!-- Table -->
   <div style="background:var(--color-bg-card,#fff); border:1px solid var(--color-border,#e5e7eb); border-radius:var(--radius-md,10px); overflow:hidden;">
     <div style="overflow-x:auto;">
@@ -101,21 +117,62 @@ include __DIR__ . '/../components/unified-layout.php';
         <thead>
           <tr style="background:var(--color-bg-surface,#f9fafb); border-bottom:1px solid var(--color-border,#e5e7eb);">
             <th style="padding:12px 16px; text-align:left; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--color-text-muted,#888);">Titel</th>
-            <th style="padding:12px 16px; text-align:left; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--color-text-muted,#888);">Slug</th>
+            <th style="padding:12px 16px; text-align:left; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--color-text-muted,#888);">URL</th>
+            <th style="padding:12px 16px; text-align:center; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--color-text-muted,#888);">Typ</th>
             <th style="padding:12px 16px; text-align:center; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--color-text-muted,#888);">Status</th>
             <th style="padding:12px 16px; text-align:center; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--color-text-muted,#888);">I nav</th>
-            <th style="padding:12px 16px; text-align:left; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--color-text-muted,#888);">Uppdaterad</th>
             <th style="padding:12px 16px; text-align:right; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--color-text-muted,#888);">Åtgärder</th>
           </tr>
         </thead>
         <tbody>
-          <?php if (empty($pages)): ?>
+          <!-- Fixed pages (always shown at top) -->
+          <?php if ($statusFilter === 'all'): ?>
+          <?php foreach ($fixedPages as $fp): ?>
+          <tr style="border-bottom:1px solid var(--color-border,#e5e7eb); background:var(--color-bg-hover, rgba(55,212,214,0.03));">
+            <td style="padding:12px 16px; font-weight:600;">
+              <i data-lucide="home" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;color:var(--color-accent);"></i>
+              <?= htmlspecialchars($fp['title']) ?>
+            </td>
+            <td style="padding:12px 16px; font-family:monospace; font-size:13px; color:var(--color-text-muted,#888);">/gravityseries<?= htmlspecialchars($fp['slug'] === '/' ? '/' : '/' . $fp['slug']) ?></td>
+            <td style="padding:12px 16px; text-align:center;">
+              <span style="background:rgba(55,212,214,0.15); color:var(--color-accent); padding:2px 10px; border-radius:12px; font-size:12px; font-weight:600;">Fast sida</span>
+            </td>
+            <td style="padding:12px 16px; text-align:center;">
+              <span style="background:#d1fae5; color:#065f46; padding:2px 10px; border-radius:12px; font-size:12px; font-weight:600;">Publicerad</span>
+            </td>
+            <td style="padding:12px 16px; text-align:center;">
+              <i data-lucide="check" style="width:16px;height:16px;color:#10b981;"></i>
+            </td>
+            <td style="padding:12px 16px; text-align:right;">
+              <div style="display:flex; gap:8px; justify-content:flex-end;">
+                <a href="<?= htmlspecialchars($fp['edit_url']) ?>" title="Redigera" style="padding:6px; border-radius:4px; color:var(--color-text-secondary,#666); text-decoration:none;">
+                  <i data-lucide="pencil" style="width:16px;height:16px;"></i>
+                </a>
+                <a href="<?= htmlspecialchars($fp['preview_url']) ?>" target="_blank" title="Förhandsgranska" style="padding:6px; border-radius:4px; color:var(--color-text-secondary,#666); text-decoration:none;">
+                  <i data-lucide="external-link" style="width:16px;height:16px;"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          <?php endforeach; ?>
+          <?php endif; ?>
+
+          <!-- CMS pages from database -->
+          <?php if (empty($pages) && $statusFilter !== 'all'): ?>
+            <tr><td colspan="6" style="padding:24px 16px; text-align:center; color:var(--color-text-muted,#888);">Inga sidor matchar filtret.</td></tr>
+          <?php elseif (empty($pages) && empty($fixedPages)): ?>
             <tr><td colspan="6" style="padding:24px 16px; text-align:center; color:var(--color-text-muted,#888);">Inga sidor skapade ännu.</td></tr>
           <?php endif; ?>
           <?php foreach ($pages as $p): ?>
           <tr style="border-bottom:1px solid var(--color-border,#e5e7eb);">
-            <td style="padding:12px 16px; font-weight:600;"><?= htmlspecialchars($p['title']) ?></td>
-            <td style="padding:12px 16px; font-family:monospace; font-size:13px; color:var(--color-text-muted,#888);">/<?= htmlspecialchars($p['slug']) ?></td>
+            <td style="padding:12px 16px; font-weight:600;">
+              <i data-lucide="file-text" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;color:var(--color-text-muted);"></i>
+              <?= htmlspecialchars($p['title']) ?>
+            </td>
+            <td style="padding:12px 16px; font-family:monospace; font-size:13px; color:var(--color-text-muted,#888);">/gravityseries/<?= htmlspecialchars($p['slug']) ?></td>
+            <td style="padding:12px 16px; text-align:center;">
+              <span style="background:var(--color-bg-hover); color:var(--color-text-secondary); padding:2px 10px; border-radius:12px; font-size:12px; font-weight:600;">CMS</span>
+            </td>
             <td style="padding:12px 16px; text-align:center;">
               <?php if ($p['status'] === 'published'): ?>
                 <span style="background:#d1fae5; color:#065f46; padding:2px 10px; border-radius:12px; font-size:12px; font-weight:600;">Publicerad</span>
@@ -125,9 +182,6 @@ include __DIR__ . '/../components/unified-layout.php';
             </td>
             <td style="padding:12px 16px; text-align:center;">
               <?= $p['show_in_nav'] ? '<i data-lucide="check" style="width:16px;height:16px;color:#10b981;"></i>' : '<span style="color:#ccc;">—</span>' ?>
-            </td>
-            <td style="padding:12px 16px; font-size:13px; color:var(--color-text-muted,#888);">
-              <?= date('Y-m-d H:i', strtotime($p['updated_at'])) ?>
             </td>
             <td style="padding:12px 16px; text-align:right;">
               <div style="display:flex; gap:8px; justify-content:flex-end;">
@@ -152,7 +206,6 @@ include __DIR__ . '/../components/unified-layout.php';
       </table>
     </div>
   </div>
-  <?php endif; ?>
 
 </div>
 

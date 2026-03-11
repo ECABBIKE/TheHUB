@@ -70,6 +70,7 @@ $gsPageTitle = $page['title'];
 $gsMetaDesc = $page['meta_description'] ?: '';
 $gsActiveNav = '';
 $gsCurrentSlug = $slug;
+$gsEditUrl = '/admin/pages/edit.php?id=' . (int)$page['id'];
 
 require_once __DIR__ . '/includes/gs-header.php';
 

@@ -4,6 +4,34 @@
 
 ---
 
+## SENASTE IMPLEMENTATION (2026-03-11, session 71b)
+
+### GravitySeries: Redigerbar startsida + kontextkänslig penna
+- **Buggfix: Header-penna kontextkänslig:** Pennikonen i GS-headern (desktop + mobil) länkade alltid till `/admin/pages/` (sidlistan). Nu är den kontextkänslig via `$gsEditUrl`-variabel:
+  - På CMS-sidor (`sida.php`): pekar till `/admin/pages/edit.php?id=X` (redigera aktuell sida)
+  - På startsidan (`index.php`): pekar till `/admin/pages/gs-homepage.php` (redigera startsidan)
+  - Default (om ej satt): pekar till `/admin/pages/` (sidlistan)
+- **Ny admin-sida: GS Startsida-editor** (`/admin/pages/gs-homepage.php`) — redigera all text på GravitySeries startsidan:
+  - Hero-sektion: eyebrow-text, titel, beskrivning
+  - Serier-sektion: etikett, rubrik, brödtext
+  - Info-kort (3 st): titel + beskrivning per kort
+  - Styrelse: dynamisk lista med roll/namn/kontakt, lägg till/ta bort medlemmar
+  - TheHUB CTA: rubrik + undertext
+  - Alla värden lagras i `sponsor_settings`-tabellen med `gs_`-prefix
+  - Styrelsemedlemmar lagras som JSON i `gs_board_members`
+- **index.php dynamisk:** Alla hårdkodade texter ersatta med `gs()`-helper som läser från databasen med fallback till default-värden. Styrelsemedlemmar renderas från JSON.
+- **Sidlistan utökad:** `/admin/pages/index.php` visar nu ALLA sidor — både CMS-sidor (från `pages`-tabellen) och fasta sidor (startsidan). Fasta sidor visas överst med "Fast sida"-badge och home-ikon. CMS-sidor har "CMS"-badge. Ny "Typ"-kolumn i tabellen.
+- **TinyMCE API-nyckel:** Korrekt API-nyckel insatt i `admin/pages/edit.php`
+- **Filer:** `gravityseries/index.php`, `gravityseries/sida.php`, `gravityseries/includes/gs-header.php`, `admin/pages/index.php`, `admin/pages/gs-homepage.php` (ny), `admin/components/unified-layout.php`
+
+### VIKTIGT: GS startsida-arkitektur
+- **Textblock i `sponsor_settings`:** Alla `gs_`-prefixade nycklar tillhör GS-startsidan
+- **`gs()` helper:** Definierad i `gravityseries/index.php`, läser från `$_gsContent` (batch-laddad)
+- **`$gsEditUrl`:** Sätts i varje GS-sida FÖRE `gs-header.php` inkluderas. Styr header-pennans mål.
+- **Fasta sidor i admin-listan:** Definierade i `$fixedPages` arrayen i `admin/pages/index.php`. Lägg till fler fasta sidor här vid behov.
+
+---
+
 ## VIKTIGT: ÄNDRA ALDRIG NAVIGATION UTAN GODKÄNNANDE
 
 **Lägg ALDRIG till nya ikoner, grupper eller länkar i sidomenyn (sidebar), mobilmenyn eller admin-tabs utan att användaren explicit ber om det.**

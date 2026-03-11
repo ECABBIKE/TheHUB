@@ -1,0 +1,336 @@
+<?php
+/**
+ * Admin — Redigera GravitySeries startsida
+ * Lagrar textblock i site_settings, styrelsemedlemmar som JSON
+ */
+require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/helpers.php';
+requireAdmin();
+
+global $pdo;
+if (!$pdo) {
+    $pdo = new PDO(
+        'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
+        DB_USER, DB_PASS,
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
+    );
+}
+
+// CSRF
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+$success = false;
+$errors = [];
+
+// Settings keys for homepage content
+$settingsKeys = [
+    'gs_hero_eyebrow'     => 'Svensk Gravitycykling sedan 2016',
+    'gs_hero_title'        => 'Gravity<em>Series</em>',
+    'gs_hero_body'         => 'Organisationen bakom svensk enduro och downhill. Vi arrangerar tävlingar, sätter regler och utvecklar sporten — från Motion till Elite.',
+    'gs_section_series_label'   => 'Tävlingsserier',
+    'gs_section_series_title'   => 'Fyra serier.<br>En rörelse.',
+    'gs_section_series_body'    => 'GravitySeries driver Enduro och Downhill-tävlingar från Malmö till Umeå. Hitta din serie — och ditt nästa lopp.',
+    'gs_section_info_label'     => 'Praktisk info',
+    'gs_section_info_title'     => 'För åkare<br>&amp; arrangörer',
+    'gs_info_card_1_title'      => 'Arrangera ett event',
+    'gs_info_card_1_desc'       => 'Vill du arrangera en tävling inom GravitySeries? Här hittar du allt från ansökan till banprojektering och praktisk info.',
+    'gs_info_card_2_title'      => 'Licenser & SCF',
+    'gs_info_card_2_desc'       => 'För att tävla i GravitySeries behöver du en giltig SCF-licens. Här förklarar vi hur du skaffar en och vad den kostar.',
+    'gs_info_card_3_title'      => 'Gravity-ID',
+    'gs_info_card_3_desc'       => 'Ditt Gravity-ID kopplar ihop dina tävlingsresultat, licens och profil. Allt på ett ställe — oavsett vilken serie du kör.',
+    'gs_section_board_label'    => 'Organisation',
+    'gs_section_board_title'    => 'Styrelsen',
+    'gs_section_board_body'     => 'GravitySeries drivs ideellt av ett engagerat gäng med passion för gravitycykling.',
+    'gs_board_members'          => '',  // JSON array
+    'gs_hub_cta_title'          => 'Kalender, resultat<br>&amp; ranking',
+    'gs_hub_cta_body'           => 'Allt samlat på TheHUB — vår tävlingsplattform.',
+];
+
+// Load current values from DB
+$currentValues = [];
+try {
+    $allKeys = array_keys($settingsKeys);
+    $placeholders = implode(',', array_fill(0, count($allKeys), '?'));
+    $stmt = $pdo->prepare("SELECT setting_key, setting_value FROM sponsor_settings WHERE setting_key IN ($placeholders)");
+    $stmt->execute($allKeys);
+    while ($row = $stmt->fetch()) {
+        $currentValues[$row['setting_key']] = $row['setting_value'];
+    }
+} catch (PDOException $e) {
+    // Table might not have these keys yet
+}
+
+// Merge defaults with DB values
+foreach ($settingsKeys as $key => $default) {
+    if (!isset($currentValues[$key])) {
+        $currentValues[$key] = $default;
+    }
+}
+
+// Default board members if not set
+if (empty($currentValues['gs_board_members'])) {
+    $currentValues['gs_board_members'] = json_encode([
+        ['role' => 'Ordförande', 'name' => 'Förnamn Efternamn', 'contact' => 'ordforde@gravityseries.se'],
+        ['role' => 'Vice ordförande', 'name' => 'Förnamn Efternamn', 'contact' => 'vice@gravityseries.se'],
+        ['role' => 'Kassör', 'name' => 'Förnamn Efternamn', 'contact' => 'kassor@gravityseries.se'],
+        ['role' => 'Tävlingsansvarig', 'name' => 'Förnamn Efternamn', 'contact' => 'tavling@gravityseries.se'],
+        ['role' => 'Teknisk ansvarig', 'name' => 'Förnamn Efternamn', 'contact' => 'teknik@gravityseries.se'],
+        ['role' => 'Kontakt', 'name' => 'info@gravityseries.se', 'contact' => 'Allmänna frågor & media'],
+    ], JSON_UNESCAPED_UNICODE);
+}
+
+// Handle POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
+        $errors[] = 'Ogiltig CSRF-token.';
+    }
+
+    if (empty($errors)) {
+        try {
+            // Save text fields
+            $textKeys = array_keys($settingsKeys);
+            // Remove board_members from text keys (handled separately)
+            $textKeys = array_diff($textKeys, ['gs_board_members']);
+
+            foreach ($textKeys as $key) {
+                $value = $_POST[$key] ?? '';
+                save_site_setting($key, $value, 'GS Startsida');
+                $currentValues[$key] = $value;
+            }
+
+            // Save board members as JSON
+            $boardMembers = [];
+            $roles = $_POST['board_role'] ?? [];
+            $names = $_POST['board_name'] ?? [];
+            $contacts = $_POST['board_contact'] ?? [];
+            for ($i = 0; $i < count($roles); $i++) {
+                $role = trim($roles[$i] ?? '');
+                $name = trim($names[$i] ?? '');
+                $contact = trim($contacts[$i] ?? '');
+                if ($role || $name) {
+                    $boardMembers[] = ['role' => $role, 'name' => $name, 'contact' => $contact];
+                }
+            }
+            $boardJson = json_encode($boardMembers, JSON_UNESCAPED_UNICODE);
+            save_site_setting('gs_board_members', $boardJson, 'GS Startsida - Styrelsemedlemmar');
+            $currentValues['gs_board_members'] = $boardJson;
+
+            $success = true;
+        } catch (Exception $e) {
+            $errors[] = 'Kunde inte spara: ' . $e->getMessage();
+        }
+    }
+}
+
+$boardMembers = json_decode($currentValues['gs_board_members'], true) ?: [];
+
+// Helper
+function gs_val($key) {
+    global $currentValues;
+    return htmlspecialchars($currentValues[$key] ?? '', ENT_QUOTES, 'UTF-8');
+}
+function gs_raw($key) {
+    global $currentValues;
+    return $currentValues[$key] ?? '';
+}
+
+$page_title = 'GravitySeries — Redigera startsida';
+include __DIR__ . '/../components/unified-layout.php';
+?>
+
+<div class="admin-content">
+  <div class="page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--space-sm); margin-bottom:var(--space-lg);">
+    <div>
+      <h1 style="margin:0; font-size:1.5rem;">Redigera startsida</h1>
+      <p style="color:var(--color-text-muted); margin:4px 0 0;">gravityseries/index.php</p>
+    </div>
+    <div style="display:flex; gap:var(--space-sm);">
+      <a href="/admin/pages/" class="btn btn-secondary" style="font-size:13px;">Alla sidor</a>
+      <a href="/gravityseries/" target="_blank" class="btn btn-secondary" style="font-size:13px;">
+        <i data-lucide="external-link" style="width:14px;height:14px;"></i> Förhandsgranska
+      </a>
+    </div>
+  </div>
+
+  <?php if ($success): ?>
+    <div class="alert alert-success" style="margin-bottom:var(--space-md);">Startsidan har sparats.</div>
+  <?php endif; ?>
+  <?php foreach ($errors as $err): ?>
+    <div class="alert alert-danger" style="margin-bottom:var(--space-md);"><?= htmlspecialchars($err) ?></div>
+  <?php endforeach; ?>
+
+  <form method="POST" id="homepageForm">
+    <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+
+    <!-- HERO -->
+    <div class="card" style="margin-bottom:var(--space-lg);">
+      <div class="card-header"><h3>Hero-sektion</h3></div>
+      <div class="card-body" style="display:flex; flex-direction:column; gap:var(--space-md);">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Eyebrow-text</label>
+          <input type="text" name="gs_hero_eyebrow" class="form-input" value="<?= gs_val('gs_hero_eyebrow') ?>">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Titel (HTML tillåtet, t.ex. &lt;em&gt;)</label>
+          <input type="text" name="gs_hero_title" class="form-input" value="<?= gs_val('gs_hero_title') ?>">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Beskrivning</label>
+          <textarea name="gs_hero_body" class="form-textarea" rows="3"><?= gs_val('gs_hero_body') ?></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- SERIER -->
+    <div class="card" style="margin-bottom:var(--space-lg);">
+      <div class="card-header"><h3>Serier-sektion</h3></div>
+      <div class="card-body" style="display:flex; flex-direction:column; gap:var(--space-md);">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Etikett</label>
+          <input type="text" name="gs_section_series_label" class="form-input" value="<?= gs_val('gs_section_series_label') ?>">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Rubrik (HTML tillåtet)</label>
+          <input type="text" name="gs_section_series_title" class="form-input" value="<?= gs_val('gs_section_series_title') ?>">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Brödtext</label>
+          <textarea name="gs_section_series_body" class="form-textarea" rows="2"><?= gs_val('gs_section_series_body') ?></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- INFO-KORT -->
+    <div class="card" style="margin-bottom:var(--space-lg);">
+      <div class="card-header"><h3>Info-kort (Praktisk info)</h3></div>
+      <div class="card-body" style="display:flex; flex-direction:column; gap:var(--space-lg);">
+        <div style="display:flex; gap:var(--space-md); flex-wrap:wrap;">
+          <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <label class="form-label">Sektionetikett</label>
+            <input type="text" name="gs_section_info_label" class="form-input" value="<?= gs_val('gs_section_info_label') ?>">
+          </div>
+          <div class="form-group" style="margin:0; flex:2; min-width:200px;">
+            <label class="form-label">Sektionsrubrik (HTML tillåtet)</label>
+            <input type="text" name="gs_section_info_title" class="form-input" value="<?= gs_val('gs_section_info_title') ?>">
+          </div>
+        </div>
+        <?php for ($i = 1; $i <= 3; $i++): ?>
+        <div style="padding:var(--space-md); background:var(--color-bg-hover); border-radius:var(--radius-sm);">
+          <strong style="font-size:13px; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Kort <?= $i ?></strong>
+          <div style="display:flex; gap:var(--space-md); flex-wrap:wrap; margin-top:var(--space-xs);">
+            <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+              <label class="form-label">Titel</label>
+              <input type="text" name="gs_info_card_<?= $i ?>_title" class="form-input" value="<?= gs_val("gs_info_card_{$i}_title") ?>">
+            </div>
+          </div>
+          <div class="form-group" style="margin:var(--space-xs) 0 0;">
+            <label class="form-label">Beskrivning</label>
+            <textarea name="gs_info_card_<?= $i ?>_desc" class="form-textarea" rows="2"><?= gs_val("gs_info_card_{$i}_desc") ?></textarea>
+          </div>
+        </div>
+        <?php endfor; ?>
+      </div>
+    </div>
+
+    <!-- STYRELSE -->
+    <div class="card" style="margin-bottom:var(--space-lg);">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <h3>Styrelse</h3>
+        <button type="button" class="btn btn-secondary" onclick="addBoardMember()" style="font-size:13px;">
+          <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till
+        </button>
+      </div>
+      <div class="card-body" style="display:flex; flex-direction:column; gap:var(--space-md);">
+        <div style="display:flex; gap:var(--space-md); flex-wrap:wrap;">
+          <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <label class="form-label">Sektionetikett</label>
+            <input type="text" name="gs_section_board_label" class="form-input" value="<?= gs_val('gs_section_board_label') ?>">
+          </div>
+          <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <label class="form-label">Sektionsrubrik</label>
+            <input type="text" name="gs_section_board_title" class="form-input" value="<?= gs_val('gs_section_board_title') ?>">
+          </div>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Sektionsbeskrivning</label>
+          <textarea name="gs_section_board_body" class="form-textarea" rows="2"><?= gs_val('gs_section_board_body') ?></textarea>
+        </div>
+
+        <div id="boardMembersContainer">
+          <?php foreach ($boardMembers as $idx => $member): ?>
+          <div class="board-member-row" style="display:flex; gap:var(--space-sm); align-items:flex-end; flex-wrap:wrap; padding:var(--space-sm); background:var(--color-bg-hover); border-radius:var(--radius-sm); margin-bottom:var(--space-xs);">
+            <div class="form-group" style="margin:0; flex:1; min-width:120px;">
+              <?php if ($idx === 0): ?><label class="form-label">Roll</label><?php endif; ?>
+              <input type="text" name="board_role[]" class="form-input" value="<?= htmlspecialchars($member['role'] ?? '') ?>" placeholder="Roll">
+            </div>
+            <div class="form-group" style="margin:0; flex:1; min-width:140px;">
+              <?php if ($idx === 0): ?><label class="form-label">Namn</label><?php endif; ?>
+              <input type="text" name="board_name[]" class="form-input" value="<?= htmlspecialchars($member['name'] ?? '') ?>" placeholder="Namn">
+            </div>
+            <div class="form-group" style="margin:0; flex:1; min-width:180px;">
+              <?php if ($idx === 0): ?><label class="form-label">Kontakt (e-post)</label><?php endif; ?>
+              <input type="text" name="board_contact[]" class="form-input" value="<?= htmlspecialchars($member['contact'] ?? '') ?>" placeholder="E-post">
+            </div>
+            <button type="button" class="btn btn-danger" onclick="this.closest('.board-member-row').remove()" style="font-size:13px; padding:8px 12px; flex-shrink:0;">
+              <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+            </button>
+          </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    </div>
+
+    <!-- HUB CTA -->
+    <div class="card" style="margin-bottom:var(--space-lg);">
+      <div class="card-header"><h3>TheHUB CTA-sektion</h3></div>
+      <div class="card-body" style="display:flex; flex-direction:column; gap:var(--space-md);">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Rubrik (HTML tillåtet)</label>
+          <input type="text" name="gs_hub_cta_title" class="form-input" value="<?= gs_val('gs_hub_cta_title') ?>">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Undertext</label>
+          <input type="text" name="gs_hub_cta_body" class="form-input" value="<?= gs_val('gs_hub_cta_body') ?>">
+        </div>
+      </div>
+    </div>
+
+    <!-- SAVE -->
+    <div style="position:sticky; bottom:0; background:var(--color-bg-page); padding:var(--space-md) 0; border-top:1px solid var(--color-border); z-index:10;">
+      <button type="submit" class="btn btn-primary" style="font-size:15px; padding:10px 32px;">
+        <i data-lucide="save" style="width:16px;height:16px;"></i> Spara startsidan
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+function addBoardMember() {
+    const container = document.getElementById('boardMembersContainer');
+    const row = document.createElement('div');
+    row.className = 'board-member-row';
+    row.style.cssText = 'display:flex; gap:var(--space-sm); align-items:flex-end; flex-wrap:wrap; padding:var(--space-sm); background:var(--color-bg-hover); border-radius:var(--radius-sm); margin-bottom:var(--space-xs);';
+    row.innerHTML = `
+        <div class="form-group" style="margin:0; flex:1; min-width:120px;">
+            <input type="text" name="board_role[]" class="form-input" placeholder="Roll">
+        </div>
+        <div class="form-group" style="margin:0; flex:1; min-width:140px;">
+            <input type="text" name="board_name[]" class="form-input" placeholder="Namn">
+        </div>
+        <div class="form-group" style="margin:0; flex:1; min-width:180px;">
+            <input type="text" name="board_contact[]" class="form-input" placeholder="E-post">
+        </div>
+        <button type="button" class="btn btn-danger" onclick="this.closest('.board-member-row').remove()" style="font-size:13px; padding:8px 12px; flex-shrink:0;">
+            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+        </button>
+    `;
+    container.appendChild(row);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+</script>
+
+<?php include __DIR__ . '/../components/unified-layout-footer.php'; ?>
