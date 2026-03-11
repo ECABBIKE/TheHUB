@@ -118,7 +118,8 @@ try {
     $adminJoin = $hasAdminUserCol ? "LEFT JOIN admin_users au ON pr.admin_user_id = au.id" : "";
     $adminSelect = $hasAdminUserCol ? ", pr.admin_user_id, au.full_name as admin_user_name" : ", NULL as admin_user_id, NULL as admin_user_name";
     $allRecipients = $db->getAll("
-        SELECT pr.id, pr.name, pr.platform_fee_type, pr.platform_fee_percent, pr.platform_fee_fixed
+        SELECT pr.id, pr.name, pr.platform_fee_type, pr.platform_fee_percent, pr.platform_fee_fixed,
+            COALESCE(pr.settlement_frequency, 'monthly') as settlement_frequency
             {$adminSelect}
         FROM payment_recipients pr
         {$adminJoin}
@@ -670,6 +671,11 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
             <div class="settlement-meta">
                 <?= $s['event_count'] ?> event, <?= $s['series_count'] ?> serier
+                <?php
+                $sf = $r['settlement_frequency'] ?? 'monthly';
+                $sfLabel = $sf === 'after_close' ? 'Efter stängd anmälan' : 'Månadsvis';
+                ?>
+                <span class="badge" style="font-size:10px;margin-left:var(--space-xs);"><?= $sfLabel ?></span>
             </div>
         </div>
         <?php if ($hasPayoutsTable): ?>

@@ -17,7 +17,8 @@ $stats = [
     'riders' => 0, 'events' => 0, 'clubs' => 0, 'series' => 0,
     'upcoming' => 0, 'results' => 0, 'pending_orders' => 0,
     'total_revenue' => 0, 'registrations_today' => 0, 'registrations_week' => 0,
-    'pending_claims' => 0, 'pending_news' => 0, 'pending_bug_reports' => 0
+    'pending_claims' => 0, 'pending_news' => 0, 'pending_bug_reports' => 0,
+    'pending_settlements' => 0
 ];
 try {
     $row = $pdo->query("
@@ -39,6 +40,56 @@ try {
     $stats = array_merge($stats, $row);
 } catch (Exception $e) {
     // Keep defaults
+}
+
+// Count pending settlements (graceful - columns may not exist yet)
+try {
+    // Monthly recipients: new month started, no payout this month, has paid orders
+    // After_close: events with closed registration, no recent payout
+    $pendingSettlements = $pdo->query("
+        SELECT COUNT(*) FROM payment_recipients pr
+        WHERE pr.active = 1
+        AND (
+            (pr.settlement_frequency = 'monthly'
+             AND NOT EXISTS (
+                 SELECT 1 FROM settlement_payouts sp
+                 WHERE sp.recipient_id = pr.id
+                 AND sp.status = 'paid'
+                 AND YEAR(sp.created_at) = YEAR(CURDATE())
+                 AND MONTH(sp.created_at) = MONTH(CURDATE())
+             )
+             AND EXISTS (
+                 SELECT 1 FROM orders o
+                 JOIN events e ON o.event_id = e.id
+                 WHERE e.payment_recipient_id = pr.id
+                 AND o.payment_status = 'paid'
+                 AND YEAR(o.created_at) = YEAR(CURDATE())
+             )
+            )
+            OR
+            (pr.settlement_frequency = 'after_close'
+             AND EXISTS (
+                 SELECT 1 FROM events e
+                 WHERE e.payment_recipient_id = pr.id
+                 AND e.date < CURDATE()
+                 AND EXISTS (
+                     SELECT 1 FROM orders o
+                     WHERE o.event_id = e.id
+                     AND o.payment_status = 'paid'
+                 )
+                 AND NOT EXISTS (
+                     SELECT 1 FROM settlement_payouts sp
+                     WHERE sp.recipient_id = pr.id
+                     AND sp.status = 'paid'
+                     AND sp.created_at > e.date
+                 )
+             )
+            )
+        )
+    ")->fetchColumn();
+    $stats['pending_settlements'] = (int)$pendingSettlements;
+} catch (Exception $e) {
+    // settlement_frequency column may not exist yet
 }
 
 // Count pending roadmap tasks from ROADMAP.md (cached for 1 hour)
@@ -423,6 +474,117 @@ include __DIR__ . '/components/unified-layout.php';
         font-size: var(--text-base);
     }
     .bugs-box-arrow {
+        display: none;
+    }
+}
+</style>
+<?php endif; ?>
+
+<?php if ($stats['pending_settlements'] > 0): ?>
+<!-- Pending Settlements Alert - Amber Box -->
+<a href="/admin/settlements.php" class="pending-settlements-box">
+    <div class="settlements-box-icon">
+        <i data-lucide="landmark"></i>
+        <span class="settlements-box-count"><?= $stats['pending_settlements'] ?></span>
+    </div>
+    <div class="settlements-box-text">
+        <strong>Avräkningar att göra</strong>
+        <span><?= $stats['pending_settlements'] ?> betalningsmottagare väntar på utbetalning</span>
+    </div>
+    <div class="settlements-box-arrow">
+        <i data-lucide="chevron-right"></i>
+    </div>
+</a>
+<style>
+.pending-settlements-box {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    padding: var(--space-lg) var(--space-xl);
+    margin-bottom: var(--space-lg);
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    color: white;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+.pending-settlements-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4);
+}
+.settlements-box-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    background: rgba(255,255,255,0.2);
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+}
+.settlements-box-icon i {
+    width: 28px;
+    height: 28px;
+}
+.settlements-box-count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 6px;
+    background: white;
+    color: #d97706;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.settlements-box-text {
+    flex: 1;
+}
+.settlements-box-text strong {
+    display: block;
+    font-size: var(--text-lg);
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.settlements-box-text span {
+    font-size: var(--text-sm);
+    opacity: 0.9;
+}
+.settlements-box-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.settlements-box-arrow i {
+    width: 24px;
+    height: 24px;
+}
+@media (max-width: 600px) {
+    .pending-settlements-box {
+        padding: var(--space-md);
+        gap: var(--space-md);
+    }
+    .settlements-box-icon {
+        width: 48px;
+        height: 48px;
+    }
+    .settlements-box-text strong {
+        font-size: var(--text-base);
+    }
+    .settlements-box-arrow {
         display: none;
     }
 }

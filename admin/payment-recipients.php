@@ -55,6 +55,31 @@ try {
     $hasAdminUserCol = !empty($colCheck);
 } catch (Exception $e) {}
 
+// AJAX: Fetch promotor payment details for auto-fill
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'promotor_payment_data' && isset($_GET['user_id'])) {
+    header('Content-Type: application/json');
+    $uid = intval($_GET['user_id']);
+    $data = ['success' => false];
+    if ($uid > 0) {
+        try {
+            $colCheck = $db->getAll("SHOW COLUMNS FROM admin_users LIKE 'swish_number'");
+            if (!empty($colCheck)) {
+                $row = $db->getRow("
+                    SELECT full_name, email, org_number, contact_phone,
+                           swish_number, swish_name, bankgiro, plusgiro,
+                           bank_account, bank_name, bank_clearing
+                    FROM admin_users WHERE id = ?
+                ", [$uid]);
+                if ($row) {
+                    $data = ['success' => true, 'data' => $row];
+                }
+            }
+        } catch (Exception $e) {}
+    }
+    echo json_encode($data);
+    exit;
+}
+
 // Handle form submissions
 $message = '';
 $error = '';
@@ -105,6 +130,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'platform_fee_fixed' => $platformFeeFixed,
                 'active' => $active
             ];
+
+            // Add settlement_frequency if column exists
+            $settlementFreq = $_POST['settlement_frequency'] ?? 'monthly';
+            if (in_array($settlementFreq, ['monthly', 'after_close'])) {
+                try {
+                    $db->getAll("SHOW COLUMNS FROM payment_recipients LIKE 'settlement_frequency'");
+                    $data['settlement_frequency'] = $settlementFreq;
+                } catch (Exception $e) {}
+            }
 
             if ($hasAdminUserCol) {
                 $data['admin_user_id'] = $adminUserId;
@@ -383,6 +417,12 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="recipient-meta"><i data-lucide="user"></i> Promotor: <?= htmlspecialchars($r['admin_user_name'] ?: $r['admin_username']) ?></div>
         <?php endif; ?>
 
+        <?php
+        $sf = $r['settlement_frequency'] ?? 'monthly';
+        $sfLabel = $sf === 'after_close' ? 'Efter stängd anmälan' : 'Månadsvis';
+        ?>
+        <div class="recipient-meta"><i data-lucide="calendar-clock"></i> Avräkning: <?= $sfLabel ?></div>
+
         <div class="recipient-stats">
             <div class="recipient-stat">
                 <div class="recipient-stat-value"><?= (int)$r['event_count'] ?></div>
@@ -424,7 +464,7 @@ $r = $editRecipient ?: [
     'swish_number' => '', 'swish_name' => '', 'gateway_type' => 'swish',
     'bankgiro' => '', 'plusgiro' => '', 'bank_account' => '', 'bank_name' => '', 'bank_clearing' => '',
     'platform_fee_type' => 'percent', 'platform_fee_percent' => 2.00, 'platform_fee_fixed' => 0,
-    'admin_user_id' => null, 'active' => 1
+    'admin_user_id' => null, 'active' => 1, 'settlement_frequency' => 'monthly'
 ];
 $isNew = empty($editRecipient);
 ?>
@@ -544,12 +584,22 @@ $isNew = empty($editRecipient);
             </div>
             <div class="fee-preview" id="feePreview"></div>
 
+            <!-- Avräkning -->
+            <div class="form-section-label"><i data-lucide="calendar-clock"></i> Avräkningsfrekvens</div>
+            <div class="form-group">
+                <label class="form-label">Hur ofta ska avräkning göras?</label>
+                <select name="settlement_frequency" class="form-select">
+                    <option value="monthly" <?= ($r['settlement_frequency'] ?? 'monthly') === 'monthly' ? 'selected' : '' ?>>Månadsvis (1:e varje månad)</option>
+                    <option value="after_close" <?= ($r['settlement_frequency'] ?? '') === 'after_close' ? 'selected' : '' ?>>Efter stängd anmälan</option>
+                </select>
+            </div>
+
             <!-- Kopplad promotor -->
             <?php if ($hasAdminUserCol): ?>
             <div class="form-section-label"><i data-lucide="user"></i> Kopplad promotor</div>
             <div class="form-group">
                 <label class="form-label">Promotor-användare</label>
-                <select name="admin_user_id" class="form-select">
+                <select name="admin_user_id" class="form-select" id="adminUserSelect">
                     <option value="">Ingen koppling</option>
                     <?php foreach ($promotorUsers as $u): ?>
                         <option value="<?= $u['id'] ?>" <?= (($r['admin_user_id'] ?? '') == $u['id']) ? 'selected' : '' ?>>
@@ -557,7 +607,11 @@ $isNew = empty($editRecipient);
                         </option>
                     <?php endforeach; ?>
                 </select>
+                <div id="autofillNotice" style="display:none;margin-top:var(--space-xs);padding:var(--space-sm) var(--space-md);background:var(--color-accent-light);border-radius:var(--radius-sm);font-size:var(--text-sm);color:var(--color-accent-text);"></div>
             </div>
+            <button type="button" id="autofillBtn" class="btn btn-ghost" style="display:none;margin-bottom:var(--space-md);" onclick="autofillFromPromotor()">
+                <i data-lucide="download" style="width:14px;height:14px;"></i> Hämta uppgifter från promotor
+            </button>
             <?php endif; ?>
 
             <!-- Aktiv -->
@@ -613,6 +667,92 @@ if (feeTypeSelect) {
     document.querySelector('[name="platform_fee_percent"]').addEventListener('input', updateFeeVisibility);
     document.querySelector('[name="platform_fee_fixed"]').addEventListener('input', updateFeeVisibility);
     updateFeeVisibility();
+}
+
+// Auto-fill from promotor's self-service payment details
+var adminUserSelect = document.getElementById('adminUserSelect');
+var autofillBtn = document.getElementById('autofillBtn');
+var autofillNotice = document.getElementById('autofillNotice');
+
+function checkPromotorData() {
+    if (!adminUserSelect) return;
+    var uid = adminUserSelect.value;
+    if (!uid) {
+        if (autofillBtn) autofillBtn.style.display = 'none';
+        if (autofillNotice) autofillNotice.style.display = 'none';
+        return;
+    }
+    fetch('/admin/payment-recipients.php?ajax=promotor_payment_data&user_id=' + uid)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.data) {
+                var d = data.data;
+                var hasInfo = d.swish_number || d.bankgiro || d.plusgiro || d.bank_account;
+                if (hasInfo) {
+                    if (autofillBtn) autofillBtn.style.display = '';
+                    if (autofillNotice) {
+                        autofillNotice.style.display = '';
+                        autofillNotice.innerHTML = '<i data-lucide="info" style="width:14px;height:14px;display:inline;"></i> ' +
+                            (d.full_name || 'Promotorn') + ' har fyllt i betalningsuppgifter. Klicka "Hämta uppgifter" för att fylla i formuläret.';
+                        if (window.lucide) lucide.createIcons();
+                    }
+                } else {
+                    if (autofillBtn) autofillBtn.style.display = 'none';
+                    if (autofillNotice) {
+                        autofillNotice.style.display = '';
+                        autofillNotice.innerHTML = (d.full_name || 'Promotorn') + ' har inte fyllt i några betalningsuppgifter ännu.';
+                    }
+                }
+            } else {
+                if (autofillBtn) autofillBtn.style.display = 'none';
+                if (autofillNotice) autofillNotice.style.display = 'none';
+            }
+        })
+        .catch(() => {});
+}
+
+function autofillFromPromotor() {
+    var uid = adminUserSelect ? adminUserSelect.value : '';
+    if (!uid) return;
+    fetch('/admin/payment-recipients.php?ajax=promotor_payment_data&user_id=' + uid)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success || !data.data) return;
+            var d = data.data;
+            var fields = {
+                'org_number': d.org_number,
+                'contact_phone': d.contact_phone,
+                'swish_number': d.swish_number,
+                'swish_name': d.swish_name,
+                'bankgiro': d.bankgiro,
+                'plusgiro': d.plusgiro,
+                'bank_account': d.bank_account,
+                'bank_name': d.bank_name,
+                'bank_clearing': d.bank_clearing
+            };
+            for (var name in fields) {
+                var input = document.querySelector('input[name="' + name + '"]');
+                if (input && fields[name]) input.value = fields[name];
+            }
+            // Auto-fill name if empty
+            var nameInput = document.querySelector('input[name="name"]');
+            if (nameInput && !nameInput.value && d.full_name) nameInput.value = d.full_name;
+            // Auto-fill contact email
+            var emailInput = document.querySelector('input[name="contact_email"]');
+            if (emailInput && !emailInput.value && d.email) emailInput.value = d.email;
+
+            if (autofillNotice) {
+                autofillNotice.innerHTML = 'Uppgifter hämtade från ' + (d.full_name || 'promotorn') + '. Granska och spara.';
+            }
+            if (autofillBtn) autofillBtn.style.display = 'none';
+        })
+        .catch(() => {});
+}
+
+if (adminUserSelect) {
+    adminUserSelect.addEventListener('change', checkPromotorData);
+    // Check on load if editing existing
+    if (adminUserSelect.value) checkPromotorData();
 }
 </script>
 

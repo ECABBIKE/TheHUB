@@ -1,6 +1,6 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-03-10
+> Senast uppdaterad: 2026-03-11
 
 ---
 
@@ -12,6 +12,28 @@
 - Flytta INTE saker mellan menygrupper utan godkännande
 - Skapa INTE nya menygrupper i admin-tabs-config.php utan godkännande
 - Om en ny sida behöver nås: lägg den under befintlig grupp i `pages`-arrayen, och länka från relevant dashboard/grid
+
+---
+
+## SENASTE IMPLEMENTATION (2026-03-11, session 71)
+
+### Betalningsmottagare: Self-service för promotorer + avräkningsfrekvens + dashboard-notis
+- **Ny funktion: Promotor self-service betalningsuppgifter** — Promotorer kan nu själva fylla i sina betalningsuppgifter (Swish, bank, org.nummer) under en ny "Betalning"-flik i promotor-panelen. Superadmin kan sedan skapa betalningsmottagare genom att tagga/söka promotorn — uppgifterna hämtas automatiskt.
+- **Ny flik "Betalning" i promotor.php:** Formulär med organisation (namn, org.nr, kontakttelefon), Swish (nummer, namn), bankuppgifter (bankgiro, plusgiro, kontonummer, bank, clearing), och avräkningsfrekvens (månadsvis/efter stängd anmälan). Statusindikator visar om promotorn är kopplad som betalningsmottagare.
+- **Auto-fill i payment-recipients.php:** AJAX-endpoint `?ajax=promotor_payment_data&user_id=X` hämtar promotorns self-service data. "Hämta uppgifter från promotor"-knapp fyller i alla formulärfält automatiskt. Grön/gul statusindikator visar om promotorn har data.
+- **Quick-create i user-events.php:** Statussektion visar om promotorn redan är betalningsmottagare (grönt), har ifylld data men inget konto (blått med "Skapa betalningsmottagare"-knapp), eller saknar data (gult med instruktion). Knappen skapar betalningsmottagare direkt med auto-detect av gateway_type (swish vs bank) och kör syncPaymentRecipientForPromotor().
+- **Avräkningsfrekvens:** Ny kolumn `payment_recipients.settlement_frequency` ENUM('monthly','after_close'). Visas som badge i settlements.php. Radioknapp-val i promotor-fliken och payment-recipients-formuläret.
+- **Dashboard-notis:** Amber/orange notisruta på admin-dashboarden när avräkningar väntar. Månadsvis: ny månad utan utbetalning + betalda ordrar. Efter stängd anmälan: genomfört event utan utbetalning efter eventdatum.
+- **Migration 095:** `admin_users` utökad med org_number, contact_phone, swish_number, swish_name, bankgiro, plusgiro, bank_account, bank_name, bank_clearing. `payment_recipients` utökad med settlement_frequency + settlement_notified_at.
+- **VIKTIGT:** Kör migration 095 via `/admin/migrations.php`
+- **Filer:** `Tools/migrations/095_payment_recipient_self_service.sql`, `admin/promotor.php`, `admin/payment-recipients.php`, `admin/user-events.php`, `admin/settlements.php`, `admin/dashboard.php`, `admin/migrations.php`
+
+### Betalningsmottagare: Arkitektur (self-service)
+- **Data lagras på admin_users:** Promotorer fyller i via promotor.php?tab=betalning → sparas i admin_users-kolumner
+- **Auto-fill kedja:** admin_users → AJAX → payment-recipients formulär → betalningsmottagare skapas
+- **Quick-create kedja:** admin_users → user-events.php POST → payment_recipients INSERT → syncPaymentRecipientForPromotor()
+- **Graceful column detection:** Alla POST-handlers kollar `SHOW COLUMNS FROM table LIKE 'column'` innan save (migration kan saknas)
+- **Settlement frequency:** 'monthly' = avräkning 1:e varje månad, 'after_close' = efter stängd anmälan
 
 ---
 
