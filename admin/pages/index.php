@@ -134,7 +134,7 @@ include __DIR__ . '/../components/unified-layout.php';
                 <a href="/admin/pages/edit.php?id=<?= $p['id'] ?>" title="Redigera" style="padding:6px; border-radius:4px; color:var(--color-text-secondary,#666); text-decoration:none;">
                   <i data-lucide="pencil" style="width:16px;height:16px;"></i>
                 </a>
-                <a href="/gravityseries/sida.php?slug=<?= htmlspecialchars($p['slug']) ?>" target="_blank" title="Förhandsgranska" style="padding:6px; border-radius:4px; color:var(--color-text-secondary,#666); text-decoration:none;">
+                <a href="/gravityseries/<?= htmlspecialchars($p['slug']) ?>" target="_blank" title="Förhandsgranska" style="padding:6px; border-radius:4px; color:var(--color-text-secondary,#666); text-decoration:none;">
                   <i data-lucide="external-link" style="width:16px;height:16px;"></i>
                 </a>
                 <form method="post" action="/admin/pages/delete.php" style="display:inline;" onsubmit="return confirm('Vill du verkligen ta bort sidan &quot;<?= htmlspecialchars($p['title']) ?>&quot;?');">

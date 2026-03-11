@@ -209,6 +209,9 @@ RewriteRule ^api/.*\.php$ - [L]
 # Skip v2 backup folder
 RewriteRule ^v2(/.*)?$ - [L]
 
+# Skip GravitySeries (standalone site with own .htaccess)
+RewriteRule ^gravityseries(/.*)?$ - [L]
+
 # Skip legacy .php files for backwards compatibility
 RewriteCond %{REQUEST_URI} \.(php)$
 RewriteCond %{REQUEST_FILENAME} -f

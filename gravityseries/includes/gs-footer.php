@@ -12,14 +12,14 @@ $gsBaseUrl = $gsBaseUrl ?? '/gravityseries';
     <div class="footer-links">
       <?php if (!empty($gsNavPages)): ?>
         <?php foreach ($gsNavPages as $navPage): ?>
-          <a href="<?= $gsBaseUrl ?>/sida.php?slug=<?= htmlspecialchars($navPage['slug']) ?>">
+          <a href="<?= $gsBaseUrl ?>/<?= htmlspecialchars($navPage['slug']) ?>">
             <?= htmlspecialchars($navPage['nav_label'] ?: $navPage['title']) ?>
           </a>
         <?php endforeach; ?>
       <?php else: ?>
-        <a href="<?= $gsBaseUrl ?>/sida.php?slug=om-oss">Om oss</a>
-        <a href="<?= $gsBaseUrl ?>/sida.php?slug=kontakt">Kontakt</a>
-        <a href="<?= $gsBaseUrl ?>/sida.php?slug=allmanna-villkor">Villkor</a>
+        <a href="<?= $gsBaseUrl ?>/om-oss">Om oss</a>
+        <a href="<?= $gsBaseUrl ?>/kontakt">Kontakt</a>
+        <a href="<?= $gsBaseUrl ?>/allmanna-villkor">Villkor</a>
       <?php endif; ?>
       <a href="https://thehub.gravityseries.se">TheHUB</a>
     </div>
