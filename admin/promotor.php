@@ -1532,13 +1532,10 @@ function cancelFeeEdit(recipientId, originalText) {
         <i data-lucide="medal"></i> Serier
     </a>
     <a href="?tab=ekonomi" class="promotor-tab <?= $promotorTab === 'ekonomi' ? 'active' : '' ?>">
-        <i data-lucide="circle-dollar-sign"></i> Ekonomi
+        <i data-lucide="banknote"></i> Ekonomi
     </a>
     <a href="?tab=media" class="promotor-tab <?= $promotorTab === 'media' ? 'active' : '' ?>">
         <i data-lucide="image"></i> Media
-    </a>
-    <a href="?tab=betalning" class="promotor-tab <?= $promotorTab === 'betalning' ? 'active' : '' ?>">
-        <i data-lucide="credit-card"></i> Betalning
     </a>
     <a href="/admin/promotor-guide.php" class="promotor-tab promotor-tab--guide" title="Arrangörsguide">
         <i data-lucide="book-open"></i> <span class="guide-label">Guide</span>
@@ -1770,11 +1767,15 @@ function cancelFeeEdit(recipientId, originalText) {
     </div>
 </div>
 
-<!-- Discount codes link -->
-<div style="margin-bottom: var(--space-lg);">
+<!-- Action links -->
+<div style="margin-bottom: var(--space-lg); display:flex; gap:var(--space-sm); flex-wrap:wrap;">
     <a href="/admin/discount-codes.php" class="btn btn-secondary">
         <i data-lucide="ticket"></i>
         Hantera rabattkoder
+    </a>
+    <a href="?tab=betalning" class="btn btn-secondary">
+        <i data-lucide="credit-card"></i>
+        Betalningsuppgifter
     </a>
 </div>
 

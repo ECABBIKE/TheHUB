@@ -1,6 +1,6 @@
 # TheHUB - Arrangörsguide
 
-> **Version:** 1.1 | **Senast uppdaterad:** 2026-03-03
+> **Version:** 1.2 | **Senast uppdaterad:** 2026-03-11
 >
 > Denna guide förklarar hur du som arrangör (promotor) använder TheHUB för att hantera dina event, se över ekonomi och arbeta med sponsorer.
 
@@ -22,8 +22,9 @@
 10. [Rabattkoder](#rabattkoder)
 11. [Serier](#serier)
 12. [Ekonomi & Betalningar](#ekonomi--betalningar)
-13. [Mediabiblioteket](#mediabiblioteket)
-14. [Vanliga frågor](#vanliga-frågor)
+13. [Betalningsuppgifter](#betalningsuppgifter)
+14. [Mediabiblioteket](#mediabiblioteket)
+15. [Vanliga frågor](#vanliga-frågor)
 
 ---
 
@@ -43,7 +44,7 @@ Som arrangör har du fyra huvudflikar:
 |------|------|-------------|
 | **Event** | Kalender | Översikt av dina tilldelade event |
 | **Serier** | Medalj | Serieinställningar (Swish, rabatter) |
-| **Ekonomi** | Plånbok | Orderöversikt och intäkter |
+| **Ekonomi** | Sedel | Orderöversikt, intäkter och betalningsuppgifter |
 | **Media** | Bild | Mediabibliotek för sponsorbilder |
 
 Flikarna visas i sidomenyn (desktop) och i bottennavigeringen (mobil).
@@ -380,6 +381,41 @@ Ordrar för serieanmälningar delas automatiskt upp per event, proportionellt ba
 ### Mobil
 
 På mobil visas ekonomiöversikten som kort istället för tabell, med samma information i kompaktare format.
+
+### Betalningsuppgifter
+
+Under Ekonomi-fliken hittar du knappen **Betalningsuppgifter** bredvid "Hantera rabattkoder". Här fyller du i dina uppgifter för att kunna ta emot utbetalningar.
+
+#### Vad du fyller i
+
+| Sektion | Fält | Beskrivning |
+|---------|------|-------------|
+| **Organisation** | Organisationsnummer | Ditt org.nr (XXXXXX-XXXX) |
+| **Organisation** | Kontakttelefon | Telefonnummer för ekonomifrågor |
+| **Swish** | Swish-nummer | Ditt Swish-nummer för utbetalningar |
+| **Swish** | Swish-namn | Namn som visas vid Swish-betalning |
+| **Bank** | Bankgiro | Bankgironummer (valfritt) |
+| **Bank** | Plusgiro | Plusgironummer (valfritt) |
+| **Bank** | Banknamn, Clearing, Konto | Bankkontouppgifter (valfritt) |
+
+> **Tips:** Du behöver antingen Swish ELLER bankuppgifter — inte nödvändigtvis båda.
+
+#### Avräkningsfrekvens
+
+Du väljer hur ofta du vill ha avräkning och utbetalning:
+
+| Alternativ | Beskrivning |
+|------------|-------------|
+| **Månadsvis** | Avräkning görs 1:e varje månad |
+| **Efter stängd anmälan** | Avräkning görs efter att anmälningsperioden stängt för varje event |
+
+#### Status
+
+Överst på betalningsuppgifter-sidan visas din status:
+
+- **Grön** — Du är kopplad som betalningsmottagare (aktiv)
+- **Blå** — Dina uppgifter är ifyllda men inte kopplade ännu (kontakta admin)
+- **Gul** — Betalningsuppgifter saknas (fyll i formuläret)
 
 ---
 

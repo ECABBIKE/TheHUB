@@ -170,7 +170,7 @@ function isAdminPageActive($item, $requestUri) {
         $promotorNav = [
             ['id' => 'events', 'label' => 'Event', 'icon' => 'calendar', 'url' => '/admin/promotor.php?tab=event'],
             ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor.php?tab=serier'],
-            ['id' => 'ekonomi', 'label' => 'Ekonomi', 'icon' => 'circle-dollar-sign', 'url' => '/admin/promotor.php?tab=ekonomi'],
+            ['id' => 'ekonomi', 'label' => 'Ekonomi', 'icon' => 'banknote', 'url' => '/admin/promotor.php?tab=ekonomi'],
             ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/promotor.php?tab=media'],
             ['id' => 'guide', 'label' => 'Guide', 'icon' => 'book-open', 'url' => '/admin/promotor-guide.php'],
         ];
