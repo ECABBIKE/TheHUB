@@ -358,14 +358,6 @@ input[type="number"] {
   </div>
 
   <!-- SM Championship Fee -->
-  <?php
-  $hasChampionshipFee = false;
-  try {
-      $cols = $db->getAll("SHOW COLUMNS FROM pricing_templates LIKE 'championship_fee'");
-      $hasChampionshipFee = !empty($cols);
-  } catch (Exception $e) {}
-  ?>
-  <?php if ($hasChampionshipFee): ?>
   <div class="mt-lg">
   <div class="card p-md" style="background: var(--color-accent-light, rgba(55, 212, 214, 0.1)); border: 1px solid var(--color-accent);">
       <label class="label" style="color: var(--color-accent);">
@@ -390,7 +382,6 @@ input[type="number"] {
       </div>
   </div>
   </div>
-  <?php endif; ?>
 
   <div class="mt-md">
   <button type="submit" class="btn btn--primary">
