@@ -81,17 +81,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $earlyBirdDays = intval($_POST['early_bird_days'] ?? 21);
         $lateFeePercent = floatval($_POST['late_fee_percent'] ?? 25);
         $lateFeeDays = intval($_POST['late_fee_days'] ?? 3);
-        $championshipFee = floatval($_POST['championship_fee'] ?? 0);
-        $championshipFeeDesc = trim($_POST['championship_fee_description'] ?? '');
-
         $db->update('pricing_templates', [
             'early_bird_percent' => $earlyBirdPercent,
             'early_bird_days_before' => $earlyBirdDays,
             'late_fee_percent' => $lateFeePercent,
             'late_fee_days_before' => $lateFeeDays,
-            'championship_fee' => $championshipFee,
-            'championship_fee_description' => $championshipFeeDesc ?: null
         ], 'id = ?', [$templateId]);
+
+        // Championship fee - separate update (column may not exist yet)
+        try {
+            $championshipFee = floatval($_POST['championship_fee'] ?? 0);
+            $championshipFeeDesc = trim($_POST['championship_fee_description'] ?? '');
+            $db->update('pricing_templates', [
+                'championship_fee' => $championshipFee,
+                'championship_fee_description' => $championshipFeeDesc ?: null
+            ], 'id = ?', [$templateId]);
+        } catch (Exception $e) {
+            // Column doesn't exist yet - migration 106 needs to run
+        }
 
         // Reload template
         $template = $db->getRow("SELECT * FROM pricing_templates WHERE id = ?", [$templateId]);
