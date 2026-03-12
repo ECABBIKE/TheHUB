@@ -334,6 +334,12 @@ $migrationChecks = [
     '098_pages_series_brand_id.sql' => [
         'columns' => ['pages.series_brand_id'],
     ],
+    '098_championship_surcharge.sql' => [
+        'columns' => ['events.championship_surcharge']
+    ],
+    '106_add_championship_fee_to_pricing.sql' => [
+        'columns' => ['pricing_templates.championship_fee', 'pricing_templates.championship_fee_description']
+    ],
 ];
 
 // ============================================================================

@@ -1146,7 +1146,8 @@ function getEligibleClassesForEvent(int $eventId, int $riderId, ?array &$license
     // Include series pricing_template_id as fallback
     $eventStmt = $pdo->prepare("
         SELECT e.date, e.pricing_template_id,
-               s.pricing_template_id as series_pricing_template_id
+               s.pricing_template_id as series_pricing_template_id,
+               e.is_championship, e.championship_surcharge
         FROM events e
         LEFT JOIN series_events se ON e.id = se.event_id
         LEFT JOIN series s ON se.series_id = s.id
@@ -1162,6 +1163,11 @@ function getEligibleClassesForEvent(int $eventId, int $riderId, ?array &$license
 
     // Use event pricing template, or fallback to series pricing template
     $pricingTemplateId = $event['pricing_template_id'] ?? $event['series_pricing_template_id'] ?? null;
+
+    // Championship surcharge - flat amount added to ALL price tiers for SM events
+    $championshipSurcharge = (!empty($event['is_championship']) && !empty($event['championship_surcharge']))
+        ? floatval($event['championship_surcharge'])
+        : 0;
 
     $eventDate = strtotime($event['date']);
     $riderAge = date('Y', $eventDate) - intval($rider['birth_year']);
@@ -1423,6 +1429,19 @@ function getEligibleClassesForEvent(int $eventId, int $riderId, ?array &$license
 
         $seasonPrice = round(floatval($class['season_price'] ?? 0));
 
+        // Add championship surcharge to ALL price tiers
+        // Surcharge is added AFTER percentage calculations (early bird discount, late fee)
+        // Example: base 600, surcharge 100 → early bird (15% off 600) = 510 + 100 = 610
+        if ($championshipSurcharge > 0) {
+            $basePrice += $championshipSurcharge;
+            $earlyBirdPrice += $championshipSurcharge;
+            $lateFeePrice += $championshipSurcharge;
+            $currentPrice += $championshipSurcharge;
+            if ($seasonPrice > 0) {
+                $seasonPrice += $championshipSurcharge;
+            }
+        }
+
         $classData = [
             'class_id' => $class['class_id'],
             'name' => $class['display_name'] ?: $class['name'] ?: ('Klass ' . $class['class_id']),
@@ -1431,6 +1450,7 @@ function getEligibleClassesForEvent(int $eventId, int $riderId, ?array &$license
             'late_fee' => $lateFeePrice,
             'current_price' => $currentPrice,
             'season_price' => $seasonPrice,
+            'championship_surcharge' => $championshipSurcharge > 0 ? $championshipSurcharge : null,
             'eligible' => $eligible,
             'reason' => $reason,
             'warning' => $warning
@@ -1547,6 +1567,29 @@ function getEligibleClassesForSeries(int $seriesId, int $riderId): array {
     $seriesStmt->execute([$seriesId]);
     $discountPercent = floatval($seriesStmt->fetchColumn() ?: 15);
 
+    // Fetch total championship surcharge for SM events in this series (added OUTSIDE discount)
+    $smSurchargeStmt = $pdo->prepare("
+        SELECT COALESCE(SUM(e.championship_surcharge), 0) as total_surcharge
+        FROM events e
+        WHERE e.series_id = ? AND e.is_championship = 1 AND e.championship_surcharge IS NOT NULL AND e.championship_surcharge > 0
+    ");
+    $smSurchargeStmt->execute([$seriesId]);
+    $totalSmSurcharge = floatval($smSurchargeStmt->fetchColumn() ?: 0);
+
+    // Also check via series_events junction
+    if ($totalSmSurcharge == 0) {
+        try {
+            $smSurchargeStmt2 = $pdo->prepare("
+                SELECT COALESCE(SUM(e.championship_surcharge), 0) as total_surcharge
+                FROM series_events se
+                JOIN events e ON se.event_id = e.id
+                WHERE se.series_id = ? AND e.is_championship = 1 AND e.championship_surcharge IS NOT NULL AND e.championship_surcharge > 0
+            ");
+            $smSurchargeStmt2->execute([$seriesId]);
+            $totalSmSurcharge = floatval($smSurchargeStmt2->fetchColumn() ?: 0);
+        } catch (\Throwable $e) {}
+    }
+
     // Hämta klasser som finns i seriens event
     $classStmt = $pdo->prepare("
         SELECT DISTINCT c.id as class_id, c.name, c.display_name, c.gender, c.min_age, c.max_age,
@@ -1590,12 +1633,18 @@ function getEligibleClassesForSeries(int $seriesId, int $riderId): array {
         $discountAmount = round($basePrice * ($discountPercent / 100), 2);
         $finalPrice = $basePrice - $discountAmount;
 
+        // Add championship surcharge OUTSIDE the discount (never discounted)
+        if ($totalSmSurcharge > 0) {
+            $finalPrice += $totalSmSurcharge;
+        }
+
         $classes[] = [
             'class_id' => $class['class_id'],
             'name' => $class['display_name'] ?: $class['name'] ?: ('Klass ' . $class['class_id']),
             'base_price' => $basePrice,
             'discount_percent' => $discountPercent,
             'discount_amount' => $discountAmount,
+            'championship_surcharge' => $totalSmSurcharge > 0 ? $totalSmSurcharge : null,
             'final_price' => $finalPrice,
             'eligible' => $eligible,
             'reason' => $reason

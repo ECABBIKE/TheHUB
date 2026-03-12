@@ -4,6 +4,19 @@
 
 ---
 
+## SENASTE FIX (2026-03-12, session 75b)
+
+### SM-prisfält i prismallar: Migration saknades + fel katalog
+- **Problem:** SM-tilläggsfälten (championship_fee, championship_fee_description) i prismallar visades med defaultvärden men sparning fungerade inte — kolumnerna fanns inte i databasen.
+- **Orsak:** Migration 106 (`106_add_championship_fee_to_pricing.sql`) låg i `admin/migrations/` (FEL) istället för `Tools/migrations/` (RÄTT), och var inte registrerad i `$migrationChecks` i `admin/migrations.php`.
+- **Fix 1:** Flyttade migrationen till `Tools/migrations/106_add_championship_fee_to_pricing.sql`
+- **Fix 2:** Registrerade migrationen i `$migrationChecks` med kolumnkontroll
+- **Fix 3:** Separerade championship_fee-sparning i en try/catch så att övriga inställningar sparas även om kolumnerna saknas (pre-migration graceful fallback)
+- **VIKTIGT:** Kör migration 106 via `/admin/migrations.php` för att skapa kolumnerna
+- **Filer:** `Tools/migrations/106_add_championship_fee_to_pricing.sql`, `admin/migrations.php`, `admin/pricing-template-edit.php`
+
+---
+
 ## SENASTE IMPLEMENTATION (2026-03-12, session 75)
 
 ### GravitySeries: Dynamiska serie-kort + CMS-infosida per serie
@@ -66,6 +79,21 @@
 
 ---
 
+## SENASTE IMPLEMENTATION (2026-03-12, session 73b)
+
+### SM-tilläggsavgift (Championship Surcharge)
+- **Ny funktion:** Flat tilläggsavgift per SM-event som läggs på ALLA prisperioder (early bird, normal, sen anmälan), aldrig rabatteras vid serieanmälan, och alltid tillfaller SM-eventets betalningsmottagare vid avräkning.
+- **Migration 097:** `events.championship_surcharge DECIMAL(10,2) NULL DEFAULT NULL` — ny kolumn efter `is_championship`.
+- **Admin event-edit.php:** Nytt fält "SM-tillägg" (antal kr) visas/döljs baserat på SM-checkboxen. Promotorer ser värdet read-only. Sparas via separat UPDATE med fallback om kolumnen saknas.
+- **order-manager.php — getEligibleClassesForEvent():** Hämtar `e.championship_surcharge` i event-queryn. Adderar surcharge till ALLA prisperioder EFTER procentberäkningar: `earlyBirdPrice += surcharge`, `basePrice += surcharge`, `lateFeePrice += surcharge`, `currentPrice += surcharge`. Returnerar `championship_surcharge` i classData.
+- **order-manager.php — getEligibleClassesForSeries():** Summerar total SM-surcharge för alla SM-event i serien. Adderar UTANFÖR serierabatten: `finalPrice = (basePrice - discountAmount) + totalSmSurcharge`. Returnerar `championship_surcharge` i klassdata.
+- **economy-helpers.php — explodeSeriesOrdersToEvents():** Hämtar `is_championship` + `championship_surcharge` per event. Vid proportionell split: extraherar total surcharge från orderbeloppet, fördelar resten proportionellt, lägger sedan till surcharge odelat på SM-eventet. Taggar split-rader med `_championship_surcharge`.
+- **pages/event.php:** Visar "inkl. X kr SM-avgift" under priset i event- och serieanmälningsmodalerna.
+- **VIKTIGT:** Kör migration 097 via `/admin/migrations.php`.
+- **Filer:** `Tools/migrations/097_championship_surcharge.sql`, `admin/event-edit.php`, `includes/order-manager.php`, `includes/economy-helpers.php`, `pages/event.php`, `admin/migrations.php`
+
+---
+
 ## SENASTE IMPLEMENTATION (2026-03-12, session 73)
 
 ### GravitySeries: CMS-sidor populerade med riktigt WordPress-innehåll
@@ -113,6 +141,22 @@
 - Flytta INTE saker mellan menygrupper utan godkännande
 - Skapa INTE nya menygrupper i admin-tabs-config.php utan godkännande
 - Om en ny sida behöver nås: lägg den under befintlig grupp i `pages`-arrayen, och länka från relevant dashboard/grid
+
+---
+
+## SENASTE IMPLEMENTATION (2026-03-12, session 73)
+
+### SM-tilläggsavgift (Championship Surcharge)
+- **Ny funktion:** Flat tilläggsavgift per SM-event som läggs på ALLA prisperioder (early bird, normal, sen anmälan), aldrig rabatteras vid serieanmälan, och alltid tillfaller SM-eventets betalningsmottagare vid avräkning.
+- **Migration 097:** `events.championship_surcharge DECIMAL(10,2) NULL DEFAULT NULL` — ny kolumn efter `is_championship`.
+- **Admin event-edit.php:** Nytt fält "SM-tillägg" (antal kr) visas/döljs baserat på SM-checkboxen. Promotorer ser värdet read-only. Sparas via separat UPDATE med fallback om kolumnen saknas.
+- **order-manager.php — getEligibleClassesForEvent():** Hämtar `e.championship_surcharge` i event-queryn. Adderar surcharge till ALLA prisperioder EFTER procentberäkningar: `earlyBirdPrice += surcharge`, `basePrice += surcharge`, `lateFeePrice += surcharge`, `currentPrice += surcharge`. Returnerar `championship_surcharge` i classData.
+- **order-manager.php — getEligibleClassesForSeries():** Summerar total SM-surcharge för alla SM-event i serien. Adderar UTANFÖR serierabatten: `finalPrice = (basePrice - discountAmount) + totalSmSurcharge`. Returnerar `championship_surcharge` i klassdata.
+- **economy-helpers.php — explodeSeriesOrdersToEvents():** Hämtar `is_championship` + `championship_surcharge` per event. Vid proportionell split: extraherar total surcharge från orderbeloppet, fördelar resten proportionellt, lägger sedan till surcharge odelat på SM-eventet. Taggar split-rader med `_championship_surcharge`.
+- **pages/event.php:** Visar "inkl. X kr SM-avgift" under priset i event- och serieanmälningsmodalerna.
+- **Exempel:** Klass 600 kr, SM-tillägg 100 kr → Early bird (15% rabatt): 510 + 100 = 610 kr, Normal: 600 + 100 = 700 kr, Sen anmälan (25%): 750 + 100 = 850 kr. Serie med 4 event (1 SM), 15% rabatt: (600×4)×0.85 + 100 = 2140 kr.
+- **VIKTIGT:** Kör migration 097 via `/admin/migrations.php`.
+- **Filer:** `Tools/migrations/097_championship_surcharge.sql`, `admin/event-edit.php`, `includes/order-manager.php`, `includes/economy-helpers.php`, `pages/event.php`, `admin/migrations.php`
 
 ---
 

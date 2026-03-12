@@ -40,7 +40,8 @@ function explodeSeriesOrdersToEvents(array $orders, $db): array {
         if (!isset($seriesEventsCache[$seriesId])) {
             try {
                 $seriesEventsCache[$seriesId] = $db->getAll("
-                    SELECT DISTINCT e.id, e.name, e.date, e.payment_recipient_id
+                    SELECT DISTINCT e.id, e.name, e.date, e.payment_recipient_id,
+                           e.is_championship, e.championship_surcharge
                     FROM (
                         SELECT event_id as eid FROM series_events WHERE series_id = ?
                         UNION
@@ -193,17 +194,56 @@ function explodeSeriesOrdersToEvents(array $orders, $db): array {
             }
         }
 
-        // Build event ID → recipient lookup
+        // Build event ID → recipient lookup + championship surcharge map
         $eventRecipientMap = [];
+        $eventSurchargeMap = [];
+        $totalSurcharge = 0;
         foreach ($seriesEvents as $evt) {
-            $eventRecipientMap[(int)$evt['id']] = $evt['payment_recipient_id'] ?? null;
+            $evId = (int)$evt['id'];
+            $eventRecipientMap[$evId] = $evt['payment_recipient_id'] ?? null;
+            $surcharge = (!empty($evt['is_championship']) && !empty($evt['championship_surcharge']))
+                ? floatval($evt['championship_surcharge'])
+                : 0;
+            $eventSurchargeMap[$evId] = $surcharge;
+            $totalSurcharge += $surcharge;
+        }
+
+        // If there are SM surcharges, extract them from the order amount before proportional split
+        // The surcharge goes undiluted to the SM event's payment recipient
+        $amountForProportionalSplit = $orderAmount;
+        if ($totalSurcharge > 0) {
+            $amountForProportionalSplit = $orderAmount - $totalSurcharge;
+            // Re-normalize shares to match the reduced amount
+            if ($shareTotal > 0) {
+                $scale = $amountForProportionalSplit / ($shareTotal - $totalSurcharge);
+                if ($scale > 0 && is_finite($scale)) {
+                    foreach ($eventShares as $evId => &$share) {
+                        // Subtract the surcharge from SM event shares before scaling
+                        $adjShare = $share - $eventSurchargeMap[$evId];
+                        $share = round($adjShare * $scale, 2);
+                    }
+                    unset($share);
+                }
+                // Re-balance rounding errors
+                $newTotal = array_sum($eventShares);
+                $diff = round($amountForProportionalSplit - $newTotal, 2);
+                if ($diff != 0 && !empty($eventShares)) {
+                    $firstKey = array_key_first($eventShares);
+                    $eventShares[$firstKey] += $diff;
+                }
+            }
         }
 
         // Create per-event rows
         $seriesName = $order['event_name'] ?? ($order['source_name'] ?? '');
         foreach ($seriesEvents as $evt) {
             $evId = (int)$evt['id'];
-            $evAmount = $eventShares[$evId] ?? round($orderAmount / $eventCount, 2);
+            $evAmount = $eventShares[$evId] ?? round($amountForProportionalSplit / $eventCount, 2);
+
+            // Add championship surcharge undiluted to SM event
+            $evSurcharge = $eventSurchargeMap[$evId] ?? 0;
+            $evAmount += $evSurcharge;
+
             $fraction = ($orderAmount > 0) ? $evAmount / $orderAmount : (1 / $eventCount);
 
             $eventRow = $order;
@@ -217,6 +257,7 @@ function explodeSeriesOrdersToEvents(array $orders, $db): array {
             $eventRow['_split_fraction'] = $fraction;
             $eventRow['_split_event_count'] = $eventCount;
             $eventRow['_event_recipient_id'] = $eventRecipientMap[$evId] ?? null;
+            $eventRow['_championship_surcharge'] = $evSurcharge > 0 ? $evSurcharge : null;
             if (isset($order['stripe_fee']) && $order['stripe_fee'] !== null) {
                 $eventRow['stripe_fee'] = round((float)$order['stripe_fee'] * $fraction, 2);
             }

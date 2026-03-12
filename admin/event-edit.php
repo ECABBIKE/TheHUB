@@ -428,9 +428,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // is_championship: ONLY super admins can change this
             // Promotors must never be able to modify it (even via manipulated POST data)
             $isChampionship = null; // null = don't update
+            $championshipSurcharge = null; // null = don't update
             if (!$isPromotorOnly) {
                 // Super admin/admin - check actual POST value (not just isset!)
                 $isChampionship = (!empty($_POST['is_championship']) && $_POST['is_championship'] == '1') ? 1 : 0;
+                $championshipSurcharge = ($isChampionship && isset($_POST['championship_surcharge']) && $_POST['championship_surcharge'] !== '')
+                    ? floatval($_POST['championship_surcharge'])
+                    : null;
             }
 
             // First, update the core fields (these MUST always be saved reliably)
@@ -578,12 +582,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $id
             ]);
 
-            // Update is_championship separately - ONLY if user is super admin (not promotor)
+            // Update is_championship + championship_surcharge separately - ONLY if user is super admin (not promotor)
             if ($isChampionship !== null) {
                 try {
-                    $db->query("UPDATE events SET is_championship = ? WHERE id = ?", [$isChampionship, $id]);
-                } catch (Exception $smEx) {
-                    error_log("EVENT EDIT: SM column update failed: " . $smEx->getMessage());
+                    $db->query("UPDATE events SET is_championship = ?, championship_surcharge = ? WHERE id = ?",
+                        [$isChampionship, $championshipSurcharge, $id]);
+                } catch (\Throwable $smEx) {
+                    // Fallback: championship_surcharge column might not exist yet
+                    try {
+                        $db->query("UPDATE events SET is_championship = ? WHERE id = ?", [$isChampionship, $id]);
+                    } catch (\Throwable $smEx2) {
+                        error_log("EVENT EDIT: SM column update failed: " . $smEx2->getMessage());
+                    }
                 }
             }
 
@@ -1990,11 +2000,15 @@ include __DIR__ . '/components/unified-layout.php';
                     <span><i data-lucide="trophy" class="icon-sm"></i> Svenskt Mästerskap</span>
                     <?php if (!empty($event['is_championship'])): ?>
                     <span class="admin-badge admin-badge-success text-xs ml-sm">SM</span>
+                    <?php if (!empty($event['championship_surcharge'])): ?>
+                    <span class="text-xs text-secondary ml-sm">(+<?= intval($event['championship_surcharge']) ?> kr SM-avgift)</span>
+                    <?php endif; ?>
                     <?php endif; ?>
                 </div>
                 <!-- Hidden fields to preserve values -->
                 <input type="hidden" name="active" value="<?= $event['active'] ? '1' : '0' ?>">
                 <input type="hidden" name="is_championship" value="<?= !empty($event['is_championship']) ? '1' : '0' ?>">
+                <input type="hidden" name="championship_surcharge" value="<?= $event['championship_surcharge'] ?? '' ?>">
                 <?php else: ?>
                 <label class="flex items-center gap-sm cursor-pointer">
                     <input type="checkbox" name="active" <?= $event['active'] ? 'checked' : '' ?>>
@@ -2002,12 +2016,22 @@ include __DIR__ . '/components/unified-layout.php';
                 </label>
 
                 <label class="flex items-center gap-sm cursor-pointer">
-                    <input type="checkbox" name="is_championship" value="1" <?= !empty($event['is_championship']) ? 'checked' : '' ?>>
+                    <input type="checkbox" name="is_championship" value="1" id="is_championship_cb"
+                           <?= !empty($event['is_championship']) ? 'checked' : '' ?>
+                           onchange="document.getElementById('championship_surcharge_row').style.display = this.checked ? 'flex' : 'none'">
                     <span><i data-lucide="trophy" class="icon-sm"></i> Svenskt Mästerskap</span>
                     <?php if (!empty($event['is_championship'])): ?>
                     <span class="admin-badge admin-badge-success text-xs ml-sm">SM</span>
                     <?php endif; ?>
                 </label>
+                <div id="championship_surcharge_row" class="flex items-center gap-sm" style="display: <?= !empty($event['is_championship']) ? 'flex' : 'none' ?>; margin-left: 24px;">
+                    <label class="text-sm text-secondary" for="championship_surcharge">SM-tillägg:</label>
+                    <input type="number" name="championship_surcharge" id="championship_surcharge"
+                           value="<?= $event['championship_surcharge'] ?? '' ?>"
+                           min="0" step="1" style="width: 80px;" class="input"
+                           placeholder="0">
+                    <span class="text-sm text-secondary">kr</span>
+                </div>
                 <?php endif; ?>
 
                 <div class="flex gap-sm">

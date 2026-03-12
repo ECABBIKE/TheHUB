@@ -3959,6 +3959,8 @@ if (!empty($event['series_id'])) {
                             warningHtml = `<div class="reg-class-desc" style="color: var(--color-warning);"><i data-lucide="alert-triangle" style="width: 14px; height: 14px; display: inline; vertical-align: text-bottom;"></i> ${cls.warning}</div>`;
                         }
 
+                        const smInfo = cls.championship_surcharge ? `<div class="text-xs" style="color: var(--color-warning);">inkl. ${cls.championship_surcharge} kr SM-avgift</div>` : '';
+
                         div.innerHTML = `
                             <input type="radio" name="class_select" value="${cls.class_id}"
                                    class="reg-class-radio"
@@ -3970,6 +3972,7 @@ if (!empty($event['series_id'])) {
                             <div class="reg-class-price">
                                 <div class="reg-class-price__current">${cls.current_price.toLocaleString('sv-SE')} kr</div>
                                 ${cls.price_type === 'early_bird' ? `<div class="reg-class-price__original">${cls.base_price.toLocaleString('sv-SE')} kr</div>` : ''}
+                                ${smInfo}
                             </div>
                         `;
 
@@ -4595,12 +4598,17 @@ if (!empty($event['series_id'])) {
                         if (hasSaving) {
                             savingHtml = `<div class="reg-class-desc" style="color: var(--color-success);">Seriepris: ${seasonTotal} kr totalt (spara ${saving} kr)</div>`;
                         }
+                        let smSeriesHtml = '';
+                        if (cls.championship_surcharge) {
+                            smSeriesHtml = `<div class="reg-class-desc text-xs" style="color: var(--color-warning);">inkl. ${cls.championship_surcharge} kr SM-avgift (ej rabatterad)</div>`;
+                        }
                         return `
                             <div class="reg-class-item" data-class-id="${cls.class_id}" data-season-price="${seasonTotal}" data-saving="${saving}">
                                 <input type="radio" name="series_class" value="${cls.class_id}" class="reg-class-radio">
                                 <div class="reg-class-info">
                                     <div class="reg-class-name">${className}</div>
                                     ${savingHtml}
+                                    ${smSeriesHtml}
                                     ${cls.warning ? `<div class="reg-class-desc" style="color: var(--color-warning);">${cls.warning}</div>` : ''}
                                 </div>
                                 <div class="reg-class-price">
