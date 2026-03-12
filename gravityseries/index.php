@@ -42,12 +42,15 @@ try {
     // Fallback values
 }
 
-// Load series from database
+// Load series from database with event stats
 $series = [];
 try {
     $series = $pdo->query("
         SELECT s.id, s.name, s.year,
-            sb.name AS brand_name, sb.slug AS brand_slug
+            sb.name AS brand_name, sb.slug AS brand_slug,
+            (SELECT COUNT(*) FROM series_events se WHERE se.series_id = s.id) AS total_events,
+            (SELECT COUNT(*) FROM series_events se JOIN events e ON se.event_id = e.id WHERE se.series_id = s.id AND e.date < CURDATE()) AS done_events,
+            (SELECT COUNT(DISTINCT r.cyclist_id) FROM results r JOIN series_events se ON r.event_id = se.event_id WHERE se.series_id = s.id) AS total_riders
         FROM series s
         LEFT JOIN series_brands sb ON s.brand_id = sb.id
         WHERE s.status = 'active' AND s.year = YEAR(CURDATE())
@@ -56,6 +59,43 @@ try {
 } catch (PDOException $e) {
     // Fallback
 }
+
+// Load events per series for pills
+$seriesEvents = [];
+try {
+    foreach ($series as $s) {
+        $evtStmt = $pdo->prepare("
+            SELECT e.id, e.name, e.location, e.date
+            FROM series_events se
+            JOIN events e ON se.event_id = e.id
+            WHERE se.series_id = ?
+            ORDER BY e.date ASC
+        ");
+        $evtStmt->execute([$s['id']]);
+        $seriesEvents[$s['id']] = $evtStmt->fetchAll();
+    }
+} catch (PDOException $e) {}
+
+// Load top 3 clubs per series (club championship)
+$seriesClubs = [];
+try {
+    foreach ($series as $s) {
+        $clubStmt = $pdo->prepare("
+            SELECT c.name AS club_name, SUM(r.points) AS total
+            FROM results r
+            JOIN series_events se ON r.event_id = se.event_id
+            JOIN riders rd ON r.cyclist_id = rd.id
+            JOIN clubs c ON rd.club_id = c.id
+            WHERE se.series_id = ?
+            AND r.points > 0
+            GROUP BY c.id, c.name
+            ORDER BY total DESC
+            LIMIT 3
+        ");
+        $clubStmt->execute([$s['id']]);
+        $seriesClubs[$s['id']] = $clubStmt->fetchAll();
+    }
+} catch (PDOException $e) {}
 
 // Load sponsors from gs_sponsors table
 $sponsors = [];
@@ -150,29 +190,77 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
       <h2 class="section-title"><?= gs('gs_section_series_title', 'Fyra serier.<br>En rörelse.') ?></h2>
       <p class="section-body"><?= gs('gs_section_series_body', 'GravitySeries driver Enduro och Downhill-tävlingar från Malmö till Umeå. Hitta din serie — och ditt nästa lopp.') ?></p>
     </div>
-    <div class="series-grid">
+    <div class="gs-series-grid">
       <?php
-      // Hardcoded series cards matching the reference design
-      $seriesCards = [
-          ['abbr' => 'GGS', 'name' => 'Götaland Gravity Series', 'color' => 'var(--ggs)', 'disc' => 'Enduro', 'region' => 'Götaland', 'slug' => 'ggs'],
-          ['abbr' => 'CGS', 'name' => 'Capital Gravity Series', 'color' => 'var(--cgs)', 'disc' => 'Enduro', 'region' => 'Mälardalen', 'slug' => 'capital'],
-          ['abbr' => 'JGS', 'name' => 'Jämtland GravitySeries', 'color' => 'var(--ges)', 'disc' => 'Enduro', 'region' => 'Jämtland', 'slug' => 'jgs'],
-          ['abbr' => 'GSD', 'name' => 'GravitySeries Downhill', 'color' => 'var(--gs-blue)', 'disc' => 'Downhill', 'region' => 'Nationell', 'slug' => 'gsd'],
-          ['abbr' => 'GSE', 'name' => 'GravitySeries Enduro', 'color' => 'var(--accent)', 'abbrColor' => 'var(--accent-d)', 'disc' => 'Enduro', 'discBg' => 'var(--accent-d)', 'region' => 'Nationell', 'slug' => 'gse'],
-          ['abbr' => 'TOTAL', 'name' => 'GravitySeries TOTAL', 'color' => 'var(--ink-2)', 'disc' => 'Enduro + DH', 'region' => 'Alla serier samlat', 'slug' => 'gstotal'],
+      // Card definitions: slug → display config
+      $cardConfig = [
+          'ggs'     => ['abbr' => 'GGS', 'css' => 'ggs',  'disc' => 'Enduro',      'region' => 'Götaland'],
+          'capital' => ['abbr' => 'CGS', 'css' => 'cgs',  'disc' => 'Enduro',      'region' => 'Mälardalen'],
+          'jgs'     => ['abbr' => 'JGS', 'css' => 'jgs',  'disc' => 'Enduro',      'region' => 'Jämtland'],
+          'gsd'     => ['abbr' => 'GSD', 'css' => 'gsdh', 'disc' => 'Downhill',    'region' => 'Nationell'],
+          'gse'     => ['abbr' => 'GSE', 'css' => '',     'disc' => 'Enduro',      'region' => 'Nationell'],
+          'gstotal' => ['abbr' => 'TOTAL','css' => '',    'disc' => 'Enduro + DH', 'region' => 'Alla serier samlat'],
       ];
-      foreach ($seriesCards as $sc):
-          $abbrColor = $sc['abbrColor'] ?? $sc['color'];
-          $discBg = $sc['discBg'] ?? $sc['color'];
+      foreach ($series as $s):
+          $slug = strtolower($s['brand_slug'] ?? '');
+          $cfg = $cardConfig[$slug] ?? null;
+          if (!$cfg) continue;
+          $seriesId = $s['id'];
+          $events = $seriesEvents[$seriesId] ?? [];
+          $clubs = $seriesClubs[$seriesId] ?? [];
+          $totalEvents = (int)($s['total_events'] ?? count($events));
+          $doneEvents = (int)($s['done_events'] ?? 0);
+          $remainingEvents = $totalEvents - $doneEvents;
+          $totalRiders = (int)($s['total_riders'] ?? 0);
+          $today = date('Y-m-d');
+
+          // Determine next event
+          $nextEventIdx = -1;
+          foreach ($events as $i => $evt) {
+              if ($evt['date'] >= $today) { $nextEventIdx = $i; break; }
+          }
       ?>
-        <?php $seriesId = $seriesIdBySlug[$sc['slug']] ?? 0; ?>
-        <a class="serie-card" href="<?= $seriesId ? 'https://thehub.gravityseries.se/series/' . $seriesId : '#' ?>">
-          <div class="serie-card-top" style="background:<?= $sc['color'] ?>"></div>
-          <div class="serie-card-body">
-            <div class="serie-abbr" style="color:<?= $abbrColor ?>"><?= $sc['abbr'] ?></div>
-            <div class="serie-fullname"><?= htmlspecialchars($sc['name']) ?></div>
-            <span class="serie-discipline" style="background:<?= $discBg ?>"><?= htmlspecialchars($sc['disc']) ?></span>
-            <div class="serie-region"><?= $mapPinSvg ?> <?= htmlspecialchars($sc['region']) ?></div>
+        <a class="gs-serie-card <?= $cfg['css'] ?>" data-serie="<?= $cfg['abbr'] ?>" href="https://thehub.gravityseries.se/series/<?= $seriesId ?>">
+          <div class="gsc-inner">
+            <div class="gsc-top">
+              <div class="gsc-badge"><i class="gsc-dot"></i> <?= $cfg['abbr'] ?></div>
+              <span class="gsc-discipline"><?= htmlspecialchars($cfg['disc']) ?></span>
+            </div>
+            <div class="gsc-title-wrap">
+              <h3 class="gsc-title"><?= htmlspecialchars($s['name']) ?></h3>
+              <div class="gsc-meta"><?= htmlspecialchars($cfg['disc']) ?> &middot; <?= htmlspecialchars($cfg['region']) ?></div>
+            </div>
+            <div class="gsc-stats">
+              <div class="gsc-stat"><strong><?= $totalEvents ?></strong><span>Deltävlingar</span></div>
+              <div class="gsc-stat"><strong><?= $doneEvents ?></strong><span>Avgjorda</span></div>
+              <div class="gsc-stat"><strong><?= $totalRiders ?></strong><span>Åkare</span></div>
+              <div class="gsc-stat"><strong><?= $remainingEvents ?></strong><span>Kvar</span></div>
+            </div>
+            <?php if (!empty($events)): ?>
+            <div class="gsc-events">
+              <?php foreach ($events as $i => $evt):
+                  $isDone = $evt['date'] < $today;
+                  $isNext = ($i === $nextEventIdx);
+                  $pillClass = $isDone ? 'done' : ($isNext ? 'next' : '');
+              ?>
+                <div class="gsc-pill <?= $pillClass ?>"><i></i> <?= htmlspecialchars($evt['location'] ?: $evt['name']) ?></div>
+              <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+            <div class="gsc-clubs">
+              <?php if (!empty($clubs)): ?>
+                <div class="gsc-clubs-label">Klubbmästerskap</div>
+                <?php foreach ($clubs as $pos => $club): ?>
+                <div class="gsc-club-row">
+                  <span class="gsc-club-pos"><?= $pos + 1 ?></span>
+                  <span class="gsc-club-name"><?= htmlspecialchars($club['club_name']) ?></span>
+                  <span class="gsc-club-pts"><?= (int)$club['total'] ?> p</span>
+                </div>
+                <?php endforeach; ?>
+              <?php else: ?>
+                <div class="gsc-clubs-empty">Säsongen pågår — ställningen uppdateras efter varje deltävling</div>
+              <?php endif; ?>
+            </div>
           </div>
         </a>
       <?php endforeach; ?>
@@ -181,7 +269,7 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
 </section>
 
 <!-- ARRANGERA / REGLER / LICENSER -->
-<div style="background:var(--white); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);">
+<div style="background:var(--bg-2, var(--white)); border-top: 1px solid var(--border, var(--rule)); border-bottom: 1px solid var(--border, var(--rule));">
   <div class="gs-section" id="arrangera">
     <div class="section-head">
       <div class="section-label"><?= gs('gs_section_info_label', 'Praktisk info') ?></div>
