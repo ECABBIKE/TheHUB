@@ -26,6 +26,13 @@
   - `gravityseries/includes/gs-header.php` — `data-theme="dark"` på html, flash-prevention script, toggle-knapp
   - `gravityseries/index.php` — nya serie-kort med event-pills och klubbmästerskap
 
+### BUGGFIX: Serie-kort renderade inte (session 74b)
+- **Problem:** Serie-korten var helt tomma på live-sajten trots att CSS och HTML-strukturen fungerade
+- **Orsak:** Implementationen ersatte hårdkodade `$seriesCards` med dynamisk DB-query som matchade `series_brands.slug` mot `$cardConfig`-nycklar. Om `brand_slug` inte matchade (fel slugs, inga aktiva serier för nuvarande år, etc.) renderades noll kort — `if (!$cfg) continue;` hoppade över allt.
+- **Fix:** Återställde hårdkodade kortdefinitioner (`$seriesCards` array med alla 6 serier) som ALLTID renderas. DB-data (events, riders, clubs) överlagras via `$seriesBySlug` lookup när matchning hittas. Om ingen DB-matchning: kortet renderas med grundinfo och nollvärden.
+- **VIKTIGT:** Hårdkodade kort är sanningskällan för vilka serier som visas. DB-data är berikande, inte styrande.
+- **Fil:** `gravityseries/index.php`
+
 ### VIKTIGT: GS tema-arkitektur
 - **CSS-variabler:** `--bg`, `--bg-2`, `--surface`, `--surface-2`, `--border`, `--border-s`, `--text`, `--text-2`, `--text-3`, `--header-bg` definierade per `[data-theme]`
 - **Legacy-variabler:** `--ink`, `--paper`, `--white`, `--rule` finns kvar i `:root` som fallback
