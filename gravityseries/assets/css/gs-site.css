@@ -14,6 +14,10 @@
   --cgs:      #28a8ff;
   --gsdh:     #1d63ff;
   --jgs:      #c084fc;
+  /* TheHUB brand */
+  --hub-cyan:  #7EECD8;
+  --hub-pink:  #F2A5C2;
+  --hub-navy:  #0d0b2e;
   --font-display: 'Bebas Neue', sans-serif;
   --font-cond:    'Barlow Condensed', sans-serif;
   --font-body:    'Barlow', sans-serif;
@@ -161,8 +165,8 @@ body {
 
 .hub-btn {
   margin-left: auto;
-  background: var(--accent);
-  color: var(--ink) !important;
+  background: linear-gradient(135deg, var(--hub-cyan), var(--hub-pink)) !important;
+  color: var(--hub-navy) !important;
   font-family: var(--font-cond);
   font-size: 13px;
   font-weight: 700;
@@ -176,10 +180,9 @@ body {
   gap: 7px;
   flex-shrink: 0;
   transition: filter .15s !important;
-  background-color: var(--accent) !important;
 }
-.hub-btn:hover { filter: brightness(1.08); background: var(--accent) !important; }
-.hub-btn svg { width: 14px; height: 14px; stroke: var(--ink); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.hub-btn:hover { filter: brightness(1.1); }
+.hub-btn svg { width: 14px; height: 14px; stroke: var(--hub-navy); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Header actions group (icons + TheHUB btn) */
 .header-actions {
@@ -269,8 +272,8 @@ body {
 .mobile-nav-menu a.active { color: var(--white); background: rgba(255,255,255,.06); }
 .mobile-nav-menu .hub-btn-mobile {
   margin: 12px 24px 4px;
-  background: var(--accent);
-  color: var(--ink) !important;
+  background: linear-gradient(135deg, var(--hub-cyan), var(--hub-pink));
+  color: var(--hub-navy) !important;
   font-family: var(--font-cond);
   font-size: 14px;
   font-weight: 700;
@@ -284,6 +287,7 @@ body {
   justify-content: center;
   gap: 8px;
 }
+.mobile-nav-menu .hub-btn-mobile svg { stroke: var(--hub-navy); }
 
 /* ── HERO ─────────────────────────────────── */
 .hero {
@@ -398,8 +402,8 @@ body {
 .btn-primary:hover { filter: brightness(1.08); }
 .btn-primary svg { width: 16px; height: 16px; stroke: var(--ink); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .btn-ghost {
-  border: 1px solid rgba(255,255,255,.2);
-  color: var(--white);
+  border: 1px solid var(--hub-cyan);
+  color: var(--hub-cyan);
   font-family: var(--font-cond);
   font-size: 15px;
   font-weight: 600;
@@ -408,10 +412,10 @@ body {
   padding: 14px 28px;
   border-radius: 4px;
   text-decoration: none;
-  transition: border-color .15s, background .15s;
+  transition: border-color .15s, background .15s, color .15s;
   background: none;
 }
-.btn-ghost:hover { border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.06); }
+.btn-ghost:hover { border-color: var(--hub-pink); color: var(--hub-pink); background: rgba(242,165,194,.06); }
 
 /* ── STAT BAR ─────────────────────────────── */
 .stat-bar {
@@ -794,7 +798,7 @@ body {
 
 /* ── HUB CTA ──────────────────────────────── */
 .hub-cta-section {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--hub-navy) 0%, #1a1054 50%, var(--hub-navy) 100%);
 }
 .hub-cta-inner {
   max-width: 1200px;
@@ -806,22 +810,24 @@ body {
   gap: 32px;
 }
 .hub-cta-title {
-  font-family: var(--font-display);
-  font-size: clamp(32px, 4vw, 52px);
-  color: var(--ink);
-  letter-spacing: .02em;
-  line-height: .95;
+  font-family: var(--font-cond);
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--hub-cyan);
+  line-height: 1.05;
   margin-bottom: 8px;
 }
 .hub-cta-sub {
-  font-family: var(--font-cond);
-  font-size: 18px;
-  color: rgba(0,0,0,.5);
+  font-family: var(--font-body);
+  font-size: 17px;
+  color: rgba(255,255,255,.55);
   font-weight: 400;
 }
 .hub-cta-btn {
-  background: var(--ink);
-  color: var(--white);
+  background: linear-gradient(135deg, var(--hub-cyan), var(--hub-pink));
+  color: var(--hub-navy);
   font-family: var(--font-cond);
   font-size: 15px;
   font-weight: 700;
@@ -837,8 +843,8 @@ body {
   transition: filter .15s;
   flex-shrink: 0;
 }
-.hub-cta-btn:hover { filter: brightness(1.2); }
-.hub-cta-btn svg { width: 16px; height: 16px; stroke: var(--white); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.hub-cta-btn:hover { filter: brightness(1.1); }
+.hub-cta-btn svg { width: 16px; height: 16px; stroke: var(--hub-navy); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ── PARTNERS ─────────────────────────────── */
 .partners-section {
