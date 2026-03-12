@@ -305,6 +305,25 @@ body {
   inset: 0;
   overflow: hidden;
 }
+.hero-bg-image {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.hero-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 13, 18, 0.45) 0%,
+    rgba(10, 13, 18, 0.55) 40%,
+    rgba(10, 13, 18, 0.8) 100%
+  );
+}
+.hero--has-image .hero-bg-stripe { opacity: .04; }
+.hero--has-image .hero-bg-grid { opacity: .5; }
 .hero-bg-stripe {
   position: absolute;
   top: -20%;

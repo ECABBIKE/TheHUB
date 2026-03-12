@@ -4,6 +4,23 @@
 
 ---
 
+## SENASTE FIX (2026-03-12, session 77)
+
+### GravitySeries: Display-font bytt till Oswald + hero-bakgrundsbild
+- **Font-byte:** Bebas Neue (bara weight 400, tunn och svag) ersatt med Oswald (400-700). `font-weight: 700` på section-title, hero-title, page-hero-title. `font-weight: 600` på stat-val.
+- **Ny funktion: Hero-bakgrundsbild:** Admin kan nu ladda upp en bakgrundsbild för hero-sektionen via GS Startsida-editorn (`/admin/pages/gs-homepage.php`).
+  - Bilduppladdning med förhandsvisning, byt/ta bort-knappar
+  - JPG auto-optimeras (max 1920px, 82% kvalitet)
+  - Bilden renderas som `background-image` i `.hero-bg-image` (cover, centrerad)
+  - Mörkt gradient-overlay (45%→80% opacity uppifrån och ner) säkerställer läsbar text
+  - Rutnät och stripe-effekter tonas ner med bild (`.hero--has-image`)
+  - Setting lagras som `gs_hero_image` i `sponsor_settings`
+- **CSS-variabler:** `--font-display` ändrad från `'Bebas Neue'` till `'Oswald'`
+- **Google Fonts:** Uppdaterad till `Oswald:wght@400;500;600;700`
+- **Filer:** `gravityseries/assets/css/gs-site.css`, `gravityseries/includes/gs-header.php`, `gravityseries/index.php`, `admin/pages/gs-homepage.php`
+
+---
+
 ## SENASTE FIX (2026-03-12, session 76)
 
 ### Pricing templates edit page redesign

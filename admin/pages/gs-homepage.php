@@ -31,6 +31,7 @@ $settingsKeys = [
     'gs_hero_eyebrow'     => 'Svensk Gravitycykling sedan 2016',
     'gs_hero_title'        => 'Gravity<em>Series</em>',
     'gs_hero_body'         => 'Organisationen bakom svensk enduro och downhill. Vi arrangerar tävlingar, sätter regler och utvecklar sporten — från Motion till Elite.',
+    'gs_hero_image'        => '',
     'gs_section_series_label'   => 'Tävlingsserier',
     'gs_section_series_title'   => 'Fyra serier.<br>En rörelse.',
     'gs_section_series_body'    => 'GravitySeries driver Enduro och Downhill-tävlingar från Malmö till Umeå. Hitta din serie — och ditt nästa lopp.',
@@ -93,13 +94,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             // Save text fields
             $textKeys = array_keys($settingsKeys);
-            // Remove board_members from text keys (handled separately)
-            $textKeys = array_diff($textKeys, ['gs_board_members']);
+            // Remove keys handled separately
+            $textKeys = array_diff($textKeys, ['gs_board_members', 'gs_hero_image']);
 
             foreach ($textKeys as $key) {
                 $value = $_POST[$key] ?? '';
                 save_site_setting($key, $value, 'GS Startsida');
                 $currentValues[$key] = $value;
+            }
+
+            // Handle hero image
+            if (!empty($_POST['remove_hero_image'])) {
+                save_site_setting('gs_hero_image', '', 'GS Startsida - Hero-bild');
+                $currentValues['gs_hero_image'] = '';
+            }
+            if (!empty($_FILES['gs_hero_image_file']['tmp_name'])) {
+                $file = $_FILES['gs_hero_image_file'];
+                $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                $finfo = new finfo(FILEINFO_MIME_TYPE);
+                $mime = $finfo->file($file['tmp_name']);
+                if (in_array($mime, $allowedTypes)) {
+                    $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$mime];
+                    // Optimize image
+                    $tmpPath = $file['tmp_name'];
+                    if ($ext === 'jpg' && function_exists('imagecreatefromjpeg')) {
+                        $img = imagecreatefromjpeg($tmpPath);
+                        if ($img) {
+                            $w = imagesx($img); $h = imagesy($img);
+                            if ($w > 1920) {
+                                $newW = 1920; $newH = (int)($h * 1920 / $w);
+                                $resized = imagecreatetruecolor($newW, $newH);
+                                imagecopyresampled($resized, $img, 0, 0, 0, 0, $newW, $newH, $w, $h);
+                                imagedestroy($img); $img = $resized;
+                            }
+                            imagejpeg($img, $tmpPath, 82);
+                            imagedestroy($img);
+                        }
+                    }
+                    $uploadDir = HUB_ROOT . '/uploads/pages/';
+                    if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                    $filename = 'gs-hero-' . time() . '.' . $ext;
+                    if (move_uploaded_file($tmpPath, $uploadDir . $filename)) {
+                        $heroUrl = '/uploads/pages/' . $filename;
+                        save_site_setting('gs_hero_image', $heroUrl, 'GS Startsida - Hero-bild');
+                        $currentValues['gs_hero_image'] = $heroUrl;
+                    }
+                } else {
+                    $errors[] = 'Hero-bilden måste vara JPG, PNG eller WebP.';
+                }
             }
 
             // Save board members as JSON
@@ -163,7 +205,7 @@ include __DIR__ . '/../components/unified-layout.php';
     <div class="alert alert-danger" style="margin-bottom:var(--space-md);"><?= htmlspecialchars($err) ?></div>
   <?php endforeach; ?>
 
-  <form method="POST" id="homepageForm">
+  <form method="POST" enctype="multipart/form-data" id="homepageForm">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
 
     <!-- HERO -->
@@ -181,6 +223,33 @@ include __DIR__ . '/../components/unified-layout.php';
         <div class="form-group" style="margin:0;">
           <label class="form-label">Beskrivning</label>
           <textarea name="gs_hero_body" class="form-textarea" rows="3"><?= gs_val('gs_hero_body') ?></textarea>
+        </div>
+
+        <!-- Hero-bild -->
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Bakgrundsbild</label>
+          <?php $heroImg = gs_raw('gs_hero_image'); ?>
+          <?php if ($heroImg): ?>
+            <div style="position:relative; border-radius:var(--radius-sm); overflow:hidden; margin-bottom:var(--space-xs);">
+              <img src="<?= htmlspecialchars($heroImg) ?>" alt="Hero" style="width:100%; max-height:200px; object-fit:cover; display:block;">
+              <div style="position:absolute; top:8px; right:8px; display:flex; gap:6px;">
+                <label style="background:var(--color-bg-card); border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:6px 10px; cursor:pointer; font-size:12px; color:var(--color-text-secondary);">
+                  <i data-lucide="replace" style="width:14px;height:14px;vertical-align:-2px;"></i> Byt
+                  <input type="file" name="gs_hero_image_file" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="this.form.querySelector('#heroPreviewCurrent').style.display='none';">
+                </label>
+                <button type="submit" name="remove_hero_image" value="1" style="background:var(--color-error); color:#fff; border:none; border-radius:var(--radius-sm); padding:6px 10px; cursor:pointer; font-size:12px;">
+                  <i data-lucide="x" style="width:14px;height:14px;vertical-align:-2px;"></i> Ta bort
+                </button>
+              </div>
+            </div>
+          <?php else: ?>
+            <label style="display:flex; align-items:center; justify-content:center; border:2px dashed var(--color-border); border-radius:var(--radius-sm); padding:var(--space-xl) var(--space-md); cursor:pointer; color:var(--color-text-muted); font-size:13px; gap:var(--space-xs); transition:border-color .2s;" onmouseover="this.style.borderColor='var(--color-accent)'" onmouseout="this.style.borderColor='var(--color-border)'">
+              <i data-lucide="image-plus" style="width:20px;height:20px;"></i>
+              Klicka för att ladda upp en hero-bild (JPG, PNG, WebP)
+              <input type="file" name="gs_hero_image_file" accept="image/jpeg,image/png,image/webp" style="display:none;">
+            </label>
+          <?php endif; ?>
+          <p class="form-help">Rekommenderad storlek: minst 1920×800px. Bilden visas bakom texten med ett mörkt overlay.</p>
         </div>
       </div>
     </div>
