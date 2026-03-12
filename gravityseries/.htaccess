@@ -1,5 +1,6 @@
 # GravitySeries — Clean URL routing
 # /gravityseries/om-oss → /gravityseries/sida.php?slug=om-oss
+# /gravityseries/serie/my-slug → /gravityseries/serie.php?slug=my-slug
 
 RewriteEngine On
 RewriteBase /gravityseries/
@@ -12,6 +13,8 @@ RewriteRule ^ - [L]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Clean URL: /gravityseries/{slug} → sida.php?slug={slug}
-# Only match lowercase letters, numbers and hyphens (valid slugs)
+# Serie detail page: /gravityseries/serie/{brand-slug}
+RewriteRule ^serie/([a-z0-9-]+)/?$ serie.php?slug=$1 [QSA,L]
+
+# CMS pages: /gravityseries/{slug}
 RewriteRule ^([a-z0-9-]+)/?$ sida.php?slug=$1 [QSA,L]
