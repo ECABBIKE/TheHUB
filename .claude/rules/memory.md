@@ -4,6 +4,17 @@
 
 ---
 
+## SENASTE FIX (2026-03-12, session 76)
+
+### GravitySeries: Serie-sektionens typsnitt + fadad bakgrund med rutmönster
+- **Problem:** "FYRA SERIER. EN RÖRELSE."-rubriken hade liten text och sektionen hade mycket tomt utrymme utan visuell karaktär.
+- **Fix 1: Typsnitt förstärkt:** `.section-title` ökad från `clamp(36px, 5vw, 56px)` till `clamp(42px, 6vw, 68px)`, tätare line-height (0.92), bredare letter-spacing (0.02em), `text-transform: uppercase` tillagd.
+- **Fix 2: Fadad bakgrund med rutmönster:** `#serier`-sektionen har nu en subtil grid-bakgrund (48px rutnät) som fadear ut via radial mask. Kompletterande färggradient-glöd (blå + grön) ger djup. Separata stilar för dark/light mode.
+- **CSS-teknik:** `::before` = rutmönster med mask-image fade, `::after` = radiella färggradienter, `> *` = z-index 1 för innehåll ovanpå.
+- **Filer:** `gravityseries/assets/css/gs-site.css`
+
+---
+
 ## SENASTE FIX (2026-03-12, session 75b)
 
 ### SM-prisfält i prismallar: Migration saknades + fel katalog
