@@ -165,7 +165,7 @@ body {
 
 .hub-btn {
   margin-left: auto;
-  background: linear-gradient(135deg, var(--hub-cyan), var(--hub-pink)) !important;
+  background: var(--hub-cyan) !important;
   color: var(--hub-navy) !important;
   font-family: var(--font-cond);
   font-size: 13px;
@@ -179,9 +179,9 @@ body {
   align-items: center;
   gap: 7px;
   flex-shrink: 0;
-  transition: filter .15s !important;
+  transition: background .15s !important;
 }
-.hub-btn:hover { filter: brightness(1.1); }
+.hub-btn:hover { background: var(--hub-pink) !important; }
 .hub-btn svg { width: 14px; height: 14px; stroke: var(--hub-navy); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Header actions group (icons + TheHUB btn) */
@@ -272,7 +272,7 @@ body {
 .mobile-nav-menu a.active { color: var(--white); background: rgba(255,255,255,.06); }
 .mobile-nav-menu .hub-btn-mobile {
   margin: 12px 24px 4px;
-  background: linear-gradient(135deg, var(--hub-cyan), var(--hub-pink));
+  background: var(--hub-cyan);
   color: var(--hub-navy) !important;
   font-family: var(--font-cond);
   font-size: 14px;
@@ -402,20 +402,20 @@ body {
 .btn-primary:hover { filter: brightness(1.08); }
 .btn-primary svg { width: 16px; height: 16px; stroke: var(--ink); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .btn-ghost {
-  border: 1px solid var(--hub-cyan);
+  border: 2px solid var(--hub-cyan);
   color: var(--hub-cyan);
   font-family: var(--font-cond);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
-  padding: 14px 28px;
+  padding: 13px 28px;
   border-radius: 4px;
   text-decoration: none;
   transition: border-color .15s, background .15s, color .15s;
   background: none;
 }
-.btn-ghost:hover { border-color: var(--hub-pink); color: var(--hub-pink); background: rgba(242,165,194,.06); }
+.btn-ghost:hover { border-color: var(--hub-pink); color: var(--hub-navy); background: var(--hub-pink); }
 
 /* ── STAT BAR ─────────────────────────────── */
 .stat-bar {
@@ -798,7 +798,7 @@ body {
 
 /* ── HUB CTA ──────────────────────────────── */
 .hub-cta-section {
-  background: linear-gradient(135deg, var(--hub-navy) 0%, #1a1054 50%, var(--hub-navy) 100%);
+  background: var(--hub-navy);
 }
 .hub-cta-inner {
   max-width: 1200px;
@@ -822,11 +822,11 @@ body {
 .hub-cta-sub {
   font-family: var(--font-body);
   font-size: 17px;
-  color: rgba(255,255,255,.55);
+  color: var(--hub-pink);
   font-weight: 400;
 }
 .hub-cta-btn {
-  background: linear-gradient(135deg, var(--hub-cyan), var(--hub-pink));
+  background: var(--hub-cyan);
   color: var(--hub-navy);
   font-family: var(--font-cond);
   font-size: 15px;
@@ -840,10 +840,10 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  transition: filter .15s;
+  transition: background .15s;
   flex-shrink: 0;
 }
-.hub-cta-btn:hover { filter: brightness(1.1); }
+.hub-cta-btn:hover { background: var(--hub-pink); }
 .hub-cta-btn svg { width: 16px; height: 16px; stroke: var(--hub-navy); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ── PARTNERS ─────────────────────────────── */
