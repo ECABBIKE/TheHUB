@@ -121,12 +121,7 @@ try {
 // Load nav pages for footer links
 $footerPages = $gsNavPages;
 
-// Build slug→series_id lookup from DB series
-$seriesIdBySlug = [];
-foreach ($series as $s) {
-    $slug = strtolower($s['brand_slug'] ?? '');
-    if ($slug) $seriesIdBySlug[$slug] = $s['id'];
-}
+// Map pin SVG and chevron SVG are defined below
 
 // Map pin SVG (reused)
 $mapPinSvg = '<svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
@@ -192,27 +187,38 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
     </div>
     <div class="gs-series-grid">
       <?php
-      // Card definitions: slug → display config
-      $cardConfig = [
-          'ggs'     => ['abbr' => 'GGS', 'css' => 'ggs',  'disc' => 'Enduro',      'region' => 'Götaland'],
-          'capital' => ['abbr' => 'CGS', 'css' => 'cgs',  'disc' => 'Enduro',      'region' => 'Mälardalen'],
-          'jgs'     => ['abbr' => 'JGS', 'css' => 'jgs',  'disc' => 'Enduro',      'region' => 'Jämtland'],
-          'gsd'     => ['abbr' => 'GSD', 'css' => 'gsdh', 'disc' => 'Downhill',    'region' => 'Nationell'],
-          'gse'     => ['abbr' => 'GSE', 'css' => '',     'disc' => 'Enduro',      'region' => 'Nationell'],
-          'gstotal' => ['abbr' => 'TOTAL','css' => '',    'disc' => 'Enduro + DH', 'region' => 'Alla serier samlat'],
+      // Hardcoded card definitions — always render even if DB is empty
+      $seriesCards = [
+          ['slug' => 'ggs',     'abbr' => 'GGS',   'name' => 'Götaland Gravity Series',   'css' => 'ggs',  'disc' => 'Enduro',      'region' => 'Götaland'],
+          ['slug' => 'capital', 'abbr' => 'CGS',   'name' => 'Capital Gravity Series',    'css' => 'cgs',  'disc' => 'Enduro',      'region' => 'Mälardalen'],
+          ['slug' => 'jgs',     'abbr' => 'JGS',   'name' => 'Jämtland GravitySeries',    'css' => 'jgs',  'disc' => 'Enduro',      'region' => 'Jämtland'],
+          ['slug' => 'gsd',     'abbr' => 'GSD',   'name' => 'GravitySeries Downhill',     'css' => 'gsdh', 'disc' => 'Downhill',    'region' => 'Nationell'],
+          ['slug' => 'gse',     'abbr' => 'GSE',   'name' => 'GravitySeries Enduro',       'css' => '',     'disc' => 'Enduro',      'region' => 'Nationell'],
+          ['slug' => 'gstotal', 'abbr' => 'TOTAL', 'name' => 'GravitySeries TOTAL',        'css' => '',     'disc' => 'Enduro + DH', 'region' => 'Alla serier samlat'],
       ];
-      foreach ($series as $s):
-          $slug = strtolower($s['brand_slug'] ?? '');
-          $cfg = $cardConfig[$slug] ?? null;
-          if (!$cfg) continue;
-          $seriesId = $s['id'];
-          $events = $seriesEvents[$seriesId] ?? [];
-          $clubs = $seriesClubs[$seriesId] ?? [];
-          $totalEvents = (int)($s['total_events'] ?? count($events));
-          $doneEvents = (int)($s['done_events'] ?? 0);
+
+      // Build DB lookup: brand_slug → series row
+      $seriesBySlug = [];
+      foreach ($series as $s) {
+          $bslug = strtolower($s['brand_slug'] ?? '');
+          if ($bslug) $seriesBySlug[$bslug] = $s;
+      }
+
+      $today = date('Y-m-d');
+
+      foreach ($seriesCards as $card):
+          $slug = $card['slug'];
+          // Try to match with DB data
+          $dbSeries = $seriesBySlug[$slug] ?? null;
+          $seriesId = $dbSeries ? $dbSeries['id'] : null;
+          $seriesName = $dbSeries ? $dbSeries['name'] : $card['name'];
+          $events = $seriesId ? ($seriesEvents[$seriesId] ?? []) : [];
+          $clubs = $seriesId ? ($seriesClubs[$seriesId] ?? []) : [];
+          $totalEvents = $dbSeries ? (int)($dbSeries['total_events'] ?? count($events)) : 0;
+          $doneEvents = $dbSeries ? (int)($dbSeries['done_events'] ?? 0) : 0;
           $remainingEvents = $totalEvents - $doneEvents;
-          $totalRiders = (int)($s['total_riders'] ?? 0);
-          $today = date('Y-m-d');
+          $totalRiders = $dbSeries ? (int)($dbSeries['total_riders'] ?? 0) : 0;
+          $href = $seriesId ? "https://thehub.gravityseries.se/series/{$seriesId}" : "#";
 
           // Determine next event
           $nextEventIdx = -1;
@@ -220,15 +226,15 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
               if ($evt['date'] >= $today) { $nextEventIdx = $i; break; }
           }
       ?>
-        <a class="gs-serie-card <?= $cfg['css'] ?>" data-serie="<?= $cfg['abbr'] ?>" href="https://thehub.gravityseries.se/series/<?= $seriesId ?>">
+        <a class="gs-serie-card <?= $card['css'] ?>" data-serie="<?= $card['abbr'] ?>" href="<?= $href ?>">
           <div class="gsc-inner">
             <div class="gsc-top">
-              <div class="gsc-badge"><i class="gsc-dot"></i> <?= $cfg['abbr'] ?></div>
-              <span class="gsc-discipline"><?= htmlspecialchars($cfg['disc']) ?></span>
+              <div class="gsc-badge"><i class="gsc-dot"></i> <?= $card['abbr'] ?></div>
+              <span class="gsc-discipline"><?= htmlspecialchars($card['disc']) ?></span>
             </div>
             <div class="gsc-title-wrap">
-              <h3 class="gsc-title"><?= htmlspecialchars($s['name']) ?></h3>
-              <div class="gsc-meta"><?= htmlspecialchars($cfg['disc']) ?> &middot; <?= htmlspecialchars($cfg['region']) ?></div>
+              <h3 class="gsc-title"><?= htmlspecialchars($seriesName) ?></h3>
+              <div class="gsc-meta"><?= htmlspecialchars($card['disc']) ?> &middot; <?= htmlspecialchars($card['region']) ?></div>
             </div>
             <div class="gsc-stats">
               <div class="gsc-stat"><strong><?= $totalEvents ?></strong><span>Deltävlingar</span></div>
