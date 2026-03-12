@@ -70,6 +70,7 @@ $gsPageTitle = $page['title'];
 $gsMetaDesc = $page['meta_description'] ?: '';
 $gsActiveNav = '';
 $gsCurrentSlug = $slug;
+$gsEditUrl = '/admin/pages/edit.php?id=' . (int)$page['id'];
 
 require_once __DIR__ . '/includes/gs-header.php';
 
@@ -107,20 +108,10 @@ if (!empty($page['hero_image'])) {
 </div>
 
 <?php if (!empty($gsIsAdmin)): ?>
-<style>
-.gs-admin-bar{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;gap:8px;align-items:center;}
-.gs-admin-btn{background:var(--ink,#0a0f0d);color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-family:'Barlow',sans-serif;font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;box-shadow:0 4px 16px rgba(0,0,0,.3);transition:background .2s;}
-.gs-admin-btn:hover{background:#333;}
-.gs-admin-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
-</style>
 <div class="gs-admin-bar">
   <a class="gs-admin-btn" href="/admin/pages/edit.php?id=<?= (int)$page['id'] ?>">
     <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-    Redigera sida
-  </a>
-  <a class="gs-admin-btn" href="/admin/pages/">
-    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-    Alla sidor
+    Redigera
   </a>
 </div>
 <?php endif; ?>

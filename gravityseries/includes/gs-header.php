@@ -9,19 +9,21 @@
  *   $gsNavPages    — Array of nav pages from DB (optional, auto-loaded)
  */
 
-// Ensure database connection
+// Database connection only — NO hub-config.php (it loads TinyMCE and other unwanted stuff)
 if (!isset($pdo)) {
     require_once __DIR__ . '/../../config.php';
     require_once __DIR__ . '/../../config/database.php';
-    try {
-        $pdo = new PDO(
-            'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . (defined('DB_CHARSET') ? DB_CHARSET : 'utf8mb4'),
-            DB_USER,
-            DB_PASS,
-            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
-        );
-    } catch (PDOException $e) {
-        die('Databasanslutning misslyckades.');
+    if (!isset($pdo)) {
+        try {
+            $pdo = new PDO(
+                'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . (defined('DB_CHARSET') ? DB_CHARSET : 'utf8mb4'),
+                DB_USER,
+                DB_PASS,
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
+            );
+        } catch (PDOException $e) {
+            die('Databasanslutning misslyckades.');
+        }
     }
 }
 
@@ -43,30 +45,43 @@ $gsPageTitle = $gsPageTitle ?? 'GravitySeries';
 $gsMetaDesc = $gsMetaDesc ?? 'GravitySeries — Organisationen bakom svensk gravitycykling. Enduro och Downhill från Motion till Elite.';
 $gsActiveNav = $gsActiveNav ?? '';
 $gsCurrentSlug = $gsCurrentSlug ?? '';
+$gsEditUrl = $gsEditUrl ?? '/admin/pages/';
 
 // Determine base URL
 $gsBaseUrl = '/gravityseries';
 
-// Check if current user is admin (for edit pencil)
+// Check user status via session (no hub-config dependency)
 $gsIsAdmin = false;
+$gsIsLoggedIn = false;
+$gsUserName = '';
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-if (!empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin') {
+$_adminRole = $_SESSION['admin_role'] ?? '';
+if (in_array($_adminRole, ['admin', 'super_admin'], true)) {
     $gsIsAdmin = true;
+}
+// Check if rider is logged in via session variables
+if (!empty($_SESSION['hub_user_id']) || !empty($_SESSION['rider_id']) || !empty($_SESSION['admin_logged_in'])) {
+    $gsIsLoggedIn = true;
+    $gsUserName = $_SESSION['hub_user_name'] ?? $_SESSION['rider_firstname'] ?? '';
 }
 ?>
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="sv" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){var t=localStorage.getItem('gs-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();
+</script>
 <title><?= htmlspecialchars($gsPageTitle) ?> — GravitySeries</title>
 <meta name="description" content="<?= htmlspecialchars($gsMetaDesc) ?>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="<?= $gsBaseUrl ?>/assets/css/gs-site.css">
+<?php $_gsCssPath = __DIR__ . '/../assets/css/gs-site.css'; $_gsCssVer = file_exists($_gsCssPath) ? filemtime($_gsCssPath) : time(); ?>
+<link rel="stylesheet" href="<?= $gsBaseUrl ?>/assets/css/gs-site.css?v=<?= $_gsCssVer ?>">
 </head>
 <body>
 
@@ -86,10 +101,31 @@ if (!empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin') {
         </a>
       <?php endforeach; ?>
     </nav>
-    <a class="hub-btn" href="https://thehub.gravityseries.se">
-      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      TheHUB
-    </a>
+    <div class="header-actions">
+      <?php if ($gsIsAdmin): ?>
+        <a class="header-icon-btn" href="<?= htmlspecialchars($gsEditUrl) ?>" title="Redigera sidan">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </a>
+      <?php endif; ?>
+      <?php if ($gsIsLoggedIn): ?>
+        <a class="header-icon-btn" href="https://thehub.gravityseries.se/profile" title="Min profil">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </a>
+        <?php if ($gsIsAdmin): ?>
+          <a class="header-icon-btn" href="https://thehub.gravityseries.se/admin/dashboard.php" title="Admin">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </a>
+        <?php endif; ?>
+      <?php endif; ?>
+      <button class="theme-toggle" id="themeToggle" aria-label="Byt tema">
+        <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+      <a class="hub-btn" href="https://thehub.gravityseries.se">
+        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        TheHUB
+      </a>
+    </div>
     <button class="nav-toggle" onclick="toggleMobileNav()">
       <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
@@ -106,8 +142,37 @@ if (!empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin') {
       <?= htmlspecialchars($navPage['nav_label'] ?: $navPage['title']) ?>
     </a>
   <?php endforeach; ?>
+  <div class="mobile-nav-divider"></div>
+  <?php if ($gsIsLoggedIn): ?>
+    <a href="https://thehub.gravityseries.se/profile">
+      <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2" class="mobile-nav-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Min profil
+    </a>
+  <?php endif; ?>
+  <?php if ($gsIsAdmin): ?>
+    <a href="<?= htmlspecialchars($gsEditUrl) ?>">
+      <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2" class="mobile-nav-icon"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Redigera sidan
+    </a>
+    <a href="https://thehub.gravityseries.se/admin/dashboard.php">
+      <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2" class="mobile-nav-icon"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Admin
+    </a>
+  <?php endif; ?>
   <a class="hub-btn-mobile" href="https://thehub.gravityseries.se">
     <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--ink);fill:none;stroke-width:2.2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     TheHUB
   </a>
 </div>
+
+<script>
+(function() {
+  var toggle = document.getElementById('themeToggle');
+  if (!toggle) return;
+  toggle.addEventListener('click', function() {
+    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('gs-theme', next);
+  });
+})();
+</script>

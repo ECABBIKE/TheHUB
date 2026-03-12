@@ -4,6 +4,91 @@
 
 ---
 
+## SENASTE IMPLEMENTATION (2026-03-12, session 74)
+
+### GravitySeries: Dark/Light tema + nya serie-kort + sports-känsla
+- **Dubbelt tema (dark/light):** Ny temväxlare i GS-headern (sol/måne-knapp). Sparar val i localStorage (`gs-theme`). Dark mode är default. Alla sektioner (stat-bar, info-kort, partners, footer, page-content) använder nu tema-medvetna CSS-variabler (`--bg`, `--surface`, `--text`, `--border` etc.) med fallbacks till legacy-variabler.
+- **Dark mode bakgrund:** Subtila radiella gradienter (blå + grön) + grid-mönster (40px rutnät med mask-fade) ger en sports-känsla. Implementerat via `[data-theme="dark"] body` och `::before` pseudo-element.
+- **Serie-kort ombyggda:** Gamla enkla kort (färgtopp + namn + disciplin-pill) ersatta med rika kort-komponenter:
+  - Badge med pulsande serie-färgprick + förkortning
+  - Disciplin-tag (Enduro/Downhill)
+  - Titel + meta (disciplin + region)
+  - Stats-grid: deltävlingar, avgjorda, åkare, kvar (live från DB)
+  - Event-pills: avgjorda (halvtonade), nästa (markerad med serie-färg), kommande
+  - Klubbmästerskap: top 3 klubbar med poäng (eller placeholder "Säsongen pågår")
+  - Gradient-overlay baserad på serie-färg via `color-mix()` och `::before`
+- **Serie-färger uppdaterade:** GGS=#87c442, GES=#ff7a18, CGS=#28a8ff, GSDH=#1d63ff, JGS=#c084fc (nya, mer vibrerande)
+- **Grid-layout:** 2 kort per rad desktop (12-kolumns grid, span 6), 1 per rad mobil
+- **Flash-prevention:** Inline `<script>` i `<head>` sätter `data-theme` från localStorage FÖRE rendering
+- **Header backdrop-filter:** Glasmorfism-effekt med `blur(12px)` på headern
+- **Inga nya filer skapade** — alla ändringar i befintliga:
+  - `gravityseries/assets/css/gs-site.css` — tema-variabler, serie-kort CSS, dark mode bakgrund
+  - `gravityseries/includes/gs-header.php` — `data-theme="dark"` på html, flash-prevention script, toggle-knapp
+  - `gravityseries/index.php` — nya serie-kort med event-pills och klubbmästerskap
+
+### VIKTIGT: GS tema-arkitektur
+- **CSS-variabler:** `--bg`, `--bg-2`, `--surface`, `--surface-2`, `--border`, `--border-s`, `--text`, `--text-2`, `--text-3`, `--header-bg` definierade per `[data-theme]`
+- **Legacy-variabler:** `--ink`, `--paper`, `--white`, `--rule` finns kvar i `:root` som fallback
+- **Fallback-mönster:** Alla nya CSS använder `var(--text, var(--ink))` — fungerar oavsett om tema är satt
+- **Serie-färger:** `--ggs`, `--ges`, `--cgs`, `--gsdh`, `--jgs` — klass på `.gs-serie-card` sätter `--c`
+- **localStorage-nyckel:** `gs-theme` (separerat från TheHUB:s tema)
+
+---
+
+## SENASTE IMPLEMENTATION (2026-03-12, session 73b)
+
+### SM-tilläggsavgift (Championship Surcharge)
+- **Ny funktion:** Flat tilläggsavgift per SM-event som läggs på ALLA prisperioder (early bird, normal, sen anmälan), aldrig rabatteras vid serieanmälan, och alltid tillfaller SM-eventets betalningsmottagare vid avräkning.
+- **Migration 097:** `events.championship_surcharge DECIMAL(10,2) NULL DEFAULT NULL` — ny kolumn efter `is_championship`.
+- **Admin event-edit.php:** Nytt fält "SM-tillägg" (antal kr) visas/döljs baserat på SM-checkboxen. Promotorer ser värdet read-only. Sparas via separat UPDATE med fallback om kolumnen saknas.
+- **order-manager.php — getEligibleClassesForEvent():** Hämtar `e.championship_surcharge` i event-queryn. Adderar surcharge till ALLA prisperioder EFTER procentberäkningar: `earlyBirdPrice += surcharge`, `basePrice += surcharge`, `lateFeePrice += surcharge`, `currentPrice += surcharge`. Returnerar `championship_surcharge` i classData.
+- **order-manager.php — getEligibleClassesForSeries():** Summerar total SM-surcharge för alla SM-event i serien. Adderar UTANFÖR serierabatten: `finalPrice = (basePrice - discountAmount) + totalSmSurcharge`. Returnerar `championship_surcharge` i klassdata.
+- **economy-helpers.php — explodeSeriesOrdersToEvents():** Hämtar `is_championship` + `championship_surcharge` per event. Vid proportionell split: extraherar total surcharge från orderbeloppet, fördelar resten proportionellt, lägger sedan till surcharge odelat på SM-eventet. Taggar split-rader med `_championship_surcharge`.
+- **pages/event.php:** Visar "inkl. X kr SM-avgift" under priset i event- och serieanmälningsmodalerna.
+- **VIKTIGT:** Kör migration 097 via `/admin/migrations.php`.
+- **Filer:** `Tools/migrations/097_championship_surcharge.sql`, `admin/event-edit.php`, `includes/order-manager.php`, `includes/economy-helpers.php`, `pages/event.php`, `admin/migrations.php`
+
+---
+
+## SENASTE IMPLEMENTATION (2026-03-12, session 73)
+
+### GravitySeries: CMS-sidor populerade med riktigt WordPress-innehåll
+- **Migration 097:** Uppdaterar 6 CMS-sidor med riktigt innehåll från WordPress-exporten (gravityseries.se)
+- **Sidor:** om-oss (Information/The Crew), arrangor-info (Eventservice/Tidtagning/MediaCrew), licenser (alla licenstyper SCF), gravity-id (Crowdfunding), kontakt (Philip/Roger/Caroline), allmanna-villkor (11 paragrafpunkter)
+- **Metod:** WordPress WXR XML-export → programmatisk extraktion → Elementor-markup bortrensad → ren HTML
+- **Filer:** `Tools/migrations/097_populate_gs_pages_from_wp.php`
+- **VIKTIGT:** Kör migration 097 via `/admin/migrations.php`
+
+---
+
+## SENASTE IMPLEMENTATION (2026-03-11, session 71b)
+
+### GravitySeries: Redigerbar startsida + kontextkänslig penna
+- **Buggfix: Header-penna kontextkänslig:** Pennikonen i GS-headern (desktop + mobil) länkade alltid till `/admin/pages/` (sidlistan). Nu är den kontextkänslig via `$gsEditUrl`-variabel:
+  - På CMS-sidor (`sida.php`): pekar till `/admin/pages/edit.php?id=X` (redigera aktuell sida)
+  - På startsidan (`index.php`): pekar till `/admin/pages/gs-homepage.php` (redigera startsidan)
+  - Default (om ej satt): pekar till `/admin/pages/` (sidlistan)
+- **Ny admin-sida: GS Startsida-editor** (`/admin/pages/gs-homepage.php`) — redigera all text på GravitySeries startsidan:
+  - Hero-sektion: eyebrow-text, titel, beskrivning
+  - Serier-sektion: etikett, rubrik, brödtext
+  - Info-kort (3 st): titel + beskrivning per kort
+  - Styrelse: dynamisk lista med roll/namn/kontakt, lägg till/ta bort medlemmar
+  - TheHUB CTA: rubrik + undertext
+  - Alla värden lagras i `sponsor_settings`-tabellen med `gs_`-prefix
+  - Styrelsemedlemmar lagras som JSON i `gs_board_members`
+- **index.php dynamisk:** Alla hårdkodade texter ersatta med `gs()`-helper som läser från databasen med fallback till default-värden. Styrelsemedlemmar renderas från JSON.
+- **Sidlistan utökad:** `/admin/pages/index.php` visar nu ALLA sidor — både CMS-sidor (från `pages`-tabellen) och fasta sidor (startsidan). Fasta sidor visas överst med "Fast sida"-badge och home-ikon. CMS-sidor har "CMS"-badge. Ny "Typ"-kolumn i tabellen.
+- **TinyMCE API-nyckel:** Korrekt API-nyckel insatt i `admin/pages/edit.php`
+- **Filer:** `gravityseries/index.php`, `gravityseries/sida.php`, `gravityseries/includes/gs-header.php`, `admin/pages/index.php`, `admin/pages/gs-homepage.php` (ny), `admin/components/unified-layout.php`
+
+### VIKTIGT: GS startsida-arkitektur
+- **Textblock i `sponsor_settings`:** Alla `gs_`-prefixade nycklar tillhör GS-startsidan
+- **`gs()` helper:** Definierad i `gravityseries/index.php`, läser från `$_gsContent` (batch-laddad)
+- **`$gsEditUrl`:** Sätts i varje GS-sida FÖRE `gs-header.php` inkluderas. Styr header-pennans mål.
+- **Fasta sidor i admin-listan:** Definierade i `$fixedPages` arrayen i `admin/pages/index.php`. Lägg till fler fasta sidor här vid behov.
+
+---
+
 ## VIKTIGT: ÄNDRA ALDRIG NAVIGATION UTAN GODKÄNNANDE
 
 **Lägg ALDRIG till nya ikoner, grupper eller länkar i sidomenyn (sidebar), mobilmenyn eller admin-tabs utan att användaren explicit ber om det.**

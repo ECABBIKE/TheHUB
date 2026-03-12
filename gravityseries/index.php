@@ -7,8 +7,24 @@
 $gsPageTitle = 'Svensk Gravitycykling';
 $gsMetaDesc = 'GravitySeries — Organisationen bakom svensk gravitycykling. Enduro och Downhill från Motion till Elite.';
 $gsActiveNav = 'start';
+$gsEditUrl = '/admin/pages/gs-homepage.php';
 
 require_once __DIR__ . '/includes/gs-header.php';
+
+// Load editable content from site_settings (gs_ prefix)
+$_gsContent = [];
+try {
+    $gsRows = $pdo->query("SELECT setting_key, setting_value FROM sponsor_settings WHERE setting_key LIKE 'gs_%'")->fetchAll();
+    foreach ($gsRows as $r) {
+        $_gsContent[$r['setting_key']] = $r['setting_value'];
+    }
+} catch (PDOException $e) {
+    // Fallback to defaults
+}
+function gs($key, $default = '') {
+    global $_gsContent;
+    return $_gsContent[$key] ?? $default;
+}
 
 // Load stats from database
 $stats = ['riders' => 0, 'events' => 0, 'clubs' => 0];
@@ -26,12 +42,15 @@ try {
     // Fallback values
 }
 
-// Load series from database
+// Load series from database with event stats
 $series = [];
 try {
     $series = $pdo->query("
         SELECT s.id, s.name, s.year,
-            sb.name AS brand_name, sb.slug AS brand_slug
+            sb.name AS brand_name, sb.slug AS brand_slug,
+            (SELECT COUNT(*) FROM series_events se WHERE se.series_id = s.id) AS total_events,
+            (SELECT COUNT(*) FROM series_events se JOIN events e ON se.event_id = e.id WHERE se.series_id = s.id AND e.date < CURDATE()) AS done_events,
+            (SELECT COUNT(DISTINCT r.cyclist_id) FROM results r JOIN series_events se ON r.event_id = se.event_id WHERE se.series_id = s.id) AS total_riders
         FROM series s
         LEFT JOIN series_brands sb ON s.brand_id = sb.id
         WHERE s.status = 'active' AND s.year = YEAR(CURDATE())
@@ -40,6 +59,43 @@ try {
 } catch (PDOException $e) {
     // Fallback
 }
+
+// Load events per series for pills
+$seriesEvents = [];
+try {
+    foreach ($series as $s) {
+        $evtStmt = $pdo->prepare("
+            SELECT e.id, e.name, e.location, e.date
+            FROM series_events se
+            JOIN events e ON se.event_id = e.id
+            WHERE se.series_id = ?
+            ORDER BY e.date ASC
+        ");
+        $evtStmt->execute([$s['id']]);
+        $seriesEvents[$s['id']] = $evtStmt->fetchAll();
+    }
+} catch (PDOException $e) {}
+
+// Load top 3 clubs per series (club championship)
+$seriesClubs = [];
+try {
+    foreach ($series as $s) {
+        $clubStmt = $pdo->prepare("
+            SELECT c.name AS club_name, SUM(r.points) AS total
+            FROM results r
+            JOIN series_events se ON r.event_id = se.event_id
+            JOIN riders rd ON r.cyclist_id = rd.id
+            JOIN clubs c ON rd.club_id = c.id
+            WHERE se.series_id = ?
+            AND r.points > 0
+            GROUP BY c.id, c.name
+            ORDER BY total DESC
+            LIMIT 3
+        ");
+        $clubStmt->execute([$s['id']]);
+        $seriesClubs[$s['id']] = $clubStmt->fetchAll();
+    }
+} catch (PDOException $e) {}
 
 // Load sponsors from gs_sponsors table
 $sponsors = [];
@@ -91,9 +147,9 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
     </div>
   </div>
   <div class="hero-content">
-    <div class="hero-eyebrow">Svensk Gravitycykling sedan 2016</div>
-    <h1 class="hero-title">Gravity<em>Series</em></h1>
-    <p class="hero-body">Organisationen bakom svensk enduro och downhill. Vi arrangerar tävlingar, sätter regler och utvecklar sporten — från Motion till Elite.</p>
+    <div class="hero-eyebrow"><?= gs('gs_hero_eyebrow', 'Svensk Gravitycykling sedan 2016') ?></div>
+    <h1 class="hero-title"><?= gs('gs_hero_title', 'Gravity<em>Series</em>') ?></h1>
+    <p class="hero-body"><?= gs('gs_hero_body', 'Organisationen bakom svensk enduro och downhill. Vi arrangerar tävlingar, sätter regler och utvecklar sporten — från Motion till Elite.') ?></p>
     <div class="hero-actions">
       <a class="btn-primary" href="#serier">
         <?= $chevronSvg ?>
@@ -130,33 +186,81 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
 <section id="serier">
   <div class="gs-section">
     <div class="section-head">
-      <div class="section-label">Tävlingsserier</div>
-      <h2 class="section-title">Fyra serier.<br>En rörelse.</h2>
-      <p class="section-body">GravitySeries driver Enduro och Downhill-tävlingar från Malmö till Umeå. Hitta din serie — och ditt nästa lopp.</p>
+      <div class="section-label"><?= gs('gs_section_series_label', 'Tävlingsserier') ?></div>
+      <h2 class="section-title"><?= gs('gs_section_series_title', 'Fyra serier.<br>En rörelse.') ?></h2>
+      <p class="section-body"><?= gs('gs_section_series_body', 'GravitySeries driver Enduro och Downhill-tävlingar från Malmö till Umeå. Hitta din serie — och ditt nästa lopp.') ?></p>
     </div>
-    <div class="series-grid">
+    <div class="gs-series-grid">
       <?php
-      // Hardcoded series cards matching the reference design
-      $seriesCards = [
-          ['abbr' => 'GGS', 'name' => 'Götaland Gravity Series', 'color' => 'var(--ggs)', 'disc' => 'Enduro', 'region' => 'Götaland', 'slug' => 'ggs'],
-          ['abbr' => 'CGS', 'name' => 'Capital Gravity Series', 'color' => 'var(--cgs)', 'disc' => 'Enduro', 'region' => 'Mälardalen', 'slug' => 'capital'],
-          ['abbr' => 'JGS', 'name' => 'Jämtland GravitySeries', 'color' => 'var(--ges)', 'disc' => 'Enduro', 'region' => 'Jämtland', 'slug' => 'jgs'],
-          ['abbr' => 'GSD', 'name' => 'GravitySeries Downhill', 'color' => 'var(--gs-blue)', 'disc' => 'Downhill', 'region' => 'Nationell', 'slug' => 'gsd'],
-          ['abbr' => 'GSE', 'name' => 'GravitySeries Enduro', 'color' => 'var(--accent)', 'abbrColor' => 'var(--accent-d)', 'disc' => 'Enduro', 'discBg' => 'var(--accent-d)', 'region' => 'Nationell', 'slug' => 'gse'],
-          ['abbr' => 'TOTAL', 'name' => 'GravitySeries TOTAL', 'color' => 'var(--ink-2)', 'disc' => 'Enduro + DH', 'region' => 'Alla serier samlat', 'slug' => 'gstotal'],
+      // Card definitions: slug → display config
+      $cardConfig = [
+          'ggs'     => ['abbr' => 'GGS', 'css' => 'ggs',  'disc' => 'Enduro',      'region' => 'Götaland'],
+          'capital' => ['abbr' => 'CGS', 'css' => 'cgs',  'disc' => 'Enduro',      'region' => 'Mälardalen'],
+          'jgs'     => ['abbr' => 'JGS', 'css' => 'jgs',  'disc' => 'Enduro',      'region' => 'Jämtland'],
+          'gsd'     => ['abbr' => 'GSD', 'css' => 'gsdh', 'disc' => 'Downhill',    'region' => 'Nationell'],
+          'gse'     => ['abbr' => 'GSE', 'css' => '',     'disc' => 'Enduro',      'region' => 'Nationell'],
+          'gstotal' => ['abbr' => 'TOTAL','css' => '',    'disc' => 'Enduro + DH', 'region' => 'Alla serier samlat'],
       ];
-      foreach ($seriesCards as $sc):
-          $abbrColor = $sc['abbrColor'] ?? $sc['color'];
-          $discBg = $sc['discBg'] ?? $sc['color'];
+      foreach ($series as $s):
+          $slug = strtolower($s['brand_slug'] ?? '');
+          $cfg = $cardConfig[$slug] ?? null;
+          if (!$cfg) continue;
+          $seriesId = $s['id'];
+          $events = $seriesEvents[$seriesId] ?? [];
+          $clubs = $seriesClubs[$seriesId] ?? [];
+          $totalEvents = (int)($s['total_events'] ?? count($events));
+          $doneEvents = (int)($s['done_events'] ?? 0);
+          $remainingEvents = $totalEvents - $doneEvents;
+          $totalRiders = (int)($s['total_riders'] ?? 0);
+          $today = date('Y-m-d');
+
+          // Determine next event
+          $nextEventIdx = -1;
+          foreach ($events as $i => $evt) {
+              if ($evt['date'] >= $today) { $nextEventIdx = $i; break; }
+          }
       ?>
-        <?php $seriesId = $seriesIdBySlug[$sc['slug']] ?? 0; ?>
-        <a class="serie-card" href="<?= $seriesId ? 'https://thehub.gravityseries.se/series/' . $seriesId : '#' ?>">
-          <div class="serie-card-top" style="background:<?= $sc['color'] ?>"></div>
-          <div class="serie-card-body">
-            <div class="serie-abbr" style="color:<?= $abbrColor ?>"><?= $sc['abbr'] ?></div>
-            <div class="serie-fullname"><?= htmlspecialchars($sc['name']) ?></div>
-            <span class="serie-discipline" style="background:<?= $discBg ?>"><?= htmlspecialchars($sc['disc']) ?></span>
-            <div class="serie-region"><?= $mapPinSvg ?> <?= htmlspecialchars($sc['region']) ?></div>
+        <a class="gs-serie-card <?= $cfg['css'] ?>" data-serie="<?= $cfg['abbr'] ?>" href="https://thehub.gravityseries.se/series/<?= $seriesId ?>">
+          <div class="gsc-inner">
+            <div class="gsc-top">
+              <div class="gsc-badge"><i class="gsc-dot"></i> <?= $cfg['abbr'] ?></div>
+              <span class="gsc-discipline"><?= htmlspecialchars($cfg['disc']) ?></span>
+            </div>
+            <div class="gsc-title-wrap">
+              <h3 class="gsc-title"><?= htmlspecialchars($s['name']) ?></h3>
+              <div class="gsc-meta"><?= htmlspecialchars($cfg['disc']) ?> &middot; <?= htmlspecialchars($cfg['region']) ?></div>
+            </div>
+            <div class="gsc-stats">
+              <div class="gsc-stat"><strong><?= $totalEvents ?></strong><span>Deltävlingar</span></div>
+              <div class="gsc-stat"><strong><?= $doneEvents ?></strong><span>Avgjorda</span></div>
+              <div class="gsc-stat"><strong><?= $totalRiders ?></strong><span>Åkare</span></div>
+              <div class="gsc-stat"><strong><?= $remainingEvents ?></strong><span>Kvar</span></div>
+            </div>
+            <?php if (!empty($events)): ?>
+            <div class="gsc-events">
+              <?php foreach ($events as $i => $evt):
+                  $isDone = $evt['date'] < $today;
+                  $isNext = ($i === $nextEventIdx);
+                  $pillClass = $isDone ? 'done' : ($isNext ? 'next' : '');
+              ?>
+                <div class="gsc-pill <?= $pillClass ?>"><i></i> <?= htmlspecialchars($evt['location'] ?: $evt['name']) ?></div>
+              <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+            <div class="gsc-clubs">
+              <?php if (!empty($clubs)): ?>
+                <div class="gsc-clubs-label">Klubbmästerskap</div>
+                <?php foreach ($clubs as $pos => $club): ?>
+                <div class="gsc-club-row">
+                  <span class="gsc-club-pos"><?= $pos + 1 ?></span>
+                  <span class="gsc-club-name"><?= htmlspecialchars($club['club_name']) ?></span>
+                  <span class="gsc-club-pts"><?= (int)$club['total'] ?> p</span>
+                </div>
+                <?php endforeach; ?>
+              <?php else: ?>
+                <div class="gsc-clubs-empty">Säsongen pågår — ställningen uppdateras efter varje deltävling</div>
+              <?php endif; ?>
+            </div>
           </div>
         </a>
       <?php endforeach; ?>
@@ -165,35 +269,35 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
 </section>
 
 <!-- ARRANGERA / REGLER / LICENSER -->
-<div style="background:var(--white); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);">
+<div style="background:var(--bg-2, var(--white)); border-top: 1px solid var(--border, var(--rule)); border-bottom: 1px solid var(--border, var(--rule));">
   <div class="gs-section" id="arrangera">
     <div class="section-head">
-      <div class="section-label">Praktisk info</div>
-      <h2 class="section-title">För åkare<br>&amp; arrangörer</h2>
+      <div class="section-label"><?= gs('gs_section_info_label', 'Praktisk info') ?></div>
+      <h2 class="section-title"><?= gs('gs_section_info_title', 'För åkare<br>&amp; arrangörer') ?></h2>
     </div>
     <div class="info-grid">
       <a class="info-card" href="<?= $gsBaseUrl ?>/arrangor-info">
         <div class="info-icon">
           <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
-        <div class="info-title">Arrangera ett event</div>
-        <p class="info-desc">Vill du arrangera en tävling inom GravitySeries? Här hittar du allt från ansökan till banprojektering och praktisk info.</p>
+        <div class="info-title"><?= gs('gs_info_card_1_title', 'Arrangera ett event') ?></div>
+        <p class="info-desc"><?= gs('gs_info_card_1_desc', 'Vill du arrangera en tävling inom GravitySeries? Här hittar du allt från ansökan till banprojektering och praktisk info.') ?></p>
         <span class="info-link">Arrangörsinformation <?= $chevronSvg ?></span>
       </a>
       <a class="info-card" href="<?= $gsBaseUrl ?>/licenser">
         <div class="info-icon">
           <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
         </div>
-        <div class="info-title">Licenser &amp; SCF</div>
-        <p class="info-desc">För att tävla i GravitySeries behöver du en giltig SCF-licens. Här förklarar vi hur du skaffar en och vad den kostar.</p>
+        <div class="info-title"><?= gs('gs_info_card_2_title', 'Licenser &amp; SCF') ?></div>
+        <p class="info-desc"><?= gs('gs_info_card_2_desc', 'För att tävla i GravitySeries behöver du en giltig SCF-licens. Här förklarar vi hur du skaffar en och vad den kostar.') ?></p>
         <span class="info-link">Licensinfo <?= $chevronSvg ?></span>
       </a>
       <a class="info-card" href="<?= $gsBaseUrl ?>/gravity-id">
         <div class="info-icon">
           <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
         </div>
-        <div class="info-title">Gravity-ID</div>
-        <p class="info-desc">Ditt Gravity-ID kopplar ihop dina tävlingsresultat, licens och profil. Allt på ett ställe — oavsett vilken serie du kör.</p>
+        <div class="info-title"><?= gs('gs_info_card_3_title', 'Gravity-ID') ?></div>
+        <p class="info-desc"><?= gs('gs_info_card_3_desc', 'Ditt Gravity-ID kopplar ihop dina tävlingsresultat, licens och profil. Allt på ett ställe — oavsett vilken serie du kör.') ?></p>
         <span class="info-link">Om Gravity-ID <?= $chevronSvg ?></span>
       </a>
     </div>
@@ -204,41 +308,31 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
 <div class="board-section" id="om">
   <div class="gs-section">
     <div class="section-head">
-      <div class="section-label" style="color:var(--accent)">Organisation</div>
-      <h2 class="section-title">Styrelsen</h2>
-      <p class="section-body">GravitySeries drivs ideellt av ett engagerat gäng med passion för gravitycykling.</p>
+      <div class="section-label" style="color:var(--accent)"><?= gs('gs_section_board_label', 'Organisation') ?></div>
+      <h2 class="section-title"><?= gs('gs_section_board_title', 'Styrelsen') ?></h2>
+      <p class="section-body"><?= gs('gs_section_board_body', 'GravitySeries drivs ideellt av ett engagerat gäng med passion för gravitycykling.') ?></p>
     </div>
     <div class="board-grid">
+      <?php
+      $boardMembers = json_decode(gs('gs_board_members', ''), true);
+      if (empty($boardMembers)) {
+          $boardMembers = [
+              ['role' => 'Ordförande', 'name' => 'Förnamn Efternamn', 'contact' => 'ordforde@gravityseries.se'],
+              ['role' => 'Vice ordförande', 'name' => 'Förnamn Efternamn', 'contact' => 'vice@gravityseries.se'],
+              ['role' => 'Kassör', 'name' => 'Förnamn Efternamn', 'contact' => 'kassor@gravityseries.se'],
+              ['role' => 'Tävlingsansvarig', 'name' => 'Förnamn Efternamn', 'contact' => 'tavling@gravityseries.se'],
+              ['role' => 'Teknisk ansvarig', 'name' => 'Förnamn Efternamn', 'contact' => 'teknik@gravityseries.se'],
+              ['role' => 'Kontakt', 'name' => 'info@gravityseries.se', 'contact' => 'Allmänna frågor & media'],
+          ];
+      }
+      foreach ($boardMembers as $member):
+      ?>
       <div class="board-card">
-        <div class="board-role">Ordförande</div>
-        <div class="board-name">Förnamn Efternamn</div>
-        <div class="board-contact">ordforde@gravityseries.se</div>
+        <div class="board-role"><?= htmlspecialchars($member['role'] ?? '') ?></div>
+        <div class="board-name"><?= htmlspecialchars($member['name'] ?? '') ?></div>
+        <div class="board-contact"><?= htmlspecialchars($member['contact'] ?? '') ?></div>
       </div>
-      <div class="board-card">
-        <div class="board-role">Vice ordförande</div>
-        <div class="board-name">Förnamn Efternamn</div>
-        <div class="board-contact">vice@gravityseries.se</div>
-      </div>
-      <div class="board-card">
-        <div class="board-role">Kassör</div>
-        <div class="board-name">Förnamn Efternamn</div>
-        <div class="board-contact">kassor@gravityseries.se</div>
-      </div>
-      <div class="board-card">
-        <div class="board-role">Tävlingsansvarig</div>
-        <div class="board-name">Förnamn Efternamn</div>
-        <div class="board-contact">tavling@gravityseries.se</div>
-      </div>
-      <div class="board-card">
-        <div class="board-role">Teknisk ansvarig</div>
-        <div class="board-name">Förnamn Efternamn</div>
-        <div class="board-contact">teknik@gravityseries.se</div>
-      </div>
-      <div class="board-card">
-        <div class="board-role">Kontakt</div>
-        <div class="board-name">info@gravityseries.se</div>
-        <div class="board-contact">Allmänna frågor &amp; media</div>
-      </div>
+      <?php endforeach; ?>
     </div>
   </div>
 </div>
@@ -286,8 +380,8 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
 <div class="hub-cta-section">
   <div class="hub-cta-inner">
     <div>
-      <div class="hub-cta-title">Kalender, resultat<br>&amp; ranking</div>
-      <div class="hub-cta-sub">Allt samlat på TheHUB — vår tävlingsplattform.</div>
+      <div class="hub-cta-title"><?= gs('gs_hub_cta_title', 'Kalender, resultat<br>&amp; ranking') ?></div>
+      <div class="hub-cta-sub"><?= gs('gs_hub_cta_body', 'Allt samlat på TheHUB — vår tävlingsplattform.') ?></div>
     </div>
     <a class="hub-cta-btn" href="https://thehub.gravityseries.se">
       <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -297,17 +391,3 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
 </div>
 
 <?php require_once __DIR__ . '/includes/gs-footer.php'; ?>
-<?php if (!empty($gsIsAdmin)): ?>
-<style>
-.gs-admin-bar{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;gap:8px;align-items:center;}
-.gs-admin-btn{background:var(--ink,#0a0f0d);color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-family:'Barlow',sans-serif;font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;box-shadow:0 4px 16px rgba(0,0,0,.3);transition:background .2s;}
-.gs-admin-btn:hover{background:#333;}
-.gs-admin-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
-</style>
-<div class="gs-admin-bar">
-  <a class="gs-admin-btn" href="/admin/pages/">
-    <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-    Hantera sidor
-  </a>
-</div>
-<?php endif; ?>
