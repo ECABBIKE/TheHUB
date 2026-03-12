@@ -6,6 +6,18 @@
 
 ## SENASTE FIX (2026-03-12, session 76)
 
+### Pricing templates edit page redesign
+- **Problem:** Redigeringssidan för prismallar (`/admin/pricing-templates.php?edit=X`) hade fält i 50%-breda kort som var onödigt stora för små värden (rabattsatser, antal dagar), tabellen var inte mobilanpassad, och den använde inte projektets tabellmönster.
+- **Fix:** Komplett redesign av edit-vyn:
+  - Nya kompakta regelkort (`.pt-rule-card`) med 72px-breda inputs för procent/dagar
+  - Early Bird (grön), Efteranmälan (amber) och SM-tillägg (accent) i inline flex-layout
+  - Custom pristabell (`.pt-table`) med uppercase headers, högerställda tal, tabular-nums
+  - Mobilresponsiv: card-layout per klassrad med `data-label` attribut i portrait
+  - `padding: 0` på card-body för edge-to-edge tabell, info-footer istället för stor alert-ruta
+  - Settings-grid (namn/beskrivning) i 2-kolumns layout som kollapsar på mobil
+- **CSS-klasser:** `.pt-compact-input`, `.pt-rule-card`, `.pt-table`, `.pt-price-cell`, `.pt-class-name`, `.pt-hint`, `.pt-unit`, `.pt-header`, `.pt-settings-grid` — alla definierade inline i `<style>` (inga ändringar i globala CSS-filer)
+- **Filer:** `admin/pricing-templates.php`
+
 ### GravitySeries: Serie-sektionens typsnitt + fadad bakgrund med rutmönster
 - **Problem:** "FYRA SERIER. EN RÖRELSE."-rubriken hade liten text och sektionen hade mycket tomt utrymme utan visuell karaktär.
 - **Fix 1: Typsnitt förstärkt:** `.section-title` ökad från `clamp(36px, 5vw, 56px)` till `clamp(42px, 6vw, 68px)`, tätare line-height (0.92), bredare letter-spacing (0.02em), `text-transform: uppercase` tillagd.

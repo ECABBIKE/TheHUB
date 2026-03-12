@@ -253,282 +253,289 @@ include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <style>
-/* Remove spinners from number inputs */
+/* Pricing templates */
 input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
- -webkit-appearance: none;
- margin: 0;
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; }
+
+.pt-compact-input {
+    width: 72px;
+    padding: var(--space-xs) var(--space-xs);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
 }
-input[type="number"] {
- -moz-appearance: textfield;
+.pt-rule-row { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; }
+.pt-rule-label { font-weight: 600; color: var(--color-text-secondary); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.pt-rule-card {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+}
+.pt-rule-card--green { background: color-mix(in srgb, var(--color-success) 8%, transparent); border-color: color-mix(in srgb, var(--color-success) 30%, transparent); }
+.pt-rule-card--amber { background: color-mix(in srgb, var(--color-warning) 8%, transparent); border-color: color-mix(in srgb, var(--color-warning) 30%, transparent); }
+.pt-rule-card--accent { background: var(--color-accent-light, rgba(55, 212, 214, 0.08)); border-color: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+
+/* Pricing table */
+.pt-table { width: 100%; border-collapse: collapse; }
+.pt-table thead th {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    border-bottom: 2px solid var(--color-border-strong);
+    white-space: nowrap;
+    text-align: left;
+}
+.pt-table thead th:not(:first-child) { text-align: right; }
+.pt-table tbody td {
+    padding: var(--space-xs) var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+}
+.pt-table tbody tr:hover { background: var(--color-bg-hover); }
+.pt-table .pt-class-name { font-weight: 600; font-size: 0.875rem; }
+.pt-table .pt-price-cell { text-align: right; white-space: nowrap; }
+.pt-table .pt-price-cell .input { width: 72px; text-align: right; padding: 6px 8px; font-variant-numeric: tabular-nums; }
+.pt-table .pt-hint { font-size: 0.7rem; color: var(--color-text-muted); }
+.pt-table .pt-unit { color: var(--color-text-muted); font-size: 0.8rem; margin-left: 2px; }
+
+/* Header bar */
+.pt-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap; margin-bottom: var(--space-lg); }
+.pt-header h1 { margin: 0; display: flex; align-items: center; gap: var(--space-xs); }
+.pt-header-sub { color: var(--color-text-secondary); font-size: 0.85rem; margin-top: 2px; }
+
+/* Settings grid */
+.pt-settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); }
+.pt-settings-field label { display: block; font-weight: 600; font-size: 0.8rem; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: var(--space-2xs); }
+
+/* SM section */
+.pt-sm-desc { max-width: 100%; }
+
+@media (max-width: 767px) {
+    .pt-settings-grid { grid-template-columns: 1fr; }
+    .pt-header { flex-direction: column; align-items: flex-start; }
+    .pt-rule-row { gap: var(--space-xs); }
+    .pt-compact-input { width: 60px; }
+
+    /* Mobile: card layout for pricing table */
+    .pt-table thead { display: none; }
+    .pt-table tbody tr {
+        display: block;
+        padding: var(--space-sm) 0;
+        border-bottom: 1px solid var(--color-border);
+    }
+    .pt-table tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: none;
+        padding: 3px var(--space-sm);
+    }
+    .pt-table tbody td::before {
+        content: attr(data-label);
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--color-text-muted);
+        text-transform: uppercase;
+    }
+    .pt-table tbody td:first-child { padding-top: var(--space-xs); }
+    .pt-table tbody td:first-child::before { display: none; }
+    .pt-table .pt-class-name { font-size: 0.9rem; }
+    .pt-table .pt-price-cell .input { width: 68px; }
 }
 </style>
 
  <?php if ($editTemplate): ?>
  <!-- Edit Template View -->
- <div class="card mb-lg">
- <div class="card-body">
- <div class="flex justify-between items-center">
-  <div>
-  <h1 class="">
-  <i data-lucide="file-text"></i>
-  <?= htmlspecialchars($editTemplate['name']) ?>
-  </h1>
-  <p class="text-secondary text-sm">
-  Konfigurera priser för denna mall
-  </p>
-  </div>
-  <a href="/admin/pricing-templates.php" class="btn btn--secondary">
-  <i data-lucide="arrow-left"></i>
-  Tillbaka
-  </a>
- </div>
- </div>
+ <div class="pt-header">
+     <div>
+         <h1>
+             <i data-lucide="file-text"></i>
+             <?= htmlspecialchars($editTemplate['name']) ?>
+         </h1>
+         <div class="pt-header-sub">Konfigurera priser för denna mall</div>
+     </div>
+     <a href="/admin/pricing-templates.php" class="btn btn--secondary">
+         <i data-lucide="arrow-left"></i> Tillbaka
+     </a>
  </div>
 
  <?php if ($message): ?>
- <div class="alert alert-<?= $messageType ?> mb-lg">
- <?= htmlspecialchars($message) ?>
- </div>
+ <div class="alert alert-<?= $messageType ?> mb-lg"><?= htmlspecialchars($message) ?></div>
  <?php endif; ?>
 
  <!-- Template Settings -->
  <div class="card mb-lg">
- <div class="card-header">
- <h2 class="">
-  <i data-lucide="settings"></i>
-  Mallinställningar
- </h2>
- </div>
- <div class="card-body">
- <form method="POST">
-  <?= csrf_field() ?>
-  <input type="hidden" name="action" value="update_template">
-  <input type="hidden" name="id" value="<?= $editTemplate['id'] ?>">
+     <div class="card-header"><h2><i data-lucide="settings"></i> Mallinställningar</h2></div>
+     <div class="card-body">
+         <form method="POST">
+             <?= csrf_field() ?>
+             <input type="hidden" name="action" value="update_template">
+             <input type="hidden" name="id" value="<?= $editTemplate['id'] ?>">
 
-  <div class="grid grid-cols-1 md-grid-cols-2 gap-md">
-  <div>
-  <label class="label">Namn</label>
-  <input type="text" name="name" class="input" value="<?= htmlspecialchars($editTemplate['name']) ?>" required>
-  </div>
-  <div>
-  <label class="label">Beskrivning</label>
-  <input type="text" name="description" class="input" value="<?= htmlspecialchars($editTemplate['description'] ?? '') ?>">
-  </div>
-  </div>
+             <div class="pt-settings-grid">
+                 <div class="pt-settings-field">
+                     <label>Namn</label>
+                     <input type="text" name="name" class="input" value="<?= htmlspecialchars($editTemplate['name']) ?>" required>
+                 </div>
+                 <div class="pt-settings-field">
+                     <label>Beskrivning</label>
+                     <input type="text" name="description" class="input" value="<?= htmlspecialchars($editTemplate['description'] ?? '') ?>">
+                 </div>
+             </div>
 
-  <div class="mt-md">
-  <label class="flex items-center gap-sm">
-  <input type="checkbox" name="is_default" value="1" <?= $editTemplate['is_default'] ? 'checked' : '' ?>>
-  <span>Standardmall för nya events</span>
-  </label>
-  </div>
+             <div style="margin-top: var(--space-sm);">
+                 <label style="display: flex; align-items: center; gap: var(--space-xs); cursor: pointer;">
+                     <input type="checkbox" name="is_default" value="1" <?= $editTemplate['is_default'] ? 'checked' : '' ?>>
+                     <span>Standardmall för nya events</span>
+                 </label>
+             </div>
 
-  <!-- Pricing Settings -->
-  <div class="mt-lg">
-  <h3 class="mb-md">Prisregler</h3>
-  <div class="grid grid-cols-1 md-grid-cols-2 gap-md">
-  <div class="card p-md" style="background: var(--gs-success-bg);">
-  <label class="label text-success">Early Bird (rabatt)</label>
-  <div class="flex gap-sm items-center mt-sm">
-   <input type="number" name="early_bird_percent" class="input"
-   value="<?= $editTemplate['early_bird_percent'] ?? 15 ?>"
-   min="0" max="100" style="width: 80px;">
-   <span>% rabatt,</span>
-   <input type="number" name="early_bird_days" class="input"
-   value="<?= $editTemplate['early_bird_days_before'] ?? 21 ?>"
-   min="0" max="90" style="width: 80px;">
-   <span>dagar före event</span>
-  </div>
-  </div>
-  <div class="card p-md" style="background: var(--gs-warning-bg);">
-  <label class="label text-warning">Efteranmälan (tillägg)</label>
-  <div class="flex gap-sm items-center mt-sm">
-   <input type="number" name="late_fee_percent" class="input"
-   value="<?= $editTemplate['late_fee_percent'] ?? 25 ?>"
-   min="0" max="100" style="width: 80px;">
-   <span>% tillägg,</span>
-   <input type="number" name="late_fee_days" class="input"
-   value="<?= $editTemplate['late_fee_days_before'] ?? 3 ?>"
-   min="0" max="30" style="width: 80px;">
-   <span>dagar före event</span>
-  </div>
-  </div>
-  </div>
-  </div>
+             <!-- Pricing Rules (Early Bird + Late Fee) -->
+             <div style="display: flex; gap: var(--space-sm); flex-wrap: wrap; margin-top: var(--space-lg);">
+                 <div class="pt-rule-card pt-rule-card--green" style="flex: 1; min-width: 220px;">
+                     <div class="pt-rule-label" style="color: var(--color-success);"><i data-lucide="tag" style="width:14px;height:14px;vertical-align:-2px;"></i> Early Bird</div>
+                     <div class="pt-rule-row" style="margin-top: var(--space-xs);">
+                         <input type="number" name="early_bird_percent" class="input pt-compact-input" value="<?= $editTemplate['early_bird_percent'] ?? 15 ?>" min="0" max="100">
+                         <span>% rabatt</span>
+                         <input type="number" name="early_bird_days" class="input pt-compact-input" value="<?= $editTemplate['early_bird_days_before'] ?? 21 ?>" min="0" max="90">
+                         <span>dagar före</span>
+                     </div>
+                 </div>
+                 <div class="pt-rule-card pt-rule-card--amber" style="flex: 1; min-width: 220px;">
+                     <div class="pt-rule-label" style="color: var(--color-warning);"><i data-lucide="clock" style="width:14px;height:14px;vertical-align:-2px;"></i> Efteranmälan</div>
+                     <div class="pt-rule-row" style="margin-top: var(--space-xs);">
+                         <input type="number" name="late_fee_percent" class="input pt-compact-input" value="<?= $editTemplate['late_fee_percent'] ?? 25 ?>" min="0" max="100">
+                         <span>% tillägg</span>
+                         <input type="number" name="late_fee_days" class="input pt-compact-input" value="<?= $editTemplate['late_fee_days_before'] ?? 3 ?>" min="0" max="30">
+                         <span>dagar före</span>
+                     </div>
+                 </div>
+             </div>
 
-  <!-- SM Championship Fee -->
-  <div class="mt-lg">
-  <div class="card p-md" style="background: var(--color-accent-light, rgba(55, 212, 214, 0.1)); border: 1px solid var(--color-accent);">
-      <label class="label" style="color: var(--color-accent);">
-          <i data-lucide="trophy"></i>
-          SM-tillägg (Svenska Mästerskap)
-      </label>
-      <p class="text-sm text-secondary mb-sm">
-          Automatiskt pristillägg för events markerade som SM. Läggs på ALLA prisperioder (early bird, normal, efteranmälan) efter procentberäkning.
-      </p>
-      <div class="flex gap-sm items-center mt-sm flex-wrap">
-          <input type="number" name="championship_fee" class="input"
-              value="<?= $editTemplate['championship_fee'] ?? 0 ?>"
-              min="0" step="1" style="width: 120px;">
-          <span>kr tillägg per anmälan</span>
-      </div>
-      <div class="mt-sm">
-          <label class="label text-sm">Beskrivning (visas för deltagare)</label>
-          <input type="text" name="championship_fee_description" class="input"
-              value="<?= htmlspecialchars($editTemplate['championship_fee_description'] ?? '') ?>"
-              placeholder="T.ex. 'SM-avgift till Svenska Cykelförbundet'"
-              style="width: 100%; max-width: 400px;">
-      </div>
-  </div>
-  </div>
+             <!-- SM Championship Fee -->
+             <div class="pt-rule-card pt-rule-card--accent" style="margin-top: var(--space-sm);">
+                 <div class="pt-rule-label" style="color: var(--color-accent);"><i data-lucide="trophy" style="width:14px;height:14px;vertical-align:-2px;"></i> SM-tillägg</div>
+                 <p style="font-size: 0.8rem; color: var(--color-text-muted); margin: var(--space-2xs) 0 var(--space-xs);">
+                     Tillägg för SM-events. Läggs på alla prisperioder efter procentberäkning.
+                 </p>
+                 <div class="pt-rule-row">
+                     <input type="number" name="championship_fee" class="input pt-compact-input" value="<?= $editTemplate['championship_fee'] ?? 0 ?>" min="0" step="1">
+                     <span>kr per anmälan</span>
+                 </div>
+                 <div style="margin-top: var(--space-xs);">
+                     <label style="font-size: 0.8rem; color: var(--color-text-secondary); font-weight: 600;">Beskrivning</label>
+                     <input type="text" name="championship_fee_description" class="input pt-sm-desc" value="<?= htmlspecialchars($editTemplate['championship_fee_description'] ?? '') ?>" placeholder="T.ex. SM-avgift till SCF">
+                 </div>
+             </div>
 
-  <div class="mt-md">
-  <button type="submit" class="btn btn--primary">
-  <i data-lucide="save"></i>
-  Spara inställningar
-  </button>
-  </div>
- </form>
- </div>
+             <div style="margin-top: var(--space-md);">
+                 <button type="submit" class="btn btn--primary"><i data-lucide="save"></i> Spara inställningar</button>
+             </div>
+         </form>
+     </div>
  </div>
 
  <!-- Pricing Rules per Class -->
  <div class="card">
- <div class="card-header">
- <h2 class="">
-  <i data-lucide="credit-card"></i>
-  Priser per klass
- </h2>
- </div>
- <div class="card-body">
- <form method="POST">
-  <?= csrf_field() ?>
-  <input type="hidden" name="action" value="save_prices">
-  <input type="hidden" name="template_id" value="<?= $editTemplate['id'] ?>">
+     <div class="card-header">
+         <h2><i data-lucide="credit-card"></i> Priser per klass</h2>
+     </div>
+     <div class="card-body" style="padding: 0;">
+         <form method="POST">
+             <?= csrf_field() ?>
+             <input type="hidden" name="action" value="save_prices">
+             <input type="hidden" name="template_id" value="<?= $editTemplate['id'] ?>">
 
-  <?php
-  // Get template pricing settings for calculations
-  $ebPercent = $editTemplate['early_bird_percent'] ?? 15;
-  $latePercent = $editTemplate['late_fee_percent'] ?? 25;
+             <?php
+             $ebPercent = $editTemplate['early_bird_percent'] ?? 15;
+             $latePercent = $editTemplate['late_fee_percent'] ?? 25;
+             $hasSeasonPriceCol = false;
+             try {
+                 $cols = $db->getAll("SHOW COLUMNS FROM pricing_template_rules LIKE 'season_price'");
+                 $hasSeasonPriceCol = !empty($cols);
+             } catch (Exception $e) {}
+             ?>
 
-  // Check if season_price column exists
-  $hasSeasonPriceCol = false;
-  try {
-   $cols = $db->getAll("SHOW COLUMNS FROM pricing_template_rules LIKE 'season_price'");
-   $hasSeasonPriceCol = !empty($cols);
-  } catch (Exception $e) {}
-  ?>
+             <div class="admin-table-container">
+                 <table class="pt-table">
+                     <thead>
+                         <tr>
+                             <th>Klass</th>
+                             <th>Eventpris</th>
+                             <th>Early Bird (-<?= $ebPercent ?>%)</th>
+                             <th>Efteranmälan (+<?= $latePercent ?>%)</th>
+                             <?php if ($hasSeasonPriceCol): ?>
+                             <th>Säsongspris</th>
+                             <?php endif; ?>
+                         </tr>
+                     </thead>
+                     <tbody>
+                     <?php foreach ($classes as $class):
+                         $rule = $templateRules[$class['id']] ?? null;
+                         $basePrice = $rule['base_price'] ?? 0;
+                         $earlyBirdPrice = $rule['early_bird_price'] ?? 0;
+                         $lateFeePrice = $rule['late_fee_price'] ?? 0;
+                         $seasonPrice = $rule['season_price'] ?? 0;
+                         $suggestedEbPrice = $basePrice > 0 ? round($basePrice * (1 - $ebPercent / 100)) : 0;
+                         $suggestedLatePrice = $basePrice > 0 ? round($basePrice * (1 + $latePercent / 100)) : 0;
+                     ?>
+                         <tr data-row="<?= $class['id'] ?>">
+                             <td data-label="">
+                                 <input type="hidden" name="class_id[]" value="<?= $class['id'] ?>">
+                                 <span class="pt-class-name"><?= htmlspecialchars($class['display_name'] ?: $class['name']) ?></span>
+                             </td>
+                             <td class="pt-price-cell" data-label="Eventpris">
+                                 <input type="number" name="base_price[]" class="input"
+                                     data-class="<?= $class['id'] ?>"
+                                     value="<?= $basePrice ?: '' ?>"
+                                     min="0" step="1"
+                                     oninput="calculatePrices(<?= $class['id'] ?>, <?= $ebPercent ?>, <?= $latePercent ?>)"><span class="pt-unit">kr</span>
+                             </td>
+                             <td class="pt-price-cell" data-label="Early Bird">
+                                 <input type="number" name="early_bird_price[]" class="input"
+                                     id="eb-input-<?= $class['id'] ?>"
+                                     value="<?= $earlyBirdPrice ?: '' ?>"
+                                     placeholder="<?= $suggestedEbPrice ?: '' ?>"
+                                     min="0" step="1"
+                                     title="Lämna tom = auto (-<?= $ebPercent ?>%)"><span class="pt-unit">kr</span>
+                                 <span id="eb-calc-<?= $class['id'] ?>" class="pt-hint"><?= $basePrice > 0 ? "(-{$ebPercent}%)" : '' ?></span>
+                             </td>
+                             <td class="pt-price-cell" data-label="Efteranmälan">
+                                 <input type="number" name="late_fee_price[]" class="input"
+                                     id="late-input-<?= $class['id'] ?>"
+                                     value="<?= $lateFeePrice ?: '' ?>"
+                                     placeholder="<?= $suggestedLatePrice ?: '' ?>"
+                                     min="0" step="1"
+                                     title="Lämna tom = auto (+<?= $latePercent ?>%)"><span class="pt-unit">kr</span>
+                                 <span id="late-calc-<?= $class['id'] ?>" class="pt-hint"><?= $basePrice > 0 ? "(+{$latePercent}%)" : '' ?></span>
+                             </td>
+                             <?php if ($hasSeasonPriceCol): ?>
+                             <td class="pt-price-cell" data-label="Säsongspris">
+                                 <input type="number" name="season_price[]" class="input"
+                                     value="<?= $seasonPrice ?: '' ?>"
+                                     min="0" step="1"
+                                     placeholder="<?= $basePrice > 0 ? number_format($basePrice * 4 * 0.85, 0) : '' ?>"><span class="pt-unit">kr</span>
+                             </td>
+                             <?php endif; ?>
+                         </tr>
+                     <?php endforeach; ?>
+                     </tbody>
+                 </table>
+             </div>
 
-  <div class="table-responsive">
-  <table class="table">
-  <thead>
-  <tr>
-   <th>Klass</th>
-   <th>Eventpris</th>
-   <th>Early Bird (-<?= $ebPercent ?>%)</th>
-   <th>Efteranmälan (+<?= $latePercent ?>%)</th>
-   <?php if ($hasSeasonPriceCol): ?>
-   <th>Säsongspris</th>
-   <?php endif; ?>
-  </tr>
-  </thead>
-  <tbody>
-  <?php foreach ($classes as $class):
-   $rule = $templateRules[$class['id']] ?? null;
-   $basePrice = $rule['base_price'] ?? 0;
-   $earlyBirdPrice = $rule['early_bird_price'] ?? 0;
-   $lateFeePrice = $rule['late_fee_price'] ?? 0;
-   $seasonPrice = $rule['season_price'] ?? 0;
-   // Calculate suggested prices (rounded to whole numbers)
-   $suggestedEbPrice = $basePrice > 0 ? round($basePrice * (1 - $ebPercent / 100)) : 0;
-   $suggestedLatePrice = $basePrice > 0 ? round($basePrice * (1 + $latePercent / 100)) : 0;
-  ?>
-   <tr data-row="<?= $class['id'] ?>">
-   <td>
-   <input type="hidden" name="class_id[]" value="<?= $class['id'] ?>">
-   <strong><?= htmlspecialchars($class['display_name'] ?: $class['name']) ?></strong>
-   </td>
-   <td>
-   <div class="flex items-center gap-xs">
-   <input type="number" name="base_price[]" class="input"
-    data-class="<?= $class['id'] ?>"
-    value="<?= $basePrice ?: '' ?>"
-    min="0" step="1" style="width: 100px;"
-    oninput="calculatePrices(<?= $class['id'] ?>, <?= $ebPercent ?>, <?= $latePercent ?>)">
-   <span class="text-secondary">kr</span>
-   </div>
-   </td>
-   <td>
-   <div class="flex items-center gap-xs">
-   <input type="number" name="early_bird_price[]" class="input"
-    id="eb-input-<?= $class['id'] ?>"
-    value="<?= $earlyBirdPrice ?: '' ?>"
-    placeholder="<?= $suggestedEbPrice ?: '' ?>"
-    min="0" step="1" style="width: 100px;"
-    title="Lämna tom för automatisk beräkning (-<?= $ebPercent ?>%)">
-   <span class="text-secondary">kr</span>
-   <span id="eb-calc-<?= $class['id'] ?>" class="text-xs text-secondary" style="white-space: nowrap;">
-   <?= $basePrice > 0 ? "(-{$ebPercent}%)" : '' ?>
-   </span>
-   </div>
-   </td>
-   <td>
-   <div class="flex items-center gap-xs">
-   <input type="number" name="late_fee_price[]" class="input"
-    id="late-input-<?= $class['id'] ?>"
-    value="<?= $lateFeePrice ?: '' ?>"
-    placeholder="<?= $suggestedLatePrice ?: '' ?>"
-    min="0" step="1" style="width: 100px;"
-    title="Lämna tom för automatisk beräkning (+<?= $latePercent ?>%)">
-   <span class="text-secondary">kr</span>
-   <span id="late-calc-<?= $class['id'] ?>" class="text-xs text-secondary" style="white-space: nowrap;">
-   <?= $basePrice > 0 ? "(+{$latePercent}%)" : '' ?>
-   </span>
-   </div>
-   </td>
-   <?php if ($hasSeasonPriceCol): ?>
-   <td>
-   <div class="flex items-center gap-xs">
-   <input type="number" name="season_price[]" class="input"
-    value="<?= $seasonPrice ?: '' ?>"
-    min="0" step="1" style="width: 100px;"
-    placeholder="<?= $basePrice > 0 ? number_format($basePrice * 4 * 0.85, 0) : '' ?>">
-   <span class="text-secondary">kr</span>
-   </div>
-   </td>
-   <?php endif; ?>
-   </tr>
-  <?php endforeach; ?>
-  </tbody>
-  </table>
-  </div>
+             <div style="padding: var(--space-sm) var(--space-md); border-top: 1px solid var(--color-border); font-size: 0.8rem; color: var(--color-text-muted);">
+                 <i data-lucide="info" style="width:14px;height:14px;vertical-align:-2px;"></i>
+                 Lämna Early Bird / Efteranmälan tom för automatisk beräkning från %. Alla priser avrundas till hela kronor.
+             </div>
 
-  <div class="alert alert--info mt-md">
-   <div style="display: flex; gap: var(--space-sm); align-items: flex-start;">
-    <i data-lucide="info" style="flex-shrink: 0; margin-top: 2px;"></i>
-    <div style="font-size: 0.875rem;">
-     <p style="margin: 0 0 var(--space-xs) 0;"><strong>Prissättning:</strong></p>
-     <ul style="margin: 0; padding-left: var(--space-lg);">
-      <li><strong>Eventpris:</strong> Grundpris för eventet (krävs)</li>
-      <li><strong>Early Bird & Efteranmälan:</strong> Lämna tom för automatisk beräkning från % (rekommenderas), eller ange manuellt pris</li>
-      <?php if ($hasSeasonPriceCol): ?>
-      <li><strong>Säsongspris:</strong> Pris för hela serien (alla events). Lämna tomt om ej erbjuds.</li>
-      <?php endif; ?>
-      <li>Alla priser avrundas automatiskt till <strong>hela kronor</strong></li>
-     </ul>
-    </div>
-   </div>
-  </div>
-
-  <div class="mt-lg">
-  <button type="submit" class="btn btn--primary">
-  <i data-lucide="save"></i>
-  Spara priser
-  </button>
-  </div>
- </form>
- </div>
+             <div style="padding: var(--space-sm) var(--space-md) var(--space-md);">
+                 <button type="submit" class="btn btn--primary"><i data-lucide="save"></i> Spara priser</button>
+             </div>
+         </form>
+     </div>
  </div>
 
  <?php else: ?>
