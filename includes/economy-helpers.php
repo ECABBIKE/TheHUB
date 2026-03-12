@@ -41,13 +41,15 @@ function explodeSeriesOrdersToEvents(array $orders, $db): array {
             try {
                 $seriesEventsCache[$seriesId] = $db->getAll("
                     SELECT DISTINCT e.id, e.name, e.date, e.payment_recipient_id,
-                           e.is_championship, e.championship_surcharge
+                           e.is_championship, e.championship_surcharge,
+                           pt.championship_fee as template_championship_fee
                     FROM (
                         SELECT event_id as eid FROM series_events WHERE series_id = ?
                         UNION
                         SELECT id as eid FROM events WHERE series_id = ?
                     ) combined
                     JOIN events e ON e.id = combined.eid
+                    LEFT JOIN pricing_templates pt ON e.pricing_template_id = pt.id
                     ORDER BY e.date ASC
                 ", [$seriesId, $seriesId]);
             } catch (Exception $e) {
@@ -201,9 +203,15 @@ function explodeSeriesOrdersToEvents(array $orders, $db): array {
         foreach ($seriesEvents as $evt) {
             $evId = (int)$evt['id'];
             $eventRecipientMap[$evId] = $evt['payment_recipient_id'] ?? null;
-            $surcharge = (!empty($evt['is_championship']) && !empty($evt['championship_surcharge']))
-                ? floatval($evt['championship_surcharge'])
-                : 0;
+            $surcharge = 0;
+            if (!empty($evt['is_championship'])) {
+                // Pricing template fee takes priority over event-level surcharge
+                if (!empty($evt['template_championship_fee']) && floatval($evt['template_championship_fee']) > 0) {
+                    $surcharge = floatval($evt['template_championship_fee']);
+                } elseif (!empty($evt['championship_surcharge'])) {
+                    $surcharge = floatval($evt['championship_surcharge']);
+                }
+            }
             $eventSurchargeMap[$evId] = $surcharge;
             $totalSurcharge += $surcharge;
         }
