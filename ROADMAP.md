@@ -117,6 +117,25 @@
 
 # CHANGELOG
 
+### 2026-03-12 (SM-tilläggsavgift / Championship Surcharge)
+- **Branch:** claude/review-license-api-XcPWX
+
+- **Ny funktion: SM-tilläggsavgift**
+  - Flat tilläggsavgift (t.ex. 100 kr) på SM-event
+  - Läggs på ALLA prisperioder (early bird, normal, sen anmälan)
+  - Aldrig rabatterad vid serieanmälan
+  - Tillfaller alltid SM-eventets betalningsmottagare vid avräkning
+
+- **Nya filer:**
+  - `Tools/migrations/097_championship_surcharge.sql` - Ny kolumn events.championship_surcharge
+
+- **Ändrade filer:**
+  - `admin/event-edit.php` - SM-tillägg fält vid SM-checkbox
+  - `includes/order-manager.php` - Surcharge i getEligibleClassesForEvent() och getEligibleClassesForSeries()
+  - `includes/economy-helpers.php` - Surcharge-hantering vid seriedelning i explodeSeriesOrdersToEvents()
+  - `pages/event.php` - Visar SM-avgift i anmälningsmodalerna
+  - `admin/migrations.php` - Migration 097 registrerad
+
 ### 2026-03-11 (Bolagsverket API + företagsuppgifter + ikonfix)
 - **Branch:** claude/review-license-api-XcPWX
 
