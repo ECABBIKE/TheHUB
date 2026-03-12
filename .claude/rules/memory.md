@@ -4,7 +4,7 @@
 
 ---
 
-## SENASTE FIX (2026-03-12, session 75)
+## SENASTE FIX (2026-03-12, session 75b)
 
 ### SM-prisfält i prismallar: Migration saknades + fel katalog
 - **Problem:** SM-tilläggsfälten (championship_fee, championship_fee_description) i prismallar visades med defaultvärden men sparning fungerade inte — kolumnerna fanns inte i databasen.
@@ -14,6 +14,33 @@
 - **Fix 3:** Separerade championship_fee-sparning i en try/catch så att övriga inställningar sparas även om kolumnerna saknas (pre-migration graceful fallback)
 - **VIKTIGT:** Kör migration 106 via `/admin/migrations.php` för att skapa kolumnerna
 - **Filer:** `Tools/migrations/106_add_championship_fee_to_pricing.sql`, `admin/migrations.php`, `admin/pricing-template-edit.php`
+
+---
+
+## SENASTE IMPLEMENTATION (2026-03-12, session 75)
+
+### GravitySeries: Dynamiska serie-kort + serie-detaljsida
+- **Serie-kort helt dynamiska från DB:** `gravityseries/index.php` omskriven — hämtar serier från `series`+`series_brands` tabellerna istället för hårdkodade `$seriesCards`. Kort skapas baserat på vilka aktiva serier som finns för nuvarande år. `accent_color` från `series_brands` används via inline `style="--c: #xxx"` istället för CSS-klasser (.ggs, .cgs etc.).
+- **Ny serie-detaljsida:** `gravityseries/serie.php` — `/gravityseries/serie/{brand-slug}` visar komplett serieinformation:
+  - Hero med varumärkesnamn, beskrivning, disciplin, stats (deltävlingar, avgjorda, klasser, åkare)
+  - 3 flikar med klient-sida flikbyte: Tävlingar, Ställning, Klubbmästerskap
+  - Tävlingar: eventlista med datum, plats, status-badges (resultat/anmälda/kommande), nästa-event markerad
+  - Ställning: per klass med bulk-points-fetch, count_best_results-stöd, top 20 per klass, "Visa alla på TheHUB"-länk
+  - Klubbmästerskap: SUM av poäng per klubb, sorterat fallande
+  - "Första tävlingen arrangeras X datum"-fallback när inga resultat finns
+  - TheHUB CTA-sektion längst ner
+- **Routing:** `.htaccess` utökad med `^serie/([a-z0-9-]+)/?$` → `serie.php?slug=$1`
+- **CSS:** ~300 rader nya stilar i `gs-site.css` för hero, flikar, eventlista, ställningstabell, mobil
+- **Discipline-gissning:** `guessSeriesDiscipline()` / `_disc()` baserat på serienamn/type
+- **Kort-förkortning:** Auto-genererad från brand_name (första bokstav per ord)
+- **Filer:** `gravityseries/index.php` (omskriven), `gravityseries/serie.php` (ny), `gravityseries/.htaccess`, `gravityseries/assets/css/gs-site.css`
+
+### VIKTIGT: GS serie-detaljsidans arkitektur
+- **Brand-slug:** Från `series_brands.slug` (auto-genererat vid skapande, t.ex. "götaland-gravity-series")
+- **Accent-färg:** `series_brands.accent_color` → inline CSS-variabel `--c` på alla sektioner
+- **Fallback:** Om ingen aktiv serie för nuvarande år hittas, väljs senaste aktiva eller första
+- **Bulk points:** EN SQL-query hämtar alla poäng → PHP aggregerar per klass/åkare (samma mönster som series/show.php)
+- **Länkning:** Åkare och event länkar till TheHUB (inte GS-sajten)
 
 ---
 
@@ -38,6 +65,13 @@
   - `gravityseries/assets/css/gs-site.css` — tema-variabler, serie-kort CSS, dark mode bakgrund
   - `gravityseries/includes/gs-header.php` — `data-theme="dark"` på html, flash-prevention script, toggle-knapp
   - `gravityseries/index.php` — nya serie-kort med event-pills och klubbmästerskap
+
+### BUGGFIX: Serie-kort renderade inte (session 74b)
+- **Problem:** Serie-korten var helt tomma på live-sajten trots att CSS och HTML-strukturen fungerade
+- **Orsak:** Implementationen ersatte hårdkodade `$seriesCards` med dynamisk DB-query som matchade `series_brands.slug` mot `$cardConfig`-nycklar. Om `brand_slug` inte matchade (fel slugs, inga aktiva serier för nuvarande år, etc.) renderades noll kort — `if (!$cfg) continue;` hoppade över allt.
+- **Fix:** Återställde hårdkodade kortdefinitioner (`$seriesCards` array med alla 6 serier) som ALLTID renderas. DB-data (events, riders, clubs) överlagras via `$seriesBySlug` lookup när matchning hittas. Om ingen DB-matchning: kortet renderas med grundinfo och nollvärden.
+- **VIKTIGT:** Hårdkodade kort är sanningskällan för vilka serier som visas. DB-data är berikande, inte styrande.
+- **Fil:** `gravityseries/index.php`
 
 ### VIKTIGT: GS tema-arkitektur
 - **CSS-variabler:** `--bg`, `--bg-2`, `--surface`, `--surface-2`, `--border`, `--border-s`, `--text`, `--text-2`, `--text-3`, `--header-bg` definierade per `[data-theme]`

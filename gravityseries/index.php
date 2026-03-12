@@ -42,19 +42,20 @@ try {
     // Fallback values
 }
 
-// Load series from database with event stats
+// Load active series for current year with brand info and event stats
 $series = [];
 try {
     $series = $pdo->query("
-        SELECT s.id, s.name, s.year,
-            sb.name AS brand_name, sb.slug AS brand_slug,
+        SELECT s.id, s.name, s.year, s.description, s.type, s.format,
+            sb.id AS brand_id, sb.name AS brand_name, sb.slug AS brand_slug,
+            sb.accent_color, sb.description AS brand_description,
             (SELECT COUNT(*) FROM series_events se WHERE se.series_id = s.id) AS total_events,
             (SELECT COUNT(*) FROM series_events se JOIN events e ON se.event_id = e.id WHERE se.series_id = s.id AND e.date < CURDATE()) AS done_events,
             (SELECT COUNT(DISTINCT r.cyclist_id) FROM results r JOIN series_events se ON r.event_id = se.event_id WHERE se.series_id = s.id) AS total_riders
         FROM series s
         LEFT JOIN series_brands sb ON s.brand_id = sb.id
         WHERE s.status = 'active' AND s.year = YEAR(CURDATE())
-        ORDER BY s.name ASC
+        ORDER BY sb.display_order ASC, s.name ASC
     ")->fetchAll();
 } catch (PDOException $e) {
     // Fallback
@@ -121,15 +122,17 @@ try {
 // Load nav pages for footer links
 $footerPages = $gsNavPages;
 
-// Build slug→series_id lookup from DB series
-$seriesIdBySlug = [];
-foreach ($series as $s) {
-    $slug = strtolower($s['brand_slug'] ?? '');
-    if ($slug) $seriesIdBySlug[$slug] = $s['id'];
+// Determine discipline from series type/format/name
+function guessSeriesDiscipline($s) {
+    $name = strtolower($s['name'] ?? '');
+    $type = strtolower($s['type'] ?? '');
+    $format = strtolower($s['format'] ?? '');
+    if (strpos($name, 'downhill') !== false || strpos($name, ' dh') !== false || $type === 'dh' || $format === 'dh') return 'Downhill';
+    if (strpos($name, 'enduro') !== false || $type === 'enduro' || $format === 'enduro') return 'Enduro';
+    if (strpos($name, 'total') !== false) return 'Enduro + DH';
+    return 'Enduro';
 }
 
-// Map pin SVG (reused)
-$mapPinSvg = '<svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
 $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';
 ?>
 
@@ -139,11 +142,16 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
     <div class="hero-bg-stripe" style="background: linear-gradient(180deg, var(--ggs), var(--ges))"></div>
     <div class="hero-bg-grid"></div>
     <div class="hero-series-bar">
-      <span style="background:var(--ggs)"></span>
-      <span style="background:var(--ges)"></span>
-      <span style="background:var(--cgs)"></span>
-      <span style="background:var(--gs-blue)"></span>
-      <span style="background:var(--accent)"></span>
+      <?php foreach ($series as $s): ?>
+        <span style="background:<?= htmlspecialchars($s['accent_color'] ?: '#61CE70') ?>"></span>
+      <?php endforeach; ?>
+      <?php if (empty($series)): ?>
+        <span style="background:var(--ggs)"></span>
+        <span style="background:var(--ges)"></span>
+        <span style="background:var(--cgs)"></span>
+        <span style="background:var(--gs-blue)"></span>
+        <span style="background:var(--accent)"></span>
+      <?php endif; ?>
     </div>
   </div>
   <div class="hero-content">
@@ -192,43 +200,60 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
     </div>
     <div class="gs-series-grid">
       <?php
-      // Card definitions: slug → display config
-      $cardConfig = [
-          'ggs'     => ['abbr' => 'GGS', 'css' => 'ggs',  'disc' => 'Enduro',      'region' => 'Götaland'],
-          'capital' => ['abbr' => 'CGS', 'css' => 'cgs',  'disc' => 'Enduro',      'region' => 'Mälardalen'],
-          'jgs'     => ['abbr' => 'JGS', 'css' => 'jgs',  'disc' => 'Enduro',      'region' => 'Jämtland'],
-          'gsd'     => ['abbr' => 'GSD', 'css' => 'gsdh', 'disc' => 'Downhill',    'region' => 'Nationell'],
-          'gse'     => ['abbr' => 'GSE', 'css' => '',     'disc' => 'Enduro',      'region' => 'Nationell'],
-          'gstotal' => ['abbr' => 'TOTAL','css' => '',    'disc' => 'Enduro + DH', 'region' => 'Alla serier samlat'],
-      ];
-      foreach ($series as $s):
-          $slug = strtolower($s['brand_slug'] ?? '');
-          $cfg = $cardConfig[$slug] ?? null;
-          if (!$cfg) continue;
+      $today = date('Y-m-d');
+
+      if (empty($series)):
+      ?>
+        <div class="gsc-clubs-empty" style="grid-column: span 12; padding: 40px 20px; font-size: 1.1rem;">
+          Inga aktiva serier för <?= date('Y') ?> ännu.
+        </div>
+      <?php
+      else:
+        foreach ($series as $s):
           $seriesId = $s['id'];
+          $brandSlug = $s['brand_slug'] ?? '';
+          $accentColor = $s['accent_color'] ?: '#61CE70';
+          $disc = guessSeriesDiscipline($s);
           $events = $seriesEvents[$seriesId] ?? [];
           $clubs = $seriesClubs[$seriesId] ?? [];
-          $totalEvents = (int)($s['total_events'] ?? count($events));
+          $totalEvents = (int)($s['total_events'] ?? 0);
           $doneEvents = (int)($s['done_events'] ?? 0);
           $remainingEvents = $totalEvents - $doneEvents;
           $totalRiders = (int)($s['total_riders'] ?? 0);
-          $today = date('Y-m-d');
+
+          // Build abbreviation from brand name or series name
+          $brandName = $s['brand_name'] ?: $s['name'];
+          $words = preg_split('/[\s-]+/', $brandName);
+          $abbr = '';
+          foreach ($words as $w) {
+              if (strlen($w) > 2) $abbr .= strtoupper(mb_substr($w, 0, 1));
+          }
+          if (strlen($abbr) < 2) $abbr = strtoupper(mb_substr($brandName, 0, 3));
+
+          // Link to GS serie page if brand_slug exists, else TheHUB
+          $href = $brandSlug ? ($gsBaseUrl . '/serie/' . htmlspecialchars($brandSlug)) : "https://thehub.gravityseries.se/series/{$seriesId}";
 
           // Determine next event
           $nextEventIdx = -1;
           foreach ($events as $i => $evt) {
               if ($evt['date'] >= $today) { $nextEventIdx = $i; break; }
           }
+
+          // First upcoming event date (for empty clubs message)
+          $firstFutureEvent = null;
+          foreach ($events as $evt) {
+              if ($evt['date'] >= $today) { $firstFutureEvent = $evt; break; }
+          }
       ?>
-        <a class="gs-serie-card <?= $cfg['css'] ?>" data-serie="<?= $cfg['abbr'] ?>" href="https://thehub.gravityseries.se/series/<?= $seriesId ?>">
+        <a class="gs-serie-card" data-serie="<?= htmlspecialchars($abbr) ?>" href="<?= $href ?>" style="--c: <?= htmlspecialchars($accentColor) ?>;">
           <div class="gsc-inner">
             <div class="gsc-top">
-              <div class="gsc-badge"><i class="gsc-dot"></i> <?= $cfg['abbr'] ?></div>
-              <span class="gsc-discipline"><?= htmlspecialchars($cfg['disc']) ?></span>
+              <div class="gsc-badge"><i class="gsc-dot"></i> <?= htmlspecialchars($abbr) ?></div>
+              <span class="gsc-discipline"><?= htmlspecialchars($disc) ?></span>
             </div>
             <div class="gsc-title-wrap">
-              <h3 class="gsc-title"><?= htmlspecialchars($s['name']) ?></h3>
-              <div class="gsc-meta"><?= htmlspecialchars($cfg['disc']) ?> &middot; <?= htmlspecialchars($cfg['region']) ?></div>
+              <h3 class="gsc-title"><?= htmlspecialchars($brandName) ?></h3>
+              <div class="gsc-meta"><?= htmlspecialchars($disc) ?> &middot; <?= htmlspecialchars($s['name']) ?></div>
             </div>
             <div class="gsc-stats">
               <div class="gsc-stat"><strong><?= $totalEvents ?></strong><span>Deltävlingar</span></div>
@@ -257,13 +282,18 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
                   <span class="gsc-club-pts"><?= (int)$club['total'] ?> p</span>
                 </div>
                 <?php endforeach; ?>
+              <?php elseif ($firstFutureEvent): ?>
+                <div class="gsc-clubs-empty">Första tävlingen arrangeras <?= date('j/n', strtotime($firstFutureEvent['date'])) ?> — <?= htmlspecialchars($firstFutureEvent['location'] ?: $firstFutureEvent['name']) ?></div>
               <?php else: ?>
                 <div class="gsc-clubs-empty">Säsongen pågår — ställningen uppdateras efter varje deltävling</div>
               <?php endif; ?>
             </div>
           </div>
         </a>
-      <?php endforeach; ?>
+      <?php
+        endforeach;
+      endif;
+      ?>
     </div>
   </div>
 </section>
