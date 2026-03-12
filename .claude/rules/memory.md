@@ -4,6 +4,37 @@
 
 ---
 
+## SENASTE IMPLEMENTATION (2026-03-12, session 74)
+
+### GravitySeries: Dark/Light tema + nya serie-kort + sports-känsla
+- **Dubbelt tema (dark/light):** Ny temväxlare i GS-headern (sol/måne-knapp). Sparar val i localStorage (`gs-theme`). Dark mode är default. Alla sektioner (stat-bar, info-kort, partners, footer, page-content) använder nu tema-medvetna CSS-variabler (`--bg`, `--surface`, `--text`, `--border` etc.) med fallbacks till legacy-variabler.
+- **Dark mode bakgrund:** Subtila radiella gradienter (blå + grön) + grid-mönster (40px rutnät med mask-fade) ger en sports-känsla. Implementerat via `[data-theme="dark"] body` och `::before` pseudo-element.
+- **Serie-kort ombyggda:** Gamla enkla kort (färgtopp + namn + disciplin-pill) ersatta med rika kort-komponenter:
+  - Badge med pulsande serie-färgprick + förkortning
+  - Disciplin-tag (Enduro/Downhill)
+  - Titel + meta (disciplin + region)
+  - Stats-grid: deltävlingar, avgjorda, åkare, kvar (live från DB)
+  - Event-pills: avgjorda (halvtonade), nästa (markerad med serie-färg), kommande
+  - Klubbmästerskap: top 3 klubbar med poäng (eller placeholder "Säsongen pågår")
+  - Gradient-overlay baserad på serie-färg via `color-mix()` och `::before`
+- **Serie-färger uppdaterade:** GGS=#87c442, GES=#ff7a18, CGS=#28a8ff, GSDH=#1d63ff, JGS=#c084fc (nya, mer vibrerande)
+- **Grid-layout:** 2 kort per rad desktop (12-kolumns grid, span 6), 1 per rad mobil
+- **Flash-prevention:** Inline `<script>` i `<head>` sätter `data-theme` från localStorage FÖRE rendering
+- **Header backdrop-filter:** Glasmorfism-effekt med `blur(12px)` på headern
+- **Inga nya filer skapade** — alla ändringar i befintliga:
+  - `gravityseries/assets/css/gs-site.css` — tema-variabler, serie-kort CSS, dark mode bakgrund
+  - `gravityseries/includes/gs-header.php` — `data-theme="dark"` på html, flash-prevention script, toggle-knapp
+  - `gravityseries/index.php` — nya serie-kort med event-pills och klubbmästerskap
+
+### VIKTIGT: GS tema-arkitektur
+- **CSS-variabler:** `--bg`, `--bg-2`, `--surface`, `--surface-2`, `--border`, `--border-s`, `--text`, `--text-2`, `--text-3`, `--header-bg` definierade per `[data-theme]`
+- **Legacy-variabler:** `--ink`, `--paper`, `--white`, `--rule` finns kvar i `:root` som fallback
+- **Fallback-mönster:** Alla nya CSS använder `var(--text, var(--ink))` — fungerar oavsett om tema är satt
+- **Serie-färger:** `--ggs`, `--ges`, `--cgs`, `--gsdh`, `--jgs` — klass på `.gs-serie-card` sätter `--c`
+- **localStorage-nyckel:** `gs-theme` (separerat från TheHUB:s tema)
+
+---
+
 ## SENASTE IMPLEMENTATION (2026-03-12, session 73)
 
 ### GravitySeries: CMS-sidor populerade med riktigt WordPress-innehåll
