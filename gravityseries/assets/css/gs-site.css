@@ -453,6 +453,56 @@ body {
 }
 
 /* ── SECTIONS ─────────────────────────────── */
+
+/* Faded grid/route background on series section */
+#serier {
+  position: relative;
+  overflow: hidden;
+}
+#serier::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    linear-gradient(rgba(97,206,112,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(97,206,112,.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image:
+    radial-gradient(ellipse 80% 70% at 50% 20%, rgba(0,0,0,.5) 0%, transparent 70%);
+  -webkit-mask-image:
+    radial-gradient(ellipse 80% 70% at 50% 20%, rgba(0,0,0,.5) 0%, transparent 70%);
+}
+#serier::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: -10%;
+  width: 120%;
+  height: 80%;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 25% 30%, rgba(0,74,152,.08), transparent 40%),
+    radial-gradient(circle at 75% 20%, rgba(97,206,112,.06), transparent 35%);
+}
+[data-theme="dark"] #serier::before {
+  background:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+[data-theme="dark"] #serier::after {
+  background:
+    radial-gradient(circle at 25% 30%, rgba(0,74,152,.18), transparent 40%),
+    radial-gradient(circle at 75% 20%, rgba(97,206,112,.08), transparent 35%);
+}
+#serier > * {
+  position: relative;
+  z-index: 1;
+}
+
 .gs-section {
   max-width: 1200px;
   margin: 0 auto;
@@ -476,10 +526,11 @@ body {
 .section-label::before { content: ''; display: inline-block; width: 24px; height: 2px; background: var(--accent); }
 .section-title {
   font-family: var(--font-display);
-  font-size: clamp(36px, 5vw, 56px);
+  font-size: clamp(42px, 6vw, 68px);
   color: var(--text, var(--ink));
-  line-height: .95;
-  letter-spacing: .01em;
+  line-height: .92;
+  letter-spacing: .02em;
+  text-transform: uppercase;
 }
 .section-body {
   font-family: var(--font-cond);
