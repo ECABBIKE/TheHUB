@@ -4,6 +4,19 @@
 
 ---
 
+## SENASTE FIX (2026-03-12, session 75b)
+
+### SM-prisfält i prismallar: Migration saknades + fel katalog
+- **Problem:** SM-tilläggsfälten (championship_fee, championship_fee_description) i prismallar visades med defaultvärden men sparning fungerade inte — kolumnerna fanns inte i databasen.
+- **Orsak:** Migration 106 (`106_add_championship_fee_to_pricing.sql`) låg i `admin/migrations/` (FEL) istället för `Tools/migrations/` (RÄTT), och var inte registrerad i `$migrationChecks` i `admin/migrations.php`.
+- **Fix 1:** Flyttade migrationen till `Tools/migrations/106_add_championship_fee_to_pricing.sql`
+- **Fix 2:** Registrerade migrationen i `$migrationChecks` med kolumnkontroll
+- **Fix 3:** Separerade championship_fee-sparning i en try/catch så att övriga inställningar sparas även om kolumnerna saknas (pre-migration graceful fallback)
+- **VIKTIGT:** Kör migration 106 via `/admin/migrations.php` för att skapa kolumnerna
+- **Filer:** `Tools/migrations/106_add_championship_fee_to_pricing.sql`, `admin/migrations.php`, `admin/pricing-template-edit.php`
+
+---
+
 ## SENASTE IMPLEMENTATION (2026-03-12, session 75)
 
 ### GravitySeries: Dynamiska serie-kort + serie-detaljsida
