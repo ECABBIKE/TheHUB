@@ -135,120 +135,267 @@ $pages = [
 '
     ],
 
-    // 3. Licenser
+    // 3. Tävlingsguide (ersätter Licenser — all licensinfo bevarad)
     [
         'slug' => 'licenser',
-        'title' => 'Licenser & SCF',
-        'meta_description' => 'Information om SCF-licenser för tävling inom GravitySeries. Tävlingslicens, motionslicens och engångslicens.',
-        'nav_label' => 'Licenser',
+        'title' => 'Tävlingsguide',
+        'meta_description' => 'Komplett guide till att tävla i GravitySeries — tävlingsformat, klasser, licenser, regler, anmälan och allt du behöver veta.',
+        'nav_label' => 'Tävlingsguide',
         'nav_order' => 30,
         'show_in_nav' => 1,
         'content' => '
-<h2>Licens 2026</h2>
-<p>Alla deltagare ska vara försäkrade under tävling. Genom vårt samarbete med Svenska Cykelförbundet så gäller deras licenser som försäkring på våra event.</p>
-<p>Ytterligare en anledning för att vi kräver licenser är för att det då ger oss möjlighet att sanktionera eventen hos SCF och därmed är även våra funktionärer försäkrade genom era avgifter.</p>
+<h2>Välkommen till Gravity</h2>
+<p>Oavsett om du är helt ny eller har många säsonger bakom dig — här hittar du allt du behöver veta för att tävla inom GravitySeries. Från vilken licens du behöver till vad som händer på tävlingsdagen.</p>
 
-<h3>Licenstyper</h3>
-<p>SCF erbjuder olika typer av licens som kan användas hos oss. Detta kan vara lite krångligt att få rätt så se till att detaljerna vad du ska tävla i stämmer mot den licens du köper.</p>
-<p>För ungdomar under 15 år finns ingen motionslicens så här är det enbart tävlingslicens eller engångslicens som är ett alternativ.</p>
-<p>För barn upp till 11 år är licens och tillhörande försäkring kostnadsfri, men måste ändå skaffas genom SCF.</p>
+<h2>Våra tävlingsformat</h2>
+<p>GravitySeries arrangerar tävlingar i två huvuddiscipliner: <strong>enduro</strong> och <strong>downhill</strong>. Båda handlar om att ta sig nedför berget så snabbt som möjligt — men på lite olika sätt.</p>
+
+<h3>Enduro</h3>
+<p>Enduro är en tävlingsform där du kör flera tidtagningsträckor (specialsträckor/SS) under en dag. Mellan sträckorna förflyttar du dig på egen hand — uppför och utefter — till nästa SS. Det är bara tiden på specialsträckorna som räknas, men du måste klara alla förflyttningar inom tidsgränserna.</p>
+<p>Enduro passar dig som gillar varierad terräng och som vill ha en hel dag i skogen. Du behöver vara i bra fysisk form för att orka både trampa och köra snabbt.</p>
+<ul>
+<li>Normalt 3–6 specialsträckor per tävling</li>
+<li>Tiderna summeras — lägst totaltid vinner</li>
+<li>Förflyttningssträckor med maxtider (du behöver inte stressa, men du måste hålla tiden)</li>
+<li>En dag, ett åk per sträcka</li>
+</ul>
+
+<h3>Downhill</h3>
+<p>Downhill är ren fart nedför en bana. Du får normalt två åk och det bästa räknas. Banorna är kortare och brantare än enduro, med hopp, dropp och tekniska sektioner. Här handlar allt om att pusha gränsen på en enda bana.</p>
+<ul>
+<li>En bana, normalt två åk (bästa tiden räknas)</li>
+<li>På SweCup DH körs kval + final</li>
+<li>Liftservade anläggningar — du behöver inte trampa uppför</li>
+<li>Kortare, mer intensivt format</li>
+</ul>
+
+<h3>sportMotion</h3>
+<p>sportMotion är våra instegstävlingar, designade för dig som vill prova på tävling utan press. Samma banor och format som tävlingsklasserna, men i en avslappnad miljö med fokus på upplevelsen snarare än resultatet.</p>
+<ul>
+<li>Samma banor som tävlingsklasserna</li>
+<li>Ingen ranking eller poängberäkning</li>
+<li>Perfekt första tävling</li>
+<li>Kräver bara motionslicens eller engångslicens</li>
+</ul>
+
+<h2>Serier</h2>
+<p>GravitySeries driver flera tävlingsserier i Sverige. Genom att köra flera deltävlingar i en serie samlar du poäng och kan tävla om seriesegern.</p>
+
+<h3>Regionala serier (Enduro)</h3>
+<ul>
+<li><strong>Götaland Gravity Series (GGS)</strong> — Söder om Dalälven. Instegstävlingar och breddsport.</li>
+<li><strong>Capital Gravity Series (CGS)</strong> — Mälardalen och Stockholmsområdet.</li>
+<li><strong>Jämtland GravitySeries (JGS)</strong> — Jämtland och norra Sverige.</li>
+</ul>
+
+<h3>Nationella serier</h3>
+<ul>
+<li><strong>GravitySeries Enduro (GSE)</strong> — Nationell enduro med de bästa banorna i landet.</li>
+<li><strong>GravitySeries Downhill (GSD)</strong> — Nationell downhill på Sveriges bästa anläggningar.</li>
+</ul>
+
+<h3>Säsongspass</h3>
+<p>Genom att köpa ett säsongspass till en serie får du rabatt på startavgifterna jämfört med att anmäla dig till varje deltävling separat. Säsongspasset bokas via TheHUB.</p>
+
+<h2>Klasser</h2>
+<p>Vi erbjuder klasser för alla åldrar och nivåer. Du placeras i rätt klass baserat på kön, ålder och licenstyp.</p>
+
+<h3>Tävlingsklasser</h3>
+<ul>
+<li><strong>Herrar Elit (H19+)</strong> — Herrar från det år du fyller 19</li>
+<li><strong>Damer Elit (D19+)</strong> — Damer från det år du fyller 19</li>
+<li><strong>Herrar Junior (HJ)</strong> — Herrar 17–18 år</li>
+<li><strong>Damer Junior (DJ)</strong> — Damer 17–18 år</li>
+<li><strong>Herrar Master 35+ (H35)</strong> — Herrar 35–44 år</li>
+<li><strong>Herrar Master 45+ (H45)</strong> — Herrar 45 år och äldre</li>
+<li><strong>Damer Master 35+ (D35)</strong> — Damer 35 år och äldre</li>
+<li><strong>Pojkar 15–16 (P15–16)</strong> — Pojkar 15–16 år</li>
+<li><strong>Flickor 15–16 (F15–16)</strong> — Flickor 15–16 år</li>
+<li><strong>Pojkar 13–14 (P13–14)</strong> — Pojkar 13–14 år</li>
+<li><strong>Flickor 13–14 (F13–14)</strong> — Flickor 13–14 år</li>
+</ul>
+
+<h3>sportMotion-klasser</h3>
+<ul>
+<li><strong>Motion Mellan (MM)</strong> — Öppen klass utan ranking. Perfekt för nybörjare.</li>
+<li><strong>Motion Kids (MK)</strong> — Barn och ungdomar som vill prova.</li>
+<li><strong>sportMotion Lång (SML)</strong> — Motionsklass för längre format.</li>
+<li><strong>E-Bike sportMotion (SMEB)</strong> — Elcyklar i motionsklass.</li>
+</ul>
+
+<p><strong>Viktigt:</strong> Vilka klasser som erbjuds kan variera mellan event. Kontrollera alltid eventsidan för aktuella klasser.</p>
+
+<h2>Licenser</h2>
+<p>Alla deltagare ska vara försäkrade under tävling. Genom vårt samarbete med Svenska Cykelförbundet (SCF) gäller deras licenser som försäkring på våra event. Licenskravet ger oss också möjlighet att sanktionera eventen hos SCF, vilket innebär att även våra funktionärer är försäkrade.</p>
+<p>SCF erbjuder olika typer av licens. Det kan vara lite krångligt att välja rätt — se till att detaljerna stämmer mot det du ska tävla i.</p>
 <p>Läs mer om licens hos SCF <a href="https://scf.se/licenser/" target="_blank" rel="noopener">här</a>.</p>
 
-<h2>Tävlingslicenser</h2>
-<p><strong>Tävlingslicens: 0–960 kr/år</strong></p>
-<p>Tävlingslicens rekommenderar vi för er som tänkt tävla på nationell nivå på SweCup Enduro. Dessa licenser fungerar utmärkt även i samtliga av våra tävlingsklasser, men se till att välja rätt.</p>
-<p><strong><a href="https://scf.se/licenser/" target="_blank" rel="noopener">Köp din tävlingslicens av SCF via denna länk...</a></strong></p>
-
-<h3>Under 11 — Men/Women</h3>
+<h3>Vilken licens behöver jag?</h3>
+<p>Det beror på vad du vill tävla i:</p>
 <ul>
-<li>För pojkar och flickor 5–10 år</li>
-<li>Används i klasserna Gravity Series Nybörjare 7–12 år</li>
-<li><strong>Används INTE hos SweCup Enduro</strong></li>
-<li>Ger deltagaren ett UCI ID</li>
-<li>0 kr</li>
+<li><strong>Bara GravitySeries (regional serie)?</strong> → Motionslicens, baslicens eller engångslicens räcker.</li>
+<li><strong>GravitySeries + SweCup motionsklass?</strong> → Motionslicens.</li>
+<li><strong>SweCup tävlingsklass?</strong> → Tävlingslicens (rätt ålderskategori).</li>
+<li><strong>Bara prova en gång?</strong> → Engångslicens (90 kr).</li>
 </ul>
 
-<h3>Youth — Men/Women</h3>
+<h3>Tävlingslicenser (0–910 kr/år)</h3>
+<p>Rekommenderas för dig som tänkt tävla på nationell nivå. <a href="https://scf.se/licenser/" target="_blank" rel="noopener">Köp din tävlingslicens av SCF här.</a></p>
+
 <ul>
-<li>För pojkar och flickor 11–16 år</li>
-<li>Används i Gravity Series P/F 13–14 och 15–16</li>
-<li>Används i SweCup Enduro P/F 13–14, 15–16 och E-Bike</li>
-<li>Ger deltagaren ett UCI ID</li>
-<li>260 kr</li>
+<li><strong>Under 11:</strong> 0 kr. Pojkar/flickor 5–10 år. Nybörjarklasser i Gravity Series. UCI ID ingår.</li>
+<li><strong>Youth:</strong> 260 kr. Pojkar/flickor 11–16 år. P/F 13–14 och 15–16. UCI ID ingår.</li>
+<li><strong>Junior:</strong> 660 kr. 17–21 år. Junior och Elit-klasser. UCI ID ingår.</li>
+<li><strong>Under 23:</strong> 910 kr. 22–23 år. Elit-klasser. UCI ID ingår.</li>
+<li><strong>Elite:</strong> 910 kr. 24+ år. Elit och Master. UCI ID ingår.</li>
+<li><strong>Master:</strong> 910 kr. 30+ år. Master-klasser. <strong>Ej tävlingsklass Elit på SweCup.</strong> UCI ID ingår.</li>
+<li><strong>Baslicens:</strong> 420 kr. 15+ år. Alla Gravity Series-klasser + SweCup Motion. <strong>Ej tävlingsklass på SweCup.</strong> UCI ID ingår.</li>
 </ul>
 
-<h3>Junior — Men/Women</h3>
+<h3>Motionslicens (300 kr/år)</h3>
+<p>Perfekt om du vill tävla i våra serier och även prova motionsklasserna på SweCup.</p>
 <ul>
-<li>För pojkar och flickor 17–21 år</li>
-<li>Används i Gravity Series P/F Junior samt 19+ (Elit) fram tills året du fyller 21</li>
-<li>Används i SweCup Enduro Junior samt Elit fram till det året du fyller 21 samt E-Bike</li>
-<li>Ger deltagaren ett UCI ID</li>
-<li>660 kr</li>
+<li>Alla Gravity Series-klasser + SweCup Motion Lång och E-Bike</li>
+<li><strong>Ej tävlingsklass på SweCup</strong></li>
+<li>Ger <strong>INTE</strong> UCI ID</li>
+<li><a href="https://www.gjensidige.se/partners/svenska-cykelforbundet" target="_blank" rel="noopener">Olycksfallsförsäkring</a> vid både tävling och träning, nationellt och internationellt</li>
+<li>Tillgång till SweCycling Community med rabatter och erbjudanden</li>
 </ul>
 
-<h3>Under 23 — Men/Women</h3>
+<h3>Engångslicens (90 kr/tävling)</h3>
+<p>Gäller för en tävlingsdag. Funkar i samtliga av våra klasser.</p>
 <ul>
-<li>För män och kvinnor 22–23 år</li>
-<li>Används i Gravity Series H/D 19+ (Elit)</li>
-<li>Används i SweCup Enduro H/D Elit, Motion Lång och E-Bike</li>
-<li>Ger deltagaren ett UCI ID</li>
-<li>910 kr</li>
+<li>Försäkring vid olycksfallsskada under tävlingen (ej fri träning)</li>
+<li>Försäkringen gäller även under direkt färd till och från eventet</li>
+<li>Gratis för ungdomar 7–11 år</li>
+</ul>
+<p><strong><a href="https://licens.scf.se" target="_blank" rel="noopener">Teckna engångslicens via licens.scf.se</a></strong></p>
+<p>Välj det lopp du ska köra, fyll i uppgifter och betala. Du installerar sedan Cardskipper-appen för din digitala licens.</p>
+
+<p><strong>OBS:</strong> För ungdomar under 15 år finns ingen motionslicens — enbart tävlingslicens eller engångslicens. För barn upp till 11 år är licens kostnadsfri men måste ändå skaffas genom SCF.</p>
+
+<h2>Anmälan</h2>
+<p>All anmälan sker via <a href="https://thehub.gravityseries.se" target="_blank" rel="noopener">TheHUB</a> — vår plattform för anmälan, resultat och ranking.</p>
+
+<h3>Så här anmäler du dig</h3>
+<ol>
+<li><strong>Hitta eventet</strong> — Gå till kalendern eller seriesidan och klicka på det event du vill köra.</li>
+<li><strong>Klicka "Anmäl"</strong> — Sök efter ditt namn eller UCI ID. Finns du inte i systemet kan du skapa en ny profil direkt.</li>
+<li><strong>Välj klass</strong> — Systemet visar vilka klasser du är behörig till baserat på ålder, kön och licens.</li>
+<li><strong>Betala</strong> — Via Swish eller kort. Du får en bekräftelse på e-post.</li>
+<li><strong>Aktivera ditt konto</strong> — Om du inte har ett konto sedan tidigare får du en länk i bekräftelsemailet för att aktivera det.</li>
+</ol>
+
+<h3>Vad behöver jag för att anmäla mig?</h3>
+<ul>
+<li>Förnamn och efternamn</li>
+<li>E-postadress</li>
+<li>Telefonnummer</li>
+<li>Födelseår</li>
+<li>Kön</li>
+<li>Nödkontakt (namn och telefon)</li>
+<li>Giltig licens (tävlings-, motions- eller engångslicens)</li>
 </ul>
 
-<h3>Elite — Men/Women</h3>
+<h3>Anmäla någon annan</h3>
+<p>Du behöver inte vara inloggad för att lägga en anmälan i varukorgen. Du kan anmäla dina barn, kompisar eller klubbmedlemmar genom att söka efter deras namn. Vid betalning krävs dock ett konto.</p>
+
+<h3>Avbokning</h3>
+<p>Startavgifter återbetalas normalt inte (undantag enligt distansavtalslagen för sportevenemang). Kontakta arrangören om du har frågor om avbokning.</p>
+
+<h2>Utrustning</h2>
+<p>Säkerhet är vår högsta prioritet. Följande utrustning krävs:</p>
+
+<h3>Obligatorisk utrustning — alla event</h3>
 <ul>
-<li>För män och kvinnor 24+ år</li>
-<li>Används i Gravity Series H/D 19+ (Elit) samt 35+ (Master)</li>
-<li>Används i SweCup Enduro H/D Elit, Motion Lång och E-Bike</li>
-<li>Ger deltagaren ett UCI ID</li>
-<li>910 kr</li>
+<li><strong>Godkänd hjälm</strong> — CE-märkt cykelhjälm. Fullface rekommenderas starkt för enduro och är obligatoriskt för downhill.</li>
+<li><strong>Handskar</strong> — Fingerhandskar rekommenderas.</li>
+<li><strong>Fungerande cykel</strong> — Cykeln ska vara i säkert skick med fungerande bromsar.</li>
 </ul>
 
-<h3>Master — Men/Women</h3>
+<h3>Rekommenderad utrustning</h3>
 <ul>
-<li>För män och kvinnor 30+ år</li>
-<li>Används i Gravity Series H/D 19+ (Elit) samt 35+ (Master)</li>
-<li>Används i SweCup Enduro H/D Master 35+, Master 45+, Motion Lång och E-Bike. Används även på SM i Downhill Master 30.</li>
-<li><strong>OBS: Du får inte tävla i tävlingsklass Elit på SweCup med denna licens</strong></li>
-<li>Ger deltagaren ett UCI ID</li>
-<li>910 kr</li>
+<li>Knä- och armbågsskydd</li>
+<li>Ryggskydd</li>
+<li>Skyddsglasögon (goggles) vid downhill</li>
+<li>Bröstskydd vid downhill</li>
+<li>Första-förband / plåster</li>
 </ul>
 
-<h3>Baslicens — Men/Women</h3>
+<h3>E-Bike</h3>
+<p>Elcyklar (E-Bike) tävlar i separata klasser. Cykeln måste uppfylla UCI:s regler för assisterade cyklar — max 250W motor som stängs av vid 25 km/h.</p>
+
+<h2>Regler</h2>
+
+<h3>Allmänna regler</h3>
 <ul>
-<li>För män och kvinnor 15+ år</li>
-<li>Används i Gravity Series P/F 15–16, P/F Junior, H/D Elit 19+</li>
-<li>Används i SweCup Enduro Motion Lång och E-Bike</li>
-<li><strong>OBS: Du får inte tävla i tävlingsklass på SweCup med denna licens</strong></li>
-<li>Ger deltagaren ett UCI ID</li>
-<li>420 kr</li>
+<li>Du måste ha giltig licens för att starta.</li>
+<li>Följ banan och alla markeringar. Avvikelse från banan kan leda till diskvalificering.</li>
+<li>Respektera andra deltagare, funktionärer och åskådare.</li>
+<li>Ta med ditt skräp — lämna ingenting i naturen.</li>
+<li>Försenad start till en SS kan leda till tidstillägg eller diskvalificering.</li>
 </ul>
 
-<h2>Motionslicens 2026</h2>
-<p><strong>Motionslicens: 300 kr/år</strong></p>
-<p>Ska du tävla hos oss men tänker även prova på SweCup och då i en av motionsklasserna rekommenderar vi dig denna licens.</p>
-<p>Ger dig rätt att delta på alla av Cykelförbundet sanktionerade motionslopp, samt ger dig även rätt att ställa upp i SCFs samtliga E-cycling-arrangemang.</p>
+<h3>Enduro-specifika regler</h3>
 <ul>
-<li>För män och kvinnor 15+ år</li>
-<li>Används i Gravity Series P/F 15–16, 17–18 (Junior), 19+ (Elit) samt 35+ (Master)</li>
-<li>Används i SweCup Enduro Motion Lång och E-Bike</li>
-<li><strong>OBS: Du får inte tävla i tävlingsklass på SweCup med denna licens</strong></li>
-<li>Ger <strong>INTE</strong> deltagaren ett UCI ID</li>
-<li>Ger <a href="https://www.gjensidige.se/partners/svenska-cykelforbundet" target="_blank" rel="noopener">olycksfallsförsäkring</a> vid idrottsutövande under både cykellopp och träning nationellt och internationellt samt vid resor till och från sina cykelaktiviteter t.o.m. 31 december pågående licensår</li>
-<li>Innehåller även Aktiv vård, läs mer <a href="https://www.gjensidige.se/partners/svenska-cykelforbundet" target="_blank" rel="noopener">här</a></li>
-<li>Tillgång till SweCycling Community i Cardskipper som bland annat innehåller rabatter och erbjudanden från SCFs partners</li>
+<li>Du måste klara alla förflyttningssträckor inom maxtiderna.</li>
+<li>Du får inte åka ner en SS innan din starttid.</li>
+<li>Hjälpa andra — om du ser en skadad deltagare, stanna och hjälp. Du kan få tidsavdrag.</li>
 </ul>
 
-<h2>Engångslicens 2026</h2>
-<p><strong>Engångslicens: 90 kr/tävling</strong></p>
-<p>Engångslicens är som det låter en licens som gäller över tävlingsdagen, och funkar i samtliga av våra klasser.</p>
-<p>Samtliga cyklister som tecknar engångslicens omfattas av en försäkring som gäller vid olycksfallsskada som inträffar under deltagande i tävlingen. Observera att denna licens EJ täcker skador på fria träningen.</p>
-<p>Försäkringen gäller dock även under direkt färd till och från eventet.</p>
-<p>För deltagare 12 år och äldre kostar licensen 90 kr.</p>
-<p>För ungdomar 7–11 år är den gratis.</p>
-<p><strong>Engångslicensen kan enbart tecknas via denna länk:</strong></p>
-<p><strong><a href="https://licens.scf.se" target="_blank" rel="noopener">https://licens.scf.se</a></strong></p>
-<p>Vid tecknandet väljer du det lopp som du vill köra, fyller i uppgifter och betalar. Därefter får du meddelande om hur du installerar Cardskipper-appen där du har din engångslicens.</p>
+<h3>Downhill-specifika regler</h3>
+<ul>
+<li>Fullface-hjälm obligatoriskt.</li>
+<li>Du startar på din tilldelade tid — var i startfållan i god tid.</li>
+<li>Banan är stängd för träning under tävlingsåken.</li>
+</ul>
+
+<h3>Uppförande</h3>
+<p>Vi förväntar oss gott sportsmannaskap av alla deltagare. Aggressivt beteende, fusk eller respektlöshet mot funktionärer leder till diskvalificering och kan resultera i avstängning från framtida event.</p>
+
+<h2>Poäng och ranking</h2>
+
+<h3>Seriepoäng</h3>
+<p>Varje deltävling i en serie ger poäng baserat på din placering i klassen. Poängen summeras över säsongen och de bästa resultaten räknas till slutställningen (antal räknande resultat varierar per serie).</p>
+
+<h3>GRAVITY Ranking</h3>
+<p>Utöver seriepoäng har vi en nationell ranking — <strong>GRAVITY Ranking</strong> — som samlar poäng från alla event under ett rullande 24-månadersfönster.</p>
+<ul>
+<li><strong>Baspoäng</strong> — Baserat på din placering (fler poäng för högre placering).</li>
+<li><strong>Fältstorlek</strong> — Fler deltagare i klassen ger högre poängmultiplikator.</li>
+<li><strong>Eventnivå</strong> — Nationella event ger full poäng, sportMotion ger halverad poäng.</li>
+<li><strong>Tidsfaktor</strong> — Resultat från de senaste 12 månaderna ger full poäng. Äldre resultat (13–24 månader) halveras.</li>
+</ul>
+<p>Rankingen uppdateras löpande och visas på din profil i TheHUB.</p>
+
+<h2>Tävlingsdagen — steg för steg</h2>
+
+<h3>Före eventet</h3>
+<ul>
+<li>Kontrollera din anmälan och klass på TheHUB.</li>
+<li>Läs PM (Promemoria) som publiceras dagarna före eventet — där finns all praktisk info.</li>
+<li>Se till att din licens är giltig. Engångslicens tecknas senast på tävlingsdagen via <a href="https://licens.scf.se" target="_blank" rel="noopener">licens.scf.se</a>.</li>
+<li>Packa rätt utrustning och verktyg. Kolla vädret.</li>
+</ul>
+
+<h3>Tävlingsdagen</h3>
+<ol>
+<li><strong>Incheckning</strong> — Checka in vid tävlingskansliet. Du får din nummerlapp och eventuellt tidtagningschip.</li>
+<li><strong>Förarmöte</strong> — Obligatoriskt. Tävlingsledaren går igenom dagens upplägg, säkerhet och baninfo.</li>
+<li><strong>Fri träning</strong> — De flesta event erbjuder fri träning på banorna före tävling. Kolla schemat.</li>
+<li><strong>Tävling</strong> — Kör dina specialsträckor/åk enligt schemat. Håll maxtiderna på förflyttningssträckorna.</li>
+<li><strong>Resultat</strong> — Resultat publiceras löpande via TheHUB. Slutresultat efter eventuella protester.</li>
+<li><strong>Prisutdelning</strong> — Priser till de bästa i varje klass. Stanna kvar och fira!</li>
+</ol>
+
+<h3>Tips för nya deltagare</h3>
+<ul>
+<li>Starta i en sportMotion-klass om du är osäker — ingen press, bara kul.</li>
+<li>Träna på att köra tekniska sektioner i låg fart innan du ökar tempot.</li>
+<li>Prata med andra deltagare — communityt är fantastiskt och alla hjälper varandra.</li>
+<li>Kom i tid. Incheckning stänger normalt 30–60 minuter före start.</li>
+<li>Ha kul! Det viktigaste är att du njuter av dagen.</li>
+</ul>
 '
     ],
 
