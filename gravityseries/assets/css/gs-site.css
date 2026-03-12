@@ -573,10 +573,12 @@ body {
 
 /* TITLE */
 .gsc-title {
-  font-family: var(--font-display);
-  font-size: clamp(26px, 3vw, 36px);
-  letter-spacing: .02em;
-  line-height: .92;
+  font-family: var(--font-cond);
+  font-size: clamp(22px, 2.6vw, 30px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  line-height: 1.1;
   color: var(--text, var(--ink));
   margin-bottom: 4px;
 }
@@ -712,9 +714,11 @@ body {
 }
 .info-icon svg { width: 22px; height: 22px; stroke: var(--text-3, var(--ink-3)); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .info-title {
-  font-family: var(--font-display);
-  font-size: 22px;
-  letter-spacing: .02em;
+  font-family: var(--font-cond);
+  font-size: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
   color: var(--text, var(--ink));
   margin-bottom: 8px;
 }
@@ -771,10 +775,12 @@ body {
   margin-bottom: 8px;
 }
 .board-name {
-  font-family: var(--font-display);
-  font-size: 22px;
+  font-family: var(--font-cond);
+  font-size: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
   color: var(--white);
-  letter-spacing: .02em;
+  letter-spacing: .05em;
   margin-bottom: 4px;
 }
 .board-contact {
@@ -1061,10 +1067,13 @@ body {
 }
 .gs-serie-back:hover { color: #fff; }
 .gs-serie-hero-title {
-  font-family: var(--font-display);
-  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  font-family: var(--font-cond);
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
   color: #fff;
-  line-height: 1.05;
+  line-height: 1.1;
   margin-bottom: 12px;
 }
 .gs-serie-hero-desc {
