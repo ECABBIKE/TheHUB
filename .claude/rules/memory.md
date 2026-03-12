@@ -18,6 +18,13 @@
 - **CSS-klasser:** `.pt-compact-input`, `.pt-rule-card`, `.pt-table`, `.pt-price-cell`, `.pt-class-name`, `.pt-hint`, `.pt-unit`, `.pt-header`, `.pt-settings-grid` — alla definierade inline i `<style>` (inga ändringar i globala CSS-filer)
 - **Filer:** `admin/pricing-templates.php`
 
+### GravitySeries: Serie-sektionens typsnitt + fadad bakgrund med rutmönster
+- **Problem:** "FYRA SERIER. EN RÖRELSE."-rubriken hade liten text och sektionen hade mycket tomt utrymme utan visuell karaktär.
+- **Fix 1: Typsnitt förstärkt:** `.section-title` ökad från `clamp(36px, 5vw, 56px)` till `clamp(42px, 6vw, 68px)`, tätare line-height (0.92), bredare letter-spacing (0.02em), `text-transform: uppercase` tillagd.
+- **Fix 2: Fadad bakgrund med rutmönster:** `#serier`-sektionen har nu en subtil grid-bakgrund (48px rutnät) som fadear ut via radial mask. Kompletterande färggradient-glöd (blå + grön) ger djup. Separata stilar för dark/light mode.
+- **CSS-teknik:** `::before` = rutmönster med mask-image fade, `::after` = radiella färggradienter, `> *` = z-index 1 för innehåll ovanpå.
+- **Filer:** `gravityseries/assets/css/gs-site.css`
+
 ---
 
 ## SENASTE FIX (2026-03-12, session 75b)
@@ -35,28 +42,25 @@
 
 ## SENASTE IMPLEMENTATION (2026-03-12, session 75)
 
-### GravitySeries: Dynamiska serie-kort + serie-detaljsida
+### GravitySeries: Dynamiska serie-kort + CMS-infosida per serie
 - **Serie-kort helt dynamiska från DB:** `gravityseries/index.php` omskriven — hämtar serier från `series`+`series_brands` tabellerna istället för hårdkodade `$seriesCards`. Kort skapas baserat på vilka aktiva serier som finns för nuvarande år. `accent_color` från `series_brands` används via inline `style="--c: #xxx"` istället för CSS-klasser (.ggs, .cgs etc.).
-- **Ny serie-detaljsida:** `gravityseries/serie.php` — `/gravityseries/serie/{brand-slug}` visar komplett serieinformation:
-  - Hero med varumärkesnamn, beskrivning, disciplin, stats (deltävlingar, avgjorda, klasser, åkare)
-  - 3 flikar med klient-sida flikbyte: Tävlingar, Ställning, Klubbmästerskap
-  - Tävlingar: eventlista med datum, plats, status-badges (resultat/anmälda/kommande), nästa-event markerad
-  - Ställning: per klass med bulk-points-fetch, count_best_results-stöd, top 20 per klass, "Visa alla på TheHUB"-länk
-  - Klubbmästerskap: SUM av poäng per klubb, sorterat fallande
-  - "Första tävlingen arrangeras X datum"-fallback när inga resultat finns
-  - TheHUB CTA-sektion längst ner
+- **CMS-infosida per serie:** `gravityseries/serie.php` — `/gravityseries/serie/{brand-slug}` visar en CMS-redigerbar infosida per serie (samma typ som om-oss, licenser etc.) med serie-branded hero.
+  - Hittar brand via slug → laddar kopplad CMS-sida från `pages` via `series_brand_id` (eller slug-fallback)
+  - Hero med varumärkesnamn, accent-färg, beskrivning, hero-bild (om satt)
+  - CMS-innehåll (redigeras via admin/pages/edit.php med TinyMCE)
+  - TheHUB CTA-sektion + placeholder om ingen publicerad sida finns
+- **Migration 098:** `pages.series_brand_id` INT NULL — kopplar CMS-sida till serie-varumärke. Seedar draft-sidor per aktivt varumärke.
+- **Admin pages/edit.php:** Ny dropdown "Kopplad tävlingsserie" i inställningssektionen. Preview redirectar till serie-sidan om koppling finns.
 - **Routing:** `.htaccess` utökad med `^serie/([a-z0-9-]+)/?$` → `serie.php?slug=$1`
-- **CSS:** ~300 rader nya stilar i `gs-site.css` för hero, flikar, eventlista, ställningstabell, mobil
-- **Discipline-gissning:** `guessSeriesDiscipline()` / `_disc()` baserat på serienamn/type
-- **Kort-förkortning:** Auto-genererad från brand_name (första bokstav per ord)
-- **Filer:** `gravityseries/index.php` (omskriven), `gravityseries/serie.php` (ny), `gravityseries/.htaccess`, `gravityseries/assets/css/gs-site.css`
+- **Filer:** `gravityseries/index.php`, `gravityseries/serie.php`, `gravityseries/.htaccess`, `gravityseries/assets/css/gs-site.css`, `admin/pages/edit.php`, `Tools/migrations/098_pages_series_brand_id.sql`, `admin/migrations.php`
+- **VIKTIGT:** Kör migration 098 via `/admin/migrations.php`
 
-### VIKTIGT: GS serie-detaljsidans arkitektur
-- **Brand-slug:** Från `series_brands.slug` (auto-genererat vid skapande, t.ex. "götaland-gravity-series")
-- **Accent-färg:** `series_brands.accent_color` → inline CSS-variabel `--c` på alla sektioner
-- **Fallback:** Om ingen aktiv serie för nuvarande år hittas, väljs senaste aktiva eller första
-- **Bulk points:** EN SQL-query hämtar alla poäng → PHP aggregerar per klass/åkare (samma mönster som series/show.php)
-- **Länkning:** Åkare och event länkar till TheHUB (inte GS-sajten)
+### VIKTIGT: GS serie-infosidans arkitektur
+- **CMS-baserad:** Innehåll lagras i `pages`-tabellen (samma som om-oss, licenser etc.)
+- **Koppling:** `pages.series_brand_id` → `series_brands.id`
+- **Lookup:** serie.php söker `pages WHERE series_brand_id = ? OR slug = ?` (dubbel fallback)
+- **Admin:** Redigeras via befintliga admin/pages/edit.php (TinyMCE, hero-bild, slug etc.)
+- **Branding:** Hero-sektionen hämtar accent_color och namn från `series_brands`, inte från pages
 
 ---
 
