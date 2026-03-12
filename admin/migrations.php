@@ -328,6 +328,9 @@ $migrationChecks = [
     '096_org_company_fields.sql' => [
         'columns' => ['admin_users.org_name', 'admin_users.org_address', 'payment_recipients.org_address']
     ],
+    '097_populate_gs_pages_from_wp.php' => [
+        'data' => ["pages.slug = 'om-oss' AND content LIKE '%Crowdfunding%' OR content LIKE '%Eventservice%'"]
+    ],
 ];
 
 // ============================================================================

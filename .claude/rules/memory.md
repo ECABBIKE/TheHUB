@@ -1,6 +1,17 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-03-11
+> Senast uppdaterad: 2026-03-12
+
+---
+
+## SENASTE IMPLEMENTATION (2026-03-12, session 73)
+
+### GravitySeries: CMS-sidor populerade med riktigt WordPress-innehåll
+- **Migration 097:** Uppdaterar 6 CMS-sidor med riktigt innehåll från WordPress-exporten (gravityseries.se)
+- **Sidor:** om-oss (Information/The Crew), arrangor-info (Eventservice/Tidtagning/MediaCrew), licenser (alla licenstyper SCF), gravity-id (Crowdfunding), kontakt (Philip/Roger/Caroline), allmanna-villkor (11 paragrafpunkter)
+- **Metod:** WordPress WXR XML-export → programmatisk extraktion → Elementor-markup bortrensad → ren HTML
+- **Filer:** `Tools/migrations/097_populate_gs_pages_from_wp.php`
+- **VIKTIGT:** Kör migration 097 via `/admin/migrations.php`
 
 ---
 
