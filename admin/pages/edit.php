@@ -61,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $navLabel = trim($_POST['nav_label'] ?? '');
     $heroImagePosition = $_POST['hero_image_position'] ?? 'center';
     $heroOverlayOpacity = max(0, min(80, (int)($_POST['hero_overlay_opacity'] ?? 50)));
+    $seriesBrandId = !empty($_POST['series_brand_id']) ? (int)$_POST['series_brand_id'] : null;
 
     // Validate
     if (empty($title)) $errors[] = 'Titel krävs.';
@@ -115,20 +116,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Save
     if (empty($errors)) {
         if ($isEdit) {
-            $stmt = $pdo->prepare("
-                UPDATE pages SET
+            $sql = "UPDATE pages SET
                     title = ?, slug = ?, meta_description = ?, content = ?,
                     template = ?, status = ?, show_in_nav = ?, nav_order = ?,
                     nav_label = ?, hero_image = ?, hero_image_position = ?,
                     hero_overlay_opacity = ?
-                WHERE id = ?
-            ");
-            $stmt->execute([
+                WHERE id = ?";
+            $params = [
                 $title, $slug, $metaDesc ?: null, $content,
                 $template, $status, $showInNav, $navOrder,
                 $navLabel ?: null, $heroImage, $heroImagePosition,
                 $heroOverlayOpacity, $id
-            ]);
+            ];
+            $pdo->prepare($sql)->execute($params);
+            // Save series_brand_id if column exists
+            try {
+                $pdo->prepare("UPDATE pages SET series_brand_id = ? WHERE id = ?")->execute([$seriesBrandId, $id]);
+            } catch (PDOException $e) {}
         } else {
             $stmt = $pdo->prepare("
                 INSERT INTO pages (title, slug, meta_description, content, template, status, show_in_nav, nav_order, nav_label, hero_image, hero_image_position, hero_overlay_opacity, created_by)
@@ -141,11 +145,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $heroOverlayOpacity, $_SESSION['admin_id'] ?? null
             ]);
             $id = $pdo->lastInsertId();
+            // Save series_brand_id if column exists
+            try {
+                $pdo->prepare("UPDATE pages SET series_brand_id = ? WHERE id = ?")->execute([$seriesBrandId, $id]);
+            } catch (PDOException $e) {}
         }
 
         // Preview redirect
         if (!empty($_POST['save_preview'])) {
             $_SESSION['gs_flash'] = ['type' => 'success', 'message' => 'Sidan sparad.'];
+            // If linked to a series brand, preview at /gravityseries/serie/{brand-slug}
+            if ($seriesBrandId) {
+                try {
+                    $brandSlug = $pdo->query("SELECT slug FROM series_brands WHERE id = " . (int)$seriesBrandId)->fetchColumn();
+                    if ($brandSlug) {
+                        header('Location: /gravityseries/serie/' . urlencode($brandSlug));
+                        exit;
+                    }
+                } catch (PDOException $e) {}
+            }
             header('Location: /gravityseries/' . urlencode($slug));
             exit;
         }
@@ -170,6 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'hero_image' => $heroImage,
         'hero_image_position' => $heroImagePosition,
         'hero_overlay_opacity' => $heroOverlayOpacity,
+        'series_brand_id' => $seriesBrandId,
     ];
 }
 
@@ -180,9 +199,15 @@ if (!$page) {
         'content' => '', 'template' => 'default', 'status' => 'draft',
         'show_in_nav' => 0, 'nav_order' => 99, 'nav_label' => '',
         'hero_image' => null, 'hero_image_position' => 'center',
-        'hero_overlay_opacity' => 50,
+        'hero_overlay_opacity' => 50, 'series_brand_id' => null,
     ];
 }
+
+// Load series brands for dropdown
+$seriesBrands = [];
+try {
+    $seriesBrands = $pdo->query("SELECT id, name, slug, accent_color FROM series_brands WHERE active = 1 ORDER BY display_order, name")->fetchAll();
+} catch (PDOException $e) {}
 
 $flash = $_SESSION['gs_flash'] ?? null;
 unset($_SESSION['gs_flash']);
@@ -328,6 +353,21 @@ include __DIR__ . '/../components/unified-layout.php';
           </label>
         </div>
       </div>
+      <?php if (!empty($seriesBrands)): ?>
+      <div style="margin-top:16px;">
+        <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--color-text-secondary,#555);">
+          Kopplad tävlingsserie <span style="color:var(--color-text-muted,#aaa); font-weight:400;">(valfritt — gör sidan tillgänglig på /gravityseries/serie/slug)</span>
+        </label>
+        <select name="series_brand_id" style="width:100%; padding:10px 14px; border:1px solid var(--color-border,#ddd); border-radius:6px; font-size:14px;">
+          <option value="">— Ingen serie —</option>
+          <?php foreach ($seriesBrands as $sb): ?>
+            <option value="<?= (int)$sb['id'] ?>" <?= ($page['series_brand_id'] ?? null) == $sb['id'] ? 'selected' : '' ?>>
+              <?= htmlspecialchars($sb['name']) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <?php endif; ?>
     </div>
 
     <!-- Actions -->

@@ -331,6 +331,9 @@ $migrationChecks = [
     '097_populate_gs_pages_from_wp.php' => [
         'data' => ["pages.slug = 'om-oss' AND content LIKE '%Crowdfunding%' OR content LIKE '%Eventservice%'"]
     ],
+    '098_pages_series_brand_id.sql' => [
+        'columns' => ['pages.series_brand_id'],
+    ],
     '098_championship_surcharge.sql' => [
         'columns' => ['events.championship_surcharge']
     ],
