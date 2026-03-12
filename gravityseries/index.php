@@ -137,8 +137,13 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
 ?>
 
 <!-- HERO -->
-<section class="hero">
+<?php $heroImage = gs('gs_hero_image', ''); ?>
+<section class="hero<?= $heroImage ? ' hero--has-image' : '' ?>">
   <div class="hero-bg">
+    <?php if ($heroImage): ?>
+      <div class="hero-bg-image" style="background-image:url('<?= htmlspecialchars($heroImage) ?>')"></div>
+      <div class="hero-bg-overlay"></div>
+    <?php endif; ?>
     <div class="hero-bg-stripe" style="background: linear-gradient(180deg, var(--ggs), var(--ges))"></div>
     <div class="hero-bg-grid"></div>
     <div class="hero-series-bar">
