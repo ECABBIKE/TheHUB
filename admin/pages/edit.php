@@ -98,14 +98,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mime = $finfo->file($file['tmp_name']);
         if (!in_array($mime, $allowedTypes)) {
             $errors[] = 'Hero-bilden måste vara JPG, PNG eller WebP.';
-        } elseif ($file['size'] > 2 * 1024 * 1024) {
-            $errors[] = 'Hero-bilden får vara max 2 MB.';
         } else {
+            // Auto-resize large images (max 1920px wide, JPEG 85% quality)
+            $maxWidth = 1920;
+            $tmpPath = $file['tmp_name'];
+            $info = getimagesize($tmpPath);
+            if ($info && $info[0] > $maxWidth) {
+                $src = null;
+                if ($mime === 'image/jpeg') $src = imagecreatefromjpeg($tmpPath);
+                elseif ($mime === 'image/png') $src = imagecreatefrompng($tmpPath);
+                elseif ($mime === 'image/webp') $src = imagecreatefromwebp($tmpPath);
+                if ($src) {
+                    $newH = (int)round($info[1] * ($maxWidth / $info[0]));
+                    $dst = imagecreatetruecolor($maxWidth, $newH);
+                    imagecopyresampled($dst, $src, 0, 0, 0, 0, $maxWidth, $newH, $info[0], $info[1]);
+                    imagejpeg($dst, $tmpPath, 85);
+                    imagedestroy($src);
+                    imagedestroy($dst);
+                    $mime = 'image/jpeg'; // Output is always JPEG after resize
+                }
+            }
             $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$mime];
             $uploadDir = __DIR__ . '/../../uploads/pages/';
             if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
             $filename = 'hero-' . $slug . '-' . time() . '.' . $ext;
-            if (move_uploaded_file($file['tmp_name'], $uploadDir . $filename)) {
+            if (move_uploaded_file($tmpPath, $uploadDir . $filename)) {
                 $heroImage = '/uploads/pages/' . $filename;
             } else {
                 $errors[] = 'Kunde inte spara hero-bilden.';
@@ -372,7 +389,7 @@ include __DIR__ . '/../components/unified-layout.php';
 
     <!-- Actions -->
     <div style="display:flex; gap:12px; flex-wrap:wrap;">
-      <button type="submit" style="background:var(--color-accent,#37d4d6); color:#fff; padding:12px 24px; border:none; border-radius:6px; font-size:15px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px;">
+      <button type="submit" style="background:var(--color-accent,#37d4d6); color:#000 !important; padding:12px 24px; border:none; border-radius:6px; font-size:15px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px;">
         <i data-lucide="save" style="width:16px;height:16px;"></i> Spara
       </button>
       <button type="submit" name="save_preview" value="1" style="background:var(--color-bg-card,#fff); border:1px solid var(--color-border,#ddd); padding:12px 24px; border-radius:6px; font-size:15px; font-weight:600; cursor:pointer; color:var(--color-text-secondary,#555); display:flex; align-items:center; gap:6px;">
@@ -395,7 +412,7 @@ tinymce.init({
   content_style: `
     @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&family=Bebas+Neue&display=swap');
     body { font-family: 'Barlow', sans-serif; font-size: 18px; line-height: 1.7; color: #1e2420; max-width: 760px; margin: 0 auto; padding: 16px; }
-    h2 { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: .01em; line-height: 1; margin-top: 32px; }
+    h2 { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; line-height: 1.15; margin-top: 32px; }
     h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-top: 24px; }
     a { color: #3fa84d; }
     blockquote { border-left: 3px solid #61CE70; padding: 12px 20px; background: rgba(97,206,112,.06); font-style: italic; }
