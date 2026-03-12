@@ -18,7 +18,7 @@
   --hub-cyan:  #7EECD8;
   --hub-pink:  #F2A5C2;
   --hub-navy:  #0d0b2e;
-  --font-display: 'Bebas Neue', sans-serif;
+  --font-display: 'Oswald', sans-serif;
   --font-cond:    'Barlow Condensed', sans-serif;
   --font-body:    'Barlow', sans-serif;
 }
@@ -356,6 +356,7 @@ body {
 }
 .hero-title {
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: clamp(64px, 12vw, 140px);
   color: var(--white);
   line-height: .88;
@@ -436,6 +437,7 @@ body {
 .stat-item:last-child { border-right: none; }
 .stat-val {
   font-family: var(--font-display);
+  font-weight: 600;
   font-size: 40px;
   color: var(--text, var(--ink));
   line-height: 1;
@@ -526,6 +528,7 @@ body {
 .section-label::before { content: ''; display: inline-block; width: 24px; height: 2px; background: var(--accent); }
 .section-title {
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: clamp(42px, 6vw, 68px);
   color: var(--text, var(--ink));
   line-height: .92;
@@ -1000,6 +1003,7 @@ body {
 }
 .page-hero-title {
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: clamp(40px, 7vw, 72px);
   color: var(--white);
   letter-spacing: .01em;
