@@ -4,6 +4,33 @@
 
 ---
 
+## SENASTE IMPLEMENTATION (2026-03-12, session 75)
+
+### GravitySeries: Dynamiska serie-kort + serie-detaljsida
+- **Serie-kort helt dynamiska från DB:** `gravityseries/index.php` omskriven — hämtar serier från `series`+`series_brands` tabellerna istället för hårdkodade `$seriesCards`. Kort skapas baserat på vilka aktiva serier som finns för nuvarande år. `accent_color` från `series_brands` används via inline `style="--c: #xxx"` istället för CSS-klasser (.ggs, .cgs etc.).
+- **Ny serie-detaljsida:** `gravityseries/serie.php` — `/gravityseries/serie/{brand-slug}` visar komplett serieinformation:
+  - Hero med varumärkesnamn, beskrivning, disciplin, stats (deltävlingar, avgjorda, klasser, åkare)
+  - 3 flikar med klient-sida flikbyte: Tävlingar, Ställning, Klubbmästerskap
+  - Tävlingar: eventlista med datum, plats, status-badges (resultat/anmälda/kommande), nästa-event markerad
+  - Ställning: per klass med bulk-points-fetch, count_best_results-stöd, top 20 per klass, "Visa alla på TheHUB"-länk
+  - Klubbmästerskap: SUM av poäng per klubb, sorterat fallande
+  - "Första tävlingen arrangeras X datum"-fallback när inga resultat finns
+  - TheHUB CTA-sektion längst ner
+- **Routing:** `.htaccess` utökad med `^serie/([a-z0-9-]+)/?$` → `serie.php?slug=$1`
+- **CSS:** ~300 rader nya stilar i `gs-site.css` för hero, flikar, eventlista, ställningstabell, mobil
+- **Discipline-gissning:** `guessSeriesDiscipline()` / `_disc()` baserat på serienamn/type
+- **Kort-förkortning:** Auto-genererad från brand_name (första bokstav per ord)
+- **Filer:** `gravityseries/index.php` (omskriven), `gravityseries/serie.php` (ny), `gravityseries/.htaccess`, `gravityseries/assets/css/gs-site.css`
+
+### VIKTIGT: GS serie-detaljsidans arkitektur
+- **Brand-slug:** Från `series_brands.slug` (auto-genererat vid skapande, t.ex. "götaland-gravity-series")
+- **Accent-färg:** `series_brands.accent_color` → inline CSS-variabel `--c` på alla sektioner
+- **Fallback:** Om ingen aktiv serie för nuvarande år hittas, väljs senaste aktiva eller första
+- **Bulk points:** EN SQL-query hämtar alla poäng → PHP aggregerar per klass/åkare (samma mönster som series/show.php)
+- **Länkning:** Åkare och event länkar till TheHUB (inte GS-sajten)
+
+---
+
 ## SENASTE IMPLEMENTATION (2026-03-12, session 74)
 
 ### GravitySeries: Dark/Light tema + nya serie-kort + sports-känsla
