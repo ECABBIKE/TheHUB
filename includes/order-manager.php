@@ -1147,7 +1147,7 @@ function getEligibleClassesForEvent(int $eventId, int $riderId, ?array &$license
     $eventStmt = $pdo->prepare("
         SELECT e.date, e.pricing_template_id,
                s.pricing_template_id as series_pricing_template_id,
-               e.is_championship, e.championship_surcharge
+               e.is_championship, e.championship_surcharge, e.pricing_template_id as event_pricing_template_id
         FROM events e
         LEFT JOIN series_events se ON e.id = se.event_id
         LEFT JOIN series s ON se.series_id = s.id
@@ -1164,10 +1164,9 @@ function getEligibleClassesForEvent(int $eventId, int $riderId, ?array &$license
     // Use event pricing template, or fallback to series pricing template
     $pricingTemplateId = $event['pricing_template_id'] ?? $event['series_pricing_template_id'] ?? null;
 
-    // Championship surcharge - flat amount added to ALL price tiers for SM events
-    $championshipSurcharge = (!empty($event['is_championship']) && !empty($event['championship_surcharge']))
-        ? floatval($event['championship_surcharge'])
-        : 0;
+    // Championship surcharge - determined later from pricing template (if SM event)
+    $isChampionship = !empty($event['is_championship']);
+    $championshipSurcharge = 0;
 
     $eventDate = strtotime($event['date']);
     $riderAge = date('Y', $eventDate) - intval($rider['birth_year']);
@@ -1311,6 +1310,14 @@ function getEligibleClassesForEvent(int $eventId, int $riderId, ?array &$license
         $pricingMode = $template['pricing_mode'] ?? 'percentage';
         $earlyBirdDaysBefore = intval($template['early_bird_days_before'] ?? 21);
         $lateFeeDaysBefore = intval($template['late_fee_days_before'] ?? 3);
+
+        // Championship fee from pricing template (overrides event-level surcharge)
+        if ($isChampionship && isset($template['championship_fee']) && floatval($template['championship_fee']) > 0) {
+            $championshipSurcharge = floatval($template['championship_fee']);
+        } elseif ($isChampionship && !empty($event['championship_surcharge'])) {
+            // Fallback to event-level surcharge (legacy)
+            $championshipSurcharge = floatval($event['championship_surcharge']);
+        }
     } else {
         // Fallback to legacy event_pricing_rules
         $classStmt = $pdo->prepare("
@@ -1567,27 +1574,44 @@ function getEligibleClassesForSeries(int $seriesId, int $riderId): array {
     $seriesStmt->execute([$seriesId]);
     $discountPercent = floatval($seriesStmt->fetchColumn() ?: 15);
 
-    // Fetch total championship surcharge for SM events in this series (added OUTSIDE discount)
-    $smSurchargeStmt = $pdo->prepare("
-        SELECT COALESCE(SUM(e.championship_surcharge), 0) as total_surcharge
-        FROM events e
-        WHERE e.series_id = ? AND e.is_championship = 1 AND e.championship_surcharge IS NOT NULL AND e.championship_surcharge > 0
-    ");
-    $smSurchargeStmt->execute([$seriesId]);
-    $totalSmSurcharge = floatval($smSurchargeStmt->fetchColumn() ?: 0);
-
-    // Also check via series_events junction
-    if ($totalSmSurcharge == 0) {
+    // Fetch total championship surcharge for SM events in this series
+    // Priority: pricing template championship_fee > event championship_surcharge (legacy)
+    $totalSmSurcharge = 0;
+    try {
+        // Count SM events and get their pricing template championship_fee
+        $smStmt = $pdo->prepare("
+            SELECT e.id, e.championship_surcharge, e.pricing_template_id,
+                   pt.championship_fee as template_fee
+            FROM events e
+            LEFT JOIN pricing_templates pt ON e.pricing_template_id = pt.id
+            WHERE e.is_championship = 1
+              AND (e.series_id = ? OR EXISTS (
+                  SELECT 1 FROM series_events se WHERE se.series_id = ? AND se.event_id = e.id
+              ))
+        ");
+        $smStmt->execute([$seriesId, $seriesId]);
+        while ($smEvent = $smStmt->fetch(PDO::FETCH_ASSOC)) {
+            // Pricing template fee takes priority over event-level surcharge
+            if (!empty($smEvent['template_fee']) && floatval($smEvent['template_fee']) > 0) {
+                $totalSmSurcharge += floatval($smEvent['template_fee']);
+            } elseif (!empty($smEvent['championship_surcharge']) && floatval($smEvent['championship_surcharge']) > 0) {
+                $totalSmSurcharge += floatval($smEvent['championship_surcharge']);
+            }
+        }
+    } catch (\Throwable $e) {
+        // championship_fee column may not exist yet - fall back to event-level only
         try {
-            $smSurchargeStmt2 = $pdo->prepare("
-                SELECT COALESCE(SUM(e.championship_surcharge), 0) as total_surcharge
-                FROM series_events se
-                JOIN events e ON se.event_id = e.id
-                WHERE se.series_id = ? AND e.is_championship = 1 AND e.championship_surcharge IS NOT NULL AND e.championship_surcharge > 0
+            $smFallback = $pdo->prepare("
+                SELECT COALESCE(SUM(e.championship_surcharge), 0)
+                FROM events e
+                WHERE e.is_championship = 1 AND e.championship_surcharge > 0
+                  AND (e.series_id = ? OR EXISTS (
+                      SELECT 1 FROM series_events se WHERE se.series_id = ? AND se.event_id = e.id
+                  ))
             ");
-            $smSurchargeStmt2->execute([$seriesId]);
-            $totalSmSurcharge = floatval($smSurchargeStmt2->fetchColumn() ?: 0);
-        } catch (\Throwable $e) {}
+            $smFallback->execute([$seriesId, $seriesId]);
+            $totalSmSurcharge = floatval($smFallback->fetchColumn() ?: 0);
+        } catch (\Throwable $e2) {}
     }
 
     // Hämta klasser som finns i seriens event
