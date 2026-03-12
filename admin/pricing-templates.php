@@ -78,6 +78,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  'late_fee_percent' => $lateFeePercent,
  'late_fee_days_before' => $lateFeeDays
  ], 'id = ?', [$id]);
+
+ // Championship fee - separate update (column may not exist before migration 106)
+ try {
+     $championshipFee = floatval($_POST['championship_fee'] ?? 0);
+     $championshipFeeDesc = trim($_POST['championship_fee_description'] ?? '');
+     $db->update('pricing_templates', [
+         'championship_fee' => $championshipFee,
+         'championship_fee_description' => $championshipFeeDesc ?: null
+     ], 'id = ?', [$id]);
+ } catch (Exception $e) {}
+
  $message ="Prismall uppdaterad!";
  $messageType = 'success';
  }
@@ -99,16 +110,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  if ($template) {
  // Create copy with new name
  $newName = $template['name'] . ' (kopia)';
- $newId = $db->insert('pricing_templates', [
+ $insertData = [
   'name' => $newName,
   'description' => $template['description'],
-  'is_default' => 0, // Never set copy as default
+  'is_default' => 0,
   'early_bird_percent' => $template['early_bird_percent'],
   'early_bird_days_before' => $template['early_bird_days_before'],
   'late_fee_percent' => $template['late_fee_percent'],
   'late_fee_days_before' => $template['late_fee_days_before'],
   'pricing_mode' => $template['pricing_mode'] ?? 'percentage'
- ]);
+ ];
+ if (isset($template['championship_fee'])) {
+     $insertData['championship_fee'] = $template['championship_fee'];
+     $insertData['championship_fee_description'] = $template['championship_fee_description'] ?? null;
+ }
+ $newId = $db->insert('pricing_templates', $insertData);
 
  // Copy all pricing rules
  $rules = $db->getAll("SELECT * FROM pricing_template_rules WHERE template_id = ?", [$id]);
@@ -340,6 +356,41 @@ input[type="number"] {
   </div>
   </div>
   </div>
+
+  <!-- SM Championship Fee -->
+  <?php
+  $hasChampionshipFee = false;
+  try {
+      $cols = $db->getAll("SHOW COLUMNS FROM pricing_templates LIKE 'championship_fee'");
+      $hasChampionshipFee = !empty($cols);
+  } catch (Exception $e) {}
+  ?>
+  <?php if ($hasChampionshipFee): ?>
+  <div class="mt-lg">
+  <div class="card p-md" style="background: var(--color-accent-light, rgba(55, 212, 214, 0.1)); border: 1px solid var(--color-accent);">
+      <label class="label" style="color: var(--color-accent);">
+          <i data-lucide="trophy"></i>
+          SM-tillägg (Svenska Mästerskap)
+      </label>
+      <p class="text-sm text-secondary mb-sm">
+          Automatiskt pristillägg för events markerade som SM. Läggs på ALLA prisperioder (early bird, normal, efteranmälan) efter procentberäkning.
+      </p>
+      <div class="flex gap-sm items-center mt-sm flex-wrap">
+          <input type="number" name="championship_fee" class="input"
+              value="<?= $editTemplate['championship_fee'] ?? 0 ?>"
+              min="0" step="1" style="width: 120px;">
+          <span>kr tillägg per anmälan</span>
+      </div>
+      <div class="mt-sm">
+          <label class="label text-sm">Beskrivning (visas för deltagare)</label>
+          <input type="text" name="championship_fee_description" class="input"
+              value="<?= htmlspecialchars($editTemplate['championship_fee_description'] ?? '') ?>"
+              placeholder="T.ex. 'SM-avgift till Svenska Cykelförbundet'"
+              style="width: 100%; max-width: 400px;">
+      </div>
+  </div>
+  </div>
+  <?php endif; ?>
 
   <div class="mt-md">
   <button type="submit" class="btn btn--primary">
