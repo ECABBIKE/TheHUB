@@ -328,6 +328,9 @@ $migrationChecks = [
     '096_org_company_fields.sql' => [
         'columns' => ['admin_users.org_name', 'admin_users.org_address', 'payment_recipients.org_address']
     ],
+    '097_championship_surcharge.sql' => [
+        'columns' => ['events.championship_surcharge']
+    ],
 ];
 
 // ============================================================================
