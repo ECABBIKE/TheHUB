@@ -174,7 +174,20 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
 ?>
 
 <!-- HERO -->
-<?php $heroImage = gs('gs_hero_image', ''); ?>
+<?php
+// Collect all hero images (up to 4), pick one at random
+$heroImages = [];
+for ($hi = 1; $hi <= 4; $hi++) {
+    $img = gs("gs_hero_image_{$hi}", '');
+    if ($img) $heroImages[] = $img;
+}
+// Fallback to legacy single image
+if (empty($heroImages)) {
+    $legacy = gs('gs_hero_image', '');
+    if ($legacy) $heroImages[] = $legacy;
+}
+$heroImage = !empty($heroImages) ? $heroImages[array_rand($heroImages)] : '';
+?>
 <section class="hero<?= $heroImage ? ' hero--has-image' : '' ?>">
   <div class="hero-bg">
     <?php if ($heroImage):

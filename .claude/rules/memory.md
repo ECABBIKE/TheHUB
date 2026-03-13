@@ -4,6 +4,22 @@
 
 ---
 
+## SENASTE FIX (2026-03-13, session 81)
+
+### GravitySeries: 4 roterande hero-bilder + serie-hero grid/stripe overlay
+- **Ny funktion: 4 hero-bakgrundsbilder:** Admin kan ladda upp upp till 4 bakgrundsbilder för hero-sektionen på startsidan. Vid varje sidladdning slumpas en av bilderna med `array_rand()`. Settings: `gs_hero_image_1` till `gs_hero_image_4` i `sponsor_settings`. Befintlig `gs_hero_image` migreras automatiskt till `gs_hero_image_1` vid första sparning.
+- **Admin UI:** 2×2 grid med nummerade bildkort (1-4). Varje kort har förhandsgranskning, byt-knapp och ta bort-knapp. Tomma slots visar upload-area. JPG auto-optimeras (max 1920px, 82% kvalitet).
+- **Serie-hero grid + diagonal stripe:** Serie-infosidornas hero (`serie.php`) har nu samma rutnätsmönster (::before) och diagonala accent-stripe (::after) som startsidans hero. Använder `color-mix()` för accent-färg-tinting.
+- **Filer:** `admin/pages/gs-homepage.php`, `gravityseries/index.php`, `gravityseries/serie.php`, `gravityseries/assets/css/gs-site.css`
+
+### VIKTIGT: Hero-bilder arkitektur
+- **Settings:** `gs_hero_image_1` till `gs_hero_image_4` (4 slots, alla valfria)
+- **Legacy:** `gs_hero_image` migreras automatiskt till `_1` vid POST i admin
+- **Frontend:** `index.php` samlar alla icke-tomma slots, väljer en med `array_rand()`
+- **Overlay:** Samma `gs_hero_overlay` slider gäller alla bilder (0-90%)
+
+---
+
 ## SENASTE FIX (2026-03-13, session 80)
 
 ### GravitySeries: Serie-logotyp + admin mobilanpassning
