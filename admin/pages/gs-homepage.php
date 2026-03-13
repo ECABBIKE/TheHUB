@@ -31,7 +31,11 @@ $settingsKeys = [
     'gs_hero_eyebrow'     => 'Svensk Gravitycykling sedan 2016',
     'gs_hero_title'        => "Gravity\nSeries",
     'gs_hero_body'         => 'Organisationen bakom svensk enduro och downhill. Vi arrangerar tävlingar, sätter regler och utvecklar sporten — från Motion till Elite.',
-    'gs_hero_image'        => '',
+    'gs_hero_image'        => '',  // Legacy single image (migrated to _1)
+    'gs_hero_image_1'      => '',
+    'gs_hero_image_2'      => '',
+    'gs_hero_image_3'      => '',
+    'gs_hero_image_4'      => '',
     'gs_hero_overlay'      => '55',
     'gs_section_series_label'   => 'Tävlingsserier',
     'gs_section_series_title'   => "Fyra serier\nEn rörelse",
@@ -98,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Save text fields
             $textKeys = array_keys($settingsKeys);
             // Remove keys handled separately
-            $textKeys = array_diff($textKeys, ['gs_board_members', 'gs_hero_image', 'gs_header_logo']);
+            $textKeys = array_diff($textKeys, ['gs_board_members', 'gs_hero_image', 'gs_hero_image_1', 'gs_hero_image_2', 'gs_hero_image_3', 'gs_hero_image_4', 'gs_header_logo']);
 
             foreach ($textKeys as $key) {
                 $value = $_POST[$key] ?? '';
@@ -106,56 +110,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $currentValues[$key] = $value;
             }
 
-            // Handle hero image removal
-            if (!empty($_POST['remove_hero_image'])) {
-                // Delete old file if it exists
-                $oldImg = $currentValues['gs_hero_image'] ?? '';
-                if ($oldImg) {
-                    $rootPath = __DIR__ . '/../..';
-                    $oldPath = $rootPath . $oldImg;
-                    if (file_exists($oldPath)) @unlink($oldPath);
-                }
-                save_site_setting('gs_hero_image', '', 'GS Startsida - Hero-bild');
+            // Migrate legacy single gs_hero_image to gs_hero_image_1
+            $legacyHero = $currentValues['gs_hero_image'] ?? '';
+            if ($legacyHero && empty($currentValues['gs_hero_image_1'])) {
+                save_site_setting('gs_hero_image_1', $legacyHero, 'GS Startsida - Hero-bild 1');
+                $currentValues['gs_hero_image_1'] = $legacyHero;
+                save_site_setting('gs_hero_image', '', 'GS Startsida - Hero-bild (legacy)');
                 $currentValues['gs_hero_image'] = '';
             }
 
-            // Handle hero image upload
-            if (!empty($_FILES['gs_hero_image_file']['tmp_name']) && $_FILES['gs_hero_image_file']['error'] === UPLOAD_ERR_OK) {
-                $file = $_FILES['gs_hero_image_file'];
-                $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-                $finfo = new finfo(FILEINFO_MIME_TYPE);
-                $mime = $finfo->file($file['tmp_name']);
-                if (in_array($mime, $allowedTypes)) {
-                    $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$mime];
-                    $tmpPath = $file['tmp_name'];
-                    // Optimize JPG
-                    if ($ext === 'jpg' && function_exists('imagecreatefromjpeg')) {
-                        $img = @imagecreatefromjpeg($tmpPath);
-                        if ($img) {
-                            $w = imagesx($img); $h = imagesy($img);
-                            if ($w > 1920) {
-                                $newW = 1920; $newH = (int)($h * 1920 / $w);
-                                $resized = imagecreatetruecolor($newW, $newH);
-                                imagecopyresampled($resized, $img, 0, 0, 0, 0, $newW, $newH, $w, $h);
-                                imagedestroy($img); $img = $resized;
+            // Handle hero image removal/upload for slots 1-4
+            $rootPath = __DIR__ . '/../..';
+            $uploadDir = $rootPath . '/uploads/pages/';
+            if (!is_dir($uploadDir)) @mkdir($uploadDir, 0755, true);
+
+            for ($hi = 1; $hi <= 4; $hi++) {
+                $settingKey = "gs_hero_image_{$hi}";
+
+                // Removal
+                if (!empty($_POST["remove_hero_image_{$hi}"])) {
+                    $oldImg = $currentValues[$settingKey] ?? '';
+                    if ($oldImg) {
+                        $oldPath = $rootPath . $oldImg;
+                        if (file_exists($oldPath)) @unlink($oldPath);
+                    }
+                    save_site_setting($settingKey, '', "GS Startsida - Hero-bild {$hi}");
+                    $currentValues[$settingKey] = '';
+                }
+
+                // Upload
+                $fileKey = "gs_hero_image_file_{$hi}";
+                if (!empty($_FILES[$fileKey]['tmp_name']) && $_FILES[$fileKey]['error'] === UPLOAD_ERR_OK) {
+                    $file = $_FILES[$fileKey];
+                    $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                    $finfo = new finfo(FILEINFO_MIME_TYPE);
+                    $mime = $finfo->file($file['tmp_name']);
+                    if (in_array($mime, $allowedTypes)) {
+                        $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$mime];
+                        $tmpPath = $file['tmp_name'];
+                        // Optimize JPG
+                        if ($ext === 'jpg' && function_exists('imagecreatefromjpeg')) {
+                            $img = @imagecreatefromjpeg($tmpPath);
+                            if ($img) {
+                                $w = imagesx($img); $h = imagesy($img);
+                                if ($w > 1920) {
+                                    $newW = 1920; $newH = (int)($h * 1920 / $w);
+                                    $resized = imagecreatetruecolor($newW, $newH);
+                                    imagecopyresampled($resized, $img, 0, 0, 0, 0, $newW, $newH, $w, $h);
+                                    imagedestroy($img); $img = $resized;
+                                }
+                                imagejpeg($img, $tmpPath, 82);
+                                imagedestroy($img);
                             }
-                            imagejpeg($img, $tmpPath, 82);
-                            imagedestroy($img);
                         }
-                    }
-                    $rootPath = __DIR__ . '/../..';
-                    $uploadDir = $rootPath . '/uploads/pages/';
-                    if (!is_dir($uploadDir)) @mkdir($uploadDir, 0755, true);
-                    $filename = 'gs-hero-' . time() . '.' . $ext;
-                    if (move_uploaded_file($tmpPath, $uploadDir . $filename)) {
-                        $heroUrl = '/uploads/pages/' . $filename;
-                        save_site_setting('gs_hero_image', $heroUrl, 'GS Startsida - Hero-bild');
-                        $currentValues['gs_hero_image'] = $heroUrl;
+                        // Delete old file
+                        $oldImg = $currentValues[$settingKey] ?? '';
+                        if ($oldImg) {
+                            $oldPath = $rootPath . $oldImg;
+                            if (file_exists($oldPath)) @unlink($oldPath);
+                        }
+                        $filename = "gs-hero-{$hi}-" . time() . '.' . $ext;
+                        if (move_uploaded_file($tmpPath, $uploadDir . $filename)) {
+                            $heroUrl = '/uploads/pages/' . $filename;
+                            save_site_setting($settingKey, $heroUrl, "GS Startsida - Hero-bild {$hi}");
+                            $currentValues[$settingKey] = $heroUrl;
+                        } else {
+                            $errors[] = "Kunde inte spara hero-bild {$hi}.";
+                        }
                     } else {
-                        $errors[] = 'Kunde inte spara hero-bilden. Kontrollera filrättigheter på uploads/pages/.';
+                        $errors[] = "Hero-bild {$hi} måste vara JPG, PNG eller WebP.";
                     }
-                } else {
-                    $errors[] = 'Hero-bilden måste vara JPG, PNG eller WebP.';
                 }
             }
 
@@ -320,31 +344,37 @@ include __DIR__ . '/../components/unified-layout.php';
           <textarea name="gs_hero_body" class="form-textarea" rows="3"><?= gs_val('gs_hero_body') ?></textarea>
         </div>
 
-        <!-- Hero-bild -->
+        <!-- Hero-bilder (4 slots, slumpas vid sidladdning) -->
         <div class="form-group" style="margin:0;">
-          <label class="form-label">Bakgrundsbild</label>
-          <?php $heroImg = gs_raw('gs_hero_image'); ?>
-          <?php if ($heroImg): ?>
-            <div style="position:relative; border-radius:var(--radius-sm); overflow:hidden; margin-bottom:var(--space-xs);">
-              <img src="<?= htmlspecialchars($heroImg) ?>" alt="Hero" style="width:100%; max-height:200px; object-fit:cover; display:block;">
-              <div style="position:absolute; top:8px; right:8px; display:flex; gap:6px;">
-                <label style="background:var(--color-bg-card); border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:6px 10px; cursor:pointer; font-size:12px; color:var(--color-text-secondary);">
-                  <i data-lucide="replace" style="width:14px;height:14px;vertical-align:-2px;"></i> Byt
-                  <input type="file" name="gs_hero_image_file" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="this.form.querySelector('#heroPreviewCurrent').style.display='none';">
-                </label>
-                <button type="submit" name="remove_hero_image" value="1" style="background:var(--color-error); color:#fff; border:none; border-radius:var(--radius-sm); padding:6px 10px; cursor:pointer; font-size:12px;">
-                  <i data-lucide="x" style="width:14px;height:14px;vertical-align:-2px;"></i> Ta bort
-                </button>
+          <label class="form-label">Bakgrundsbilder (max 4 — slumpas vid varje sidladdning)</label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-sm);">
+            <?php for ($hi = 1; $hi <= 4; $hi++):
+              $heroImg = gs_raw("gs_hero_image_{$hi}");
+            ?>
+              <div style="position:relative; border-radius:var(--radius-sm); overflow:hidden; border:1px solid var(--color-border); min-height:100px;">
+                <div style="position:absolute; top:6px; left:8px; background:rgba(0,0,0,.6); color:#fff; border-radius:var(--radius-sm); padding:2px 8px; font-size:11px; font-weight:600; z-index:2;"><?= $hi ?></div>
+                <?php if ($heroImg): ?>
+                  <img src="<?= htmlspecialchars($heroImg) ?>" alt="Hero <?= $hi ?>" style="width:100%; height:120px; object-fit:cover; display:block;">
+                  <div style="position:absolute; bottom:6px; right:6px; display:flex; gap:4px; z-index:2;">
+                    <label style="background:var(--color-bg-card); border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:4px 8px; cursor:pointer; font-size:11px; color:var(--color-text-secondary);">
+                      <i data-lucide="replace" style="width:12px;height:12px;vertical-align:-2px;"></i> Byt
+                      <input type="file" name="gs_hero_image_file_<?= $hi ?>" accept="image/jpeg,image/png,image/webp" style="display:none;">
+                    </label>
+                    <button type="submit" name="remove_hero_image_<?= $hi ?>" value="1" style="background:var(--color-error); color:#fff; border:none; border-radius:var(--radius-sm); padding:4px 8px; cursor:pointer; font-size:11px;">
+                      <i data-lucide="x" style="width:12px;height:12px;vertical-align:-2px;"></i>
+                    </button>
+                  </div>
+                <?php else: ?>
+                  <label style="display:flex; align-items:center; justify-content:center; height:120px; cursor:pointer; color:var(--color-text-muted); font-size:12px; gap:var(--space-2xs); transition:border-color .2s; flex-direction:column;" onmouseover="this.parentElement.style.borderColor='var(--color-accent)'" onmouseout="this.parentElement.style.borderColor='var(--color-border)'">
+                    <i data-lucide="image-plus" style="width:18px;height:18px;"></i>
+                    Ladda upp
+                    <input type="file" name="gs_hero_image_file_<?= $hi ?>" accept="image/jpeg,image/png,image/webp" style="display:none;">
+                  </label>
+                <?php endif; ?>
               </div>
-            </div>
-          <?php else: ?>
-            <label style="display:flex; align-items:center; justify-content:center; border:2px dashed var(--color-border); border-radius:var(--radius-sm); padding:var(--space-xl) var(--space-md); cursor:pointer; color:var(--color-text-muted); font-size:13px; gap:var(--space-xs); transition:border-color .2s;" onmouseover="this.style.borderColor='var(--color-accent)'" onmouseout="this.style.borderColor='var(--color-border)'">
-              <i data-lucide="image-plus" style="width:20px;height:20px;"></i>
-              Klicka för att ladda upp en hero-bild (JPG, PNG, WebP)
-              <input type="file" name="gs_hero_image_file" accept="image/jpeg,image/png,image/webp" style="display:none;">
-            </label>
-          <?php endif; ?>
-          <p class="form-help">Rekommenderad storlek: minst 1920×800px. Bilden visas bakom texten med ett mörkt overlay.</p>
+            <?php endfor; ?>
+          </div>
+          <p class="form-help">Rekommenderad storlek: minst 1920×800px. En slumpad bild visas vid varje sidladdning. Overlay-mörkhet gäller alla bilder.</p>
         </div>
 
         <!-- Overlay opacity -->
