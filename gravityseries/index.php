@@ -26,6 +26,33 @@ function gs($key, $default = '') {
     return $_gsContent[$key] ?? $default;
 }
 
+/**
+ * Render text safely with line break support.
+ * - Escapes HTML, converts \n to <br>
+ * - Also converts legacy <br> tags stored in DB (escaped after htmlspecialchars)
+ */
+function gs_text($key, $default = '') {
+    $val = gs($key, $default);
+    // Convert any existing <br> tags to newlines first (legacy DB data)
+    $val = str_ireplace(['<br>', '<br/>', '<br />'], "\n", $val);
+    // Strip decorative dots (legacy data)
+    $val = preg_replace('/\.(?=\S)/', ' ', $val);  // dot before letter → space
+    $val = str_replace('.', '', $val);
+    $val = preg_replace('/[ ]{2,}/', ' ', $val);
+    $val = trim($val);
+    return nl2br(htmlspecialchars($val));
+}
+
+/**
+ * Render multiline text (body/descriptions) safely.
+ * Preserves line breaks, escapes HTML. No dot-stripping.
+ */
+function gs_body($key, $default = '') {
+    $val = gs($key, $default);
+    $val = str_ireplace(['<br>', '<br/>', '<br />'], "\n", $val);
+    return nl2br(htmlspecialchars(trim($val)));
+}
+
 // Load stats from database
 $stats = ['riders' => 0, 'events' => 0, 'clubs' => 0, 'venues' => 0];
 try {
@@ -175,9 +202,9 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
     </div>
   </div>
   <div class="hero-content">
-    <div class="hero-eyebrow"><?= gs('gs_hero_eyebrow', 'Svensk Gravitycykling sedan 2016') ?></div>
-    <h1 class="hero-title"><?= gs('gs_hero_title', 'Gravity<em>Series</em>') ?></h1>
-    <p class="hero-body"><?= nl2br(htmlspecialchars(gs('gs_hero_body', 'Organisationen bakom svensk enduro och downhill. Vi arrangerar tävlingar, sätter regler och utvecklar sporten — från Motion till Elite.'))) ?></p>
+    <div class="hero-eyebrow"><?= htmlspecialchars(gs('gs_hero_eyebrow', 'Svensk Gravitycykling sedan 2016')) ?></div>
+    <h1 class="hero-title"><?= gs_text('gs_hero_title', "Gravity\nSeries") ?></h1>
+    <p class="hero-body"><?= gs_body('gs_hero_body', 'Organisationen bakom svensk enduro och downhill. Vi arrangerar tävlingar, sätter regler och utvecklar sporten — från Motion till Elite.') ?></p>
     <div class="hero-actions">
       <a class="btn-primary" href="#serier">
         <?= $chevronSvg ?>
@@ -215,16 +242,9 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
 <section id="serier">
   <div class="gs-section">
     <div class="section-head">
-      <div class="section-label"><?= gs('gs_section_series_label', 'Tävlingsserier') ?></div>
-      <?php
-        $seriesTitle = gs('gs_section_series_title', "Fyra serier\nEn rörelse");
-        // Strip decorative dots from title (legacy data cleanup)
-        $seriesTitle = preg_replace('/\.(?=\S)/', ' ', $seriesTitle); // dot before non-space → space
-        $seriesTitle = preg_replace('/\.\s*$/', '', $seriesTitle);     // trailing dots
-        $seriesTitle = preg_replace('/\.(\s*\n)/', '$1', $seriesTitle); // dots before line breaks
-      ?>
-      <h2 class="section-title"><?= nl2br(htmlspecialchars(trim($seriesTitle))) ?></h2>
-      <p class="section-body"><?= nl2br(htmlspecialchars(gs('gs_section_series_body', 'GravitySeries driver Enduro och Downhill-tävlingar från Malmö till Umeå. Hitta din serie — och ditt nästa lopp.'))) ?></p>
+      <div class="section-label"><?= htmlspecialchars(gs('gs_section_series_label', 'Tävlingsserier')) ?></div>
+      <h2 class="section-title"><?= gs_text('gs_section_series_title', "Fyra serier\nEn rörelse") ?></h2>
+      <p class="section-body"><?= gs_body('gs_section_series_body', 'GravitySeries driver Enduro och Downhill-tävlingar från Malmö till Umeå. Hitta din serie — och ditt nästa lopp.') ?></p>
     </div>
     <div class="gs-series-grid">
       <?php
@@ -330,32 +350,32 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
 <div style="background:var(--bg-2, var(--white)); border-top: 1px solid var(--border, var(--rule)); border-bottom: 1px solid var(--border, var(--rule));">
   <div class="gs-section" id="arrangera">
     <div class="section-head">
-      <div class="section-label"><?= gs('gs_section_info_label', 'Praktisk info') ?></div>
-      <h2 class="section-title"><?= gs('gs_section_info_title', 'För åkare<br>&amp; arrangörer') ?></h2>
+      <div class="section-label"><?= htmlspecialchars(gs('gs_section_info_label', 'Praktisk info')) ?></div>
+      <h2 class="section-title"><?= gs_text('gs_section_info_title', "För åkare\n& arrangörer") ?></h2>
     </div>
     <div class="info-grid">
       <a class="info-card" href="<?= $gsBaseUrl ?>/arrangor-info">
         <div class="info-icon">
           <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
-        <div class="info-title"><?= gs('gs_info_card_1_title', 'Arrangera ett event') ?></div>
-        <p class="info-desc"><?= nl2br(htmlspecialchars(gs('gs_info_card_1_desc', 'Vill du arrangera en tävling inom GravitySeries? Här hittar du allt från ansökan till banprojektering och praktisk info.'))) ?></p>
+        <div class="info-title"><?= htmlspecialchars(gs('gs_info_card_1_title', 'Arrangera ett event')) ?></div>
+        <p class="info-desc"><?= gs_body('gs_info_card_1_desc', 'Vill du arrangera en tävling inom GravitySeries? Här hittar du allt från ansökan till banprojektering och praktisk info.') ?></p>
         <span class="info-link">Arrangörsinformation <?= $chevronSvg ?></span>
       </a>
       <a class="info-card" href="<?= $gsBaseUrl ?>/licenser">
         <div class="info-icon">
           <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
         </div>
-        <div class="info-title"><?= gs('gs_info_card_2_title', 'Licenser &amp; SCF') ?></div>
-        <p class="info-desc"><?= nl2br(htmlspecialchars(gs('gs_info_card_2_desc', 'För att tävla i GravitySeries behöver du en giltig SCF-licens. Här förklarar vi hur du skaffar en och vad den kostar.'))) ?></p>
+        <div class="info-title"><?= htmlspecialchars(gs('gs_info_card_2_title', 'Licenser & SCF')) ?></div>
+        <p class="info-desc"><?= gs_body('gs_info_card_2_desc', 'För att tävla i GravitySeries behöver du en giltig SCF-licens. Här förklarar vi hur du skaffar en och vad den kostar.') ?></p>
         <span class="info-link">Licensinfo <?= $chevronSvg ?></span>
       </a>
       <a class="info-card" href="<?= $gsBaseUrl ?>/gravity-id">
         <div class="info-icon">
           <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
         </div>
-        <div class="info-title"><?= gs('gs_info_card_3_title', 'Gravity-ID') ?></div>
-        <p class="info-desc"><?= nl2br(htmlspecialchars(gs('gs_info_card_3_desc', 'Ditt Gravity-ID kopplar ihop dina tävlingsresultat, licens och profil. Allt på ett ställe — oavsett vilken serie du kör.'))) ?></p>
+        <div class="info-title"><?= htmlspecialchars(gs('gs_info_card_3_title', 'Gravity-ID')) ?></div>
+        <p class="info-desc"><?= gs_body('gs_info_card_3_desc', 'Ditt Gravity-ID kopplar ihop dina tävlingsresultat, licens och profil. Allt på ett ställe — oavsett vilken serie du kör.') ?></p>
         <span class="info-link">Om Gravity-ID <?= $chevronSvg ?></span>
       </a>
     </div>
@@ -366,9 +386,9 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
 <div class="board-section" id="om">
   <div class="gs-section">
     <div class="section-head">
-      <div class="section-label" style="color:var(--accent)"><?= gs('gs_section_board_label', 'Organisation') ?></div>
-      <h2 class="section-title"><?= gs('gs_section_board_title', 'Styrelsen') ?></h2>
-      <p class="section-body"><?= nl2br(htmlspecialchars(gs('gs_section_board_body', 'GravitySeries drivs ideellt av ett engagerat gäng med passion för gravitycykling.'))) ?></p>
+      <div class="section-label" style="color:var(--accent)"><?= htmlspecialchars(gs('gs_section_board_label', 'Organisation')) ?></div>
+      <h2 class="section-title"><?= htmlspecialchars(gs('gs_section_board_title', 'Styrelsen')) ?></h2>
+      <p class="section-body"><?= gs_body('gs_section_board_body', 'GravitySeries drivs ideellt av ett engagerat gäng med passion för gravitycykling.') ?></p>
     </div>
     <div class="board-grid">
       <?php
@@ -438,8 +458,8 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
 <div class="hub-cta-section">
   <div class="hub-cta-inner">
     <div>
-      <div class="hub-cta-title"><?= gs('gs_hub_cta_title', 'Kalender, resultat<br>&amp; ranking') ?></div>
-      <div class="hub-cta-sub"><?= gs('gs_hub_cta_body', 'Allt samlat på TheHUB — vår tävlingsplattform.') ?></div>
+      <div class="hub-cta-title"><?= gs_text('gs_hub_cta_title', "Kalender, resultat\n& ranking") ?></div>
+      <div class="hub-cta-sub"><?= gs_body('gs_hub_cta_body', 'Allt samlat på TheHUB — vår tävlingsplattform.') ?></div>
     </div>
     <a class="hub-cta-btn" href="https://thehub.gravityseries.se">
       <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>

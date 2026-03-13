@@ -29,15 +29,15 @@ $errors = [];
 // Settings keys for homepage content
 $settingsKeys = [
     'gs_hero_eyebrow'     => 'Svensk Gravitycykling sedan 2016',
-    'gs_hero_title'        => 'Gravity<em>Series</em>',
+    'gs_hero_title'        => "Gravity\nSeries",
     'gs_hero_body'         => 'Organisationen bakom svensk enduro och downhill. Vi arrangerar tävlingar, sätter regler och utvecklar sporten — från Motion till Elite.',
     'gs_hero_image'        => '',
     'gs_hero_overlay'      => '55',
     'gs_section_series_label'   => 'Tävlingsserier',
-    'gs_section_series_title'   => 'Fyra serier.<br>En rörelse.',
+    'gs_section_series_title'   => "Fyra serier\nEn rörelse",
     'gs_section_series_body'    => 'GravitySeries driver Enduro och Downhill-tävlingar från Malmö till Umeå. Hitta din serie — och ditt nästa lopp.',
     'gs_section_info_label'     => 'Praktisk info',
-    'gs_section_info_title'     => 'För åkare<br>&amp; arrangörer',
+    'gs_section_info_title'     => "För åkare\n& arrangörer",
     'gs_info_card_1_title'      => 'Arrangera ett event',
     'gs_info_card_1_desc'       => 'Vill du arrangera en tävling inom GravitySeries? Här hittar du allt från ansökan till banprojektering och praktisk info.',
     'gs_info_card_2_title'      => 'Licenser & SCF',
@@ -48,7 +48,7 @@ $settingsKeys = [
     'gs_section_board_title'    => 'Styrelsen',
     'gs_section_board_body'     => 'GravitySeries drivs ideellt av ett engagerat gäng med passion för gravitycykling.',
     'gs_board_members'          => '',  // JSON array
-    'gs_hub_cta_title'          => 'Kalender, resultat<br>&amp; ranking',
+    'gs_hub_cta_title'          => "Kalender, resultat\n& ranking",
     'gs_hub_cta_body'           => 'Allt samlat på TheHUB — vår tävlingsplattform.',
     'gs_series_year'            => '',
     'gs_header_logo'            => '',
@@ -231,7 +231,10 @@ $boardMembers = json_decode($currentValues['gs_board_members'], true) ?: [];
 // Helper
 function gs_val($key) {
     global $currentValues;
-    return htmlspecialchars($currentValues[$key] ?? '', ENT_QUOTES, 'UTF-8');
+    $val = $currentValues[$key] ?? '';
+    // Clean legacy <br> tags to newlines for textarea display
+    $val = str_ireplace(['<br>', '<br/>', '<br />', '&amp;'], ["\n", "\n", "\n", '&'], $val);
+    return htmlspecialchars($val, ENT_QUOTES, 'UTF-8');
 }
 function gs_raw($key) {
     global $currentValues;
@@ -309,8 +312,8 @@ include __DIR__ . '/../components/unified-layout.php';
           <input type="text" name="gs_hero_eyebrow" class="form-input" value="<?= gs_val('gs_hero_eyebrow') ?>">
         </div>
         <div class="form-group" style="margin:0;">
-          <label class="form-label">Titel (HTML tillåtet, t.ex. &lt;em&gt;)</label>
-          <input type="text" name="gs_hero_title" class="form-input" value="<?= gs_val('gs_hero_title') ?>">
+          <label class="form-label">Titel (Enter = radbrytning)</label>
+          <textarea name="gs_hero_title" class="form-input" rows="2" style="resize:vertical;"><?= gs_val('gs_hero_title') ?></textarea>
         </div>
         <div class="form-group" style="margin:0;">
           <label class="form-label">Beskrivning</label>
@@ -367,8 +370,8 @@ include __DIR__ . '/../components/unified-layout.php';
           <input type="text" name="gs_section_series_label" class="form-input" value="<?= gs_val('gs_section_series_label') ?>">
         </div>
         <div class="form-group" style="margin:0;">
-          <label class="form-label">Rubrik (HTML tillåtet)</label>
-          <input type="text" name="gs_section_series_title" class="form-input" value="<?= gs_val('gs_section_series_title') ?>">
+          <label class="form-label">Rubrik (Enter = radbrytning)</label>
+          <textarea name="gs_section_series_title" class="form-input" rows="2" style="resize:vertical;"><?= gs_val('gs_section_series_title') ?></textarea>
         </div>
         <div class="form-group" style="margin:0;">
           <label class="form-label">Brödtext</label>
@@ -387,8 +390,8 @@ include __DIR__ . '/../components/unified-layout.php';
             <input type="text" name="gs_section_info_label" class="form-input" value="<?= gs_val('gs_section_info_label') ?>">
           </div>
           <div class="form-group" style="margin:0; flex:2; min-width:200px;">
-            <label class="form-label">Sektionsrubrik (HTML tillåtet)</label>
-            <input type="text" name="gs_section_info_title" class="form-input" value="<?= gs_val('gs_section_info_title') ?>">
+            <label class="form-label">Sektionsrubrik (Enter = radbrytning)</label>
+            <textarea name="gs_section_info_title" class="form-input" rows="2" style="resize:vertical;"><?= gs_val('gs_section_info_title') ?></textarea>
           </div>
         </div>
         <?php for ($i = 1; $i <= 3; $i++): ?>
@@ -462,8 +465,8 @@ include __DIR__ . '/../components/unified-layout.php';
       <div class="card-header"><h3>TheHUB CTA-sektion</h3></div>
       <div class="card-body" style="display:flex; flex-direction:column; gap:var(--space-md);">
         <div class="form-group" style="margin:0;">
-          <label class="form-label">Rubrik (HTML tillåtet)</label>
-          <input type="text" name="gs_hub_cta_title" class="form-input" value="<?= gs_val('gs_hub_cta_title') ?>">
+          <label class="form-label">Rubrik (Enter = radbrytning)</label>
+          <textarea name="gs_hub_cta_title" class="form-input" rows="2" style="resize:vertical;"><?= gs_val('gs_hub_cta_title') ?></textarea>
         </div>
         <div class="form-group" style="margin:0;">
           <label class="form-label">Undertext</label>
