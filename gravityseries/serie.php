@@ -56,24 +56,31 @@ if (!$brand) {
 }
 
 // Load the CMS page linked to this brand
+// First try published for display, then any status for edit link
 $page = null;
+$pageForEdit = null;
 try {
     // Try series_brand_id first (new column), then fallback to slug match
     $pStmt = $pdo->prepare("
         SELECT * FROM pages
         WHERE (series_brand_id = ? OR slug = ?)
-        AND status = 'published'
-        ORDER BY series_brand_id IS NOT NULL DESC
+        ORDER BY status = 'published' DESC, series_brand_id IS NOT NULL DESC
         LIMIT 1
     ");
     $pStmt->execute([$brand['id'], $slug]);
-    $page = $pStmt->fetch();
+    $pageForEdit = $pStmt->fetch();
+    if ($pageForEdit && $pageForEdit['status'] === 'published') {
+        $page = $pageForEdit;
+    }
 } catch (PDOException $e) {
     // If series_brand_id column doesn't exist yet, fallback to slug
     try {
-        $pStmt = $pdo->prepare("SELECT * FROM pages WHERE slug = ? AND status = 'published' LIMIT 1");
+        $pStmt = $pdo->prepare("SELECT * FROM pages WHERE slug = ? ORDER BY status = 'published' DESC LIMIT 1");
         $pStmt->execute([$slug]);
-        $page = $pStmt->fetch();
+        $pageForEdit = $pStmt->fetch();
+        if ($pageForEdit && $pageForEdit['status'] === 'published') {
+            $page = $pageForEdit;
+        }
     } catch (PDOException $e2) {}
 }
 
@@ -83,7 +90,7 @@ $accentColor = $brand['accent_color'] ?: '#61CE70';
 $gsPageTitle = $brand['name'];
 $gsMetaDesc = $page['meta_description'] ?? ($brand['description'] ?: ($brand['name'] . ' — tävlingsserie inom GravitySeries'));
 $gsActiveNav = 'serier';
-$gsEditUrl = $page ? '/admin/pages/edit.php?id=' . (int)$page['id'] : '/admin/pages/edit.php';
+$gsEditUrl = $pageForEdit ? '/admin/pages/edit.php?id=' . (int)$pageForEdit['id'] : '/admin/pages/edit.php';
 
 require_once __DIR__ . '/includes/gs-header.php';
 
@@ -152,8 +159,8 @@ if (!empty($page['hero_image'])) {
 
 <?php if (!empty($gsIsAdmin)): ?>
 <div class="gs-admin-bar">
-  <?php if ($page): ?>
-  <a class="gs-admin-btn" href="/admin/pages/edit.php?id=<?= (int)$page['id'] ?>">
+  <?php if ($pageForEdit): ?>
+  <a class="gs-admin-btn" href="/admin/pages/edit.php?id=<?= (int)$pageForEdit['id'] ?>">
     <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
     Redigera
   </a>
