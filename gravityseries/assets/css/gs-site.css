@@ -1142,6 +1142,33 @@ body {
   padding: 80px 0 48px;
   overflow: hidden;
 }
+/* Grid overlay */
+.gs-serie-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 20%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 20%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+/* Diagonal stripe */
+.gs-serie-hero::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  right: -10%;
+  width: 55%;
+  height: 140%;
+  background: color-mix(in srgb, var(--c) 8%, transparent);
+  transform: skewX(-8deg);
+  pointer-events: none;
+  z-index: 1;
+}
 .gs-serie-hero-bg {
   position: absolute; inset: 0;
   background: radial-gradient(ellipse at 30% 30%, color-mix(in srgb, var(--c) 12%, transparent), transparent 70%);
@@ -1154,6 +1181,7 @@ body {
   max-width: 900px;
   margin: 0 auto;
   padding: 0 24px;
+  z-index: 2;
 }
 .gs-serie-back {
   display: inline-flex;
