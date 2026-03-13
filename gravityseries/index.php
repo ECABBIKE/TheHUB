@@ -213,7 +213,7 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
   <div class="gs-section">
     <div class="section-head">
       <div class="section-label"><?= gs('gs_section_series_label', 'Tävlingsserier') ?></div>
-      <h2 class="section-title"><?= gs('gs_section_series_title', 'Fyra serier.<br>En rörelse.') ?></h2>
+      <h2 class="section-title"><?= nl2br(htmlspecialchars(gs('gs_section_series_title', "Fyra serier\nEn rörelse"))) ?></h2>
       <p class="section-body"><?= nl2br(htmlspecialchars(gs('gs_section_series_body', 'GravitySeries driver Enduro och Downhill-tävlingar från Malmö till Umeå. Hitta din serie — och ditt nästa lopp.'))) ?></p>
     </div>
     <div class="gs-series-grid">
