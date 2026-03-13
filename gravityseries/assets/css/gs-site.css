@@ -1167,6 +1167,16 @@ body {
   transition: color .15s;
 }
 .gs-serie-back:hover { color: #fff; }
+.gs-serie-hero-logo {
+  display: block;
+  max-height: 80px;
+  max-width: 320px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,.3));
+}
 .gs-serie-hero-title {
   font-family: var(--font-cond);
   font-size: clamp(2rem, 4.5vw, 3rem);
@@ -1223,6 +1233,7 @@ body {
   .gs-serie-hero { padding: 64px 0 32px; }
   .gs-serie-hero-inner { padding: 0 16px; }
   .gs-serie-hero-title { font-size: 2rem; }
+  .gs-serie-hero-logo { max-height: 56px; max-width: 240px; margin-bottom: 12px; }
 }
 
 /* ─── Admin toolbar (only visible for admins) ─── */

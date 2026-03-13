@@ -86,6 +86,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // Handle serie logo upload (stored on series_brands.logo)
+    if ($seriesBrandId && !empty($_FILES['serie_logo_file']['tmp_name'])) {
+        $logoFile = $_FILES['serie_logo_file'];
+        $logoAllowed = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+        $logoFinfo = new finfo(FILEINFO_MIME_TYPE);
+        $logoMime = $logoFinfo->file($logoFile['tmp_name']);
+        if (!in_array($logoMime, $logoAllowed)) {
+            $errors[] = 'Serie-logotypen måste vara JPG, PNG, WebP eller SVG.';
+        } else {
+            $logoTmp = $logoFile['tmp_name'];
+            // Auto-resize non-SVG (max 600px wide)
+            if ($logoMime !== 'image/svg+xml') {
+                $logoInfo = getimagesize($logoTmp);
+                if ($logoInfo && $logoInfo[0] > 600) {
+                    $src = null;
+                    if ($logoMime === 'image/jpeg') $src = imagecreatefromjpeg($logoTmp);
+                    elseif ($logoMime === 'image/png') $src = imagecreatefrompng($logoTmp);
+                    elseif ($logoMime === 'image/webp') $src = imagecreatefromwebp($logoTmp);
+                    if ($src) {
+                        $newH = (int)round($logoInfo[1] * (600 / $logoInfo[0]));
+                        $dst = imagecreatetruecolor(600, $newH);
+                        // Preserve alpha for PNG
+                        if ($logoMime === 'image/png') {
+                            imagealphablending($dst, false);
+                            imagesavealpha($dst, true);
+                        }
+                        imagecopyresampled($dst, $src, 0, 0, 0, 0, 600, $newH, $logoInfo[0], $logoInfo[1]);
+                        if ($logoMime === 'image/png') {
+                            imagepng($dst, $logoTmp, 8);
+                        } else {
+                            imagejpeg($dst, $logoTmp, 85);
+                            $logoMime = 'image/jpeg';
+                        }
+                        imagedestroy($src);
+                        imagedestroy($dst);
+                    }
+                }
+            }
+            $logoExt = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/svg+xml' => 'svg'][$logoMime];
+            $logoUploadDir = __DIR__ . '/../../uploads/pages/';
+            if (!is_dir($logoUploadDir)) mkdir($logoUploadDir, 0755, true);
+            $logoFilename = 'serie-logo-' . ($slug ?: 'new') . '-' . time() . '.' . $logoExt;
+            if (move_uploaded_file($logoTmp, $logoUploadDir . $logoFilename)) {
+                $serieLogo = '/uploads/pages/' . $logoFilename;
+                // Save directly to series_brands.logo
+                try {
+                    $pdo->prepare("UPDATE series_brands SET logo = ? WHERE id = ?")->execute([$serieLogo, $seriesBrandId]);
+                } catch (PDOException $e) {}
+            }
+        }
+    }
+    // Remove serie logo
+    if ($seriesBrandId && !empty($_POST['remove_serie_logo'])) {
+        try {
+            $pdo->prepare("UPDATE series_brands SET logo = NULL WHERE id = ?")->execute([$seriesBrandId]);
+        } catch (PDOException $e) {}
+    }
+
     // Handle hero image upload
     $heroImage = $isEdit ? ($page['hero_image'] ?? null) : null;
     if (!empty($_POST['remove_hero_image'])) {
@@ -234,7 +292,42 @@ $current_admin_page = 'pages';
 include __DIR__ . '/../components/unified-layout.php';
 ?>
 
-<div class="admin-content" style="padding: 24px; max-width: 960px;">
+<style>
+/* Mobile fixes for page editor */
+@media (max-width: 767px) {
+  .gs-edit-grid-3 { grid-template-columns: 1fr !important; }
+  .gs-edit-grid-2 { grid-template-columns: 1fr !important; }
+  .gs-edit-content { padding: 16px !important; }
+  .gs-edit-content input[type="text"],
+  .gs-edit-content input[type="number"],
+  .gs-edit-content select,
+  .gs-edit-content textarea {
+    font-size: 16px !important; /* Prevents iOS zoom */
+    min-height: 44px;
+    background: var(--color-bg-card, #fff) !important;
+    color: var(--color-text-primary, #333) !important;
+  }
+  .gs-edit-content select {
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    padding-right: 32px !important;
+  }
+  .gs-edit-card {
+    margin-left: -16px;
+    margin-right: -16px;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+  .gs-edit-actions { flex-direction: column; }
+  .gs-edit-actions button { width: 100%; justify-content: center; }
+}
+</style>
+
+<div class="admin-content gs-edit-content" style="padding: 24px; max-width: 960px;">
 
   <!-- Header -->
   <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
@@ -271,7 +364,7 @@ include __DIR__ . '/../components/unified-layout.php';
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
 
     <!-- Title & Slug -->
-    <div style="background:var(--color-bg-card,#fff); border:1px solid var(--color-border,#e5e7eb); border-radius:var(--radius-md,10px); padding:20px; margin-bottom:16px;">
+    <div style="background:var(--color-bg-card,#fff); border:1px solid var(--color-border,#e5e7eb); border-radius:var(--radius-md,10px); padding:20px; margin-bottom:16px;" class="gs-edit-card">
       <div style="margin-bottom:16px;">
         <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--color-text-secondary,#555);">Titel *</label>
         <input type="text" name="title" value="<?= htmlspecialchars($page['title']) ?>" required
@@ -296,13 +389,13 @@ include __DIR__ . '/../components/unified-layout.php';
     </div>
 
     <!-- Content (TinyMCE) -->
-    <div style="background:var(--color-bg-card,#fff); border:1px solid var(--color-border,#e5e7eb); border-radius:var(--radius-md,10px); padding:20px; margin-bottom:16px;">
+    <div style="background:var(--color-bg-card,#fff); border:1px solid var(--color-border,#e5e7eb); border-radius:var(--radius-md,10px); padding:20px; margin-bottom:16px;" class="gs-edit-card">
       <label style="display:block; font-size:13px; font-weight:600; margin-bottom:8px; color:var(--color-text-secondary,#555);">Innehåll</label>
       <textarea name="content" id="tinymce-editor" rows="20" style="width:100%; min-height:400px;"><?= htmlspecialchars($page['content']) ?></textarea>
     </div>
 
     <!-- Hero Image -->
-    <div style="background:var(--color-bg-card,#fff); border:1px solid var(--color-border,#e5e7eb); border-radius:var(--radius-md,10px); padding:20px; margin-bottom:16px;">
+    <div style="background:var(--color-bg-card,#fff); border:1px solid var(--color-border,#e5e7eb); border-radius:var(--radius-md,10px); padding:20px; margin-bottom:16px;" class="gs-edit-card">
       <label style="display:block; font-size:13px; font-weight:600; margin-bottom:8px; color:var(--color-text-secondary,#555);">Hero-bild (valfritt)</label>
       <?php if (!empty($page['hero_image'])): ?>
         <div style="margin-bottom:12px; position:relative; max-width:400px;">
@@ -314,7 +407,7 @@ include __DIR__ . '/../components/unified-layout.php';
       <?php endif; ?>
       <input type="file" name="hero_image_file" accept="image/jpeg,image/png,image/webp"
         style="font-size:14px; margin-bottom:12px;">
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px;">
+      <div class="gs-edit-grid-2" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px;">
         <div>
           <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:var(--color-text-muted,#888);">Bildposition</label>
           <select name="hero_image_position" style="width:100%; padding:8px 12px; border:1px solid var(--color-border,#ddd); border-radius:6px; font-size:14px;">
@@ -332,8 +425,8 @@ include __DIR__ . '/../components/unified-layout.php';
     </div>
 
     <!-- Settings -->
-    <div style="background:var(--color-bg-card,#fff); border:1px solid var(--color-border,#e5e7eb); border-radius:var(--radius-md,10px); padding:20px; margin-bottom:16px;">
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
+    <div style="background:var(--color-bg-card,#fff); border:1px solid var(--color-border,#e5e7eb); border-radius:var(--radius-md,10px); padding:20px; margin-bottom:16px;" class="gs-edit-card">
+      <div class="gs-edit-grid-3" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
         <div>
           <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--color-text-secondary,#555);">Mall</label>
           <select name="template" style="width:100%; padding:10px 14px; border:1px solid var(--color-border,#ddd); border-radius:6px; font-size:14px;">
@@ -355,7 +448,7 @@ include __DIR__ . '/../components/unified-layout.php';
             style="width:100%; padding:10px 14px; border:1px solid var(--color-border,#ddd); border-radius:6px; font-size:14px;">
         </div>
       </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;">
+      <div class="gs-edit-grid-2" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;">
         <div>
           <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--color-text-secondary,#555);">Navigationslabel <span style="color:var(--color-text-muted,#aaa); font-weight:400;">(om tom: titel)</span></label>
           <input type="text" name="nav_label" value="<?= htmlspecialchars($page['nav_label'] ?? '') ?>" maxlength="60"
@@ -373,9 +466,10 @@ include __DIR__ . '/../components/unified-layout.php';
       <?php if (!empty($seriesBrands)): ?>
       <div style="margin-top:16px;">
         <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--color-text-secondary,#555);">
-          Kopplad tävlingsserie <span style="color:var(--color-text-muted,#aaa); font-weight:400;">(valfritt — gör sidan tillgänglig på /gravityseries/serie/slug)</span>
+          Kopplad tävlingsserie <span style="color:var(--color-text-muted,#aaa); font-weight:400;">(valfritt)</span>
         </label>
-        <select name="series_brand_id" style="width:100%; padding:10px 14px; border:1px solid var(--color-border,#ddd); border-radius:6px; font-size:14px;">
+        <select name="series_brand_id" id="seriesBrandSelect" style="width:100%; padding:10px 14px; border:1px solid var(--color-border,#ddd); border-radius:6px; font-size:14px; background:var(--color-bg-card,#fff); color:var(--color-text-primary,#333);"
+          onchange="toggleSerieLogoSection()">
           <option value="">— Ingen serie —</option>
           <?php foreach ($seriesBrands as $sb): ?>
             <option value="<?= (int)$sb['id'] ?>" <?= ($page['series_brand_id'] ?? null) == $sb['id'] ? 'selected' : '' ?>>
@@ -387,8 +481,42 @@ include __DIR__ . '/../components/unified-layout.php';
       <?php endif; ?>
     </div>
 
+    <!-- Serie Logo (only visible when series brand is selected) -->
+    <?php
+    // Load current serie logo from brand
+    $currentSerieLogo = '';
+    if (!empty($page['series_brand_id'])) {
+        try {
+            $logoStmt = $pdo->prepare("SELECT logo FROM series_brands WHERE id = ?");
+            $logoStmt->execute([$page['series_brand_id']]);
+            $currentSerieLogo = $logoStmt->fetchColumn() ?: '';
+        } catch (PDOException $e) {}
+    }
+    ?>
+    <div id="serieLogoSection" class="gs-edit-card" style="background:var(--color-bg-card,#fff); border:1px solid var(--color-border,#e5e7eb); border-radius:var(--radius-md,10px); padding:20px; margin-bottom:16px; <?= empty($page['series_brand_id']) ? 'display:none;' : '' ?>">
+      <label style="display:block; font-size:13px; font-weight:600; margin-bottom:8px; color:var(--color-text-secondary,#555);">
+        Serie-logotyp <span style="color:var(--color-text-muted,#aaa); font-weight:400;">(visas ovanför titeln på seriesidan)</span>
+      </label>
+      <?php if ($currentSerieLogo): ?>
+        <div style="margin-bottom:12px; padding:16px; background:var(--color-bg-page,#f5f5f5); border-radius:6px; display:inline-block;">
+          <img src="<?= htmlspecialchars($currentSerieLogo) ?>" alt="Serie-logotyp"
+            style="max-height:80px; max-width:300px; width:auto; display:block;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--color-text-muted,#888); cursor:pointer;">
+            <input type="checkbox" name="remove_serie_logo" value="1" style="width:16px; height:16px;"> Ta bort logotyp
+          </label>
+        </div>
+      <?php endif; ?>
+      <input type="file" name="serie_logo_file" accept="image/jpeg,image/png,image/webp,image/svg+xml"
+        style="font-size:14px; color:var(--color-text-primary,#333);">
+      <p style="margin:8px 0 0; font-size:12px; color:var(--color-text-muted,#888);">
+        PNG med transparens rekommenderas. Max 600px bred (auto-skalas).
+      </p>
+    </div>
+
     <!-- Actions -->
-    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+    <div class="gs-edit-actions" style="display:flex; gap:12px; flex-wrap:wrap;">
       <button type="submit" style="background:var(--color-accent,#37d4d6); color:#000 !important; padding:12px 24px; border:none; border-radius:6px; font-size:15px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px;">
         <i data-lucide="save" style="width:16px;height:16px;"></i> Spara
       </button>
@@ -435,6 +563,15 @@ function autoSlug(title) {
 document.getElementById('slugInput').addEventListener('input', function() {
   slugEdited = true;
 });
+
+// Show/hide serie logo section based on brand dropdown
+function toggleSerieLogoSection() {
+  var sel = document.getElementById('seriesBrandSelect');
+  var sec = document.getElementById('serieLogoSection');
+  if (sel && sec) {
+    sec.style.display = sel.value ? '' : 'none';
+  }
+}
 </script>
 
 <?php include __DIR__ . '/../components/unified-layout-footer.php'; ?>

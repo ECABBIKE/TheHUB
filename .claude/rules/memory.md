@@ -4,6 +4,30 @@
 
 ---
 
+## SENASTE FIX (2026-03-13, session 80)
+
+### GravitySeries: Serie-logotyp + admin mobilanpassning
+- **Ny funktion: Serie-logotyp uppladdning:** Admin kan ladda upp en logotyp per tävlingsserie via CMS-sidredigeraren (`admin/pages/edit.php`). Sektionen visas dynamiskt när en serie är kopplad. Loggan lagras i `series_brands.logo`. PNG med transparens rekommenderas, auto-skalas till max 600px.
+- **Frontend:** Loggan visas ovanför serienamnet i hero-sektionen på serie-infosidor (`serie.php`). Responsiv: 80px hög desktop, 56px mobil. Drop-shadow för läsbarhet mot bakgrund.
+- **Admin mobilanpassning:** CMS-redigeraren fixad för mobil: grids kollapsar till 1 kolumn, inputs har 16px font (no iOS zoom), 44px min-height, synlig chevron på selects, knappar full bredd.
+- **Filer:** `admin/pages/edit.php`, `gravityseries/serie.php`, `gravityseries/assets/css/gs-site.css`
+
+### GravitySeries: Diverse förbättringar — stat bar, textrendering, redigeringsknapp
+- **Stat bar omgjord:** 4 nya mätvärden: Unika deltagare (2-årsspann), Tävlingar (innevarande år), Aktiva klubbar (2-årsspann), Destinationer (2-årsspann). Queries använder `COUNT(DISTINCT)` mot results+events+riders+clubs.
+- **Enhetlig textrendering:** Nya helpers `gs_text()` (rubriker, strips dots, konverterar `<br>`→`\n`) och `gs_body()` (brödtext, konverterar `<br>`→`\n`). Löser problem med synliga `<BR>`-taggar och dekorativa punkter i rubriker.
+- **Admin: Titelfält → textarea:** Alla 4 titelfält i gs-homepage.php ändrade från `<input>` till `<textarea rows="2">` för radbrytningsstöd. `gs_val()` rensar legacy `<br>` och `&amp;` vid visning i textarea.
+- **Textläsbarhet:** `.section-body` och `.hero-body` ändrade till `color: var(--text, #e0e0e0)` med opacity.
+- **Header-logga:** Ny uppladdningsfunktion i admin. Logga ersätter "GravitySeries"-text i headern.
+- **Redigeringsknapp fixad (serie-sidor):** Pennknappen i headern länkade till "Skapa ny sida" på serie-undersidor (t.ex. Götaland Gravity Series). Orsak: CMS-sidorna seedades som `draft` men queryn filtrerade på `status = 'published'` → `$page` var null → edit-URL pekade till create. Fix: `serie.php` söker nu ALLA statusar för edit-URL (`$pageForEdit`) men visar bara `published` sidor (`$page`) på frontend.
+- **Filer:** `gravityseries/index.php`, `gravityseries/serie.php`, `gravityseries/includes/gs-header.php`, `gravityseries/assets/css/gs-site.css`, `admin/pages/gs-homepage.php`
+
+### VIKTIGT: GS serie-sidor och draft-status
+- Serie-CMS-sidor seedas som `draft` (migration 098). Admin måste publicera dem via edit.php.
+- `serie.php` använder `$pageForEdit` (alla statusar) för redigeringslänkar och `$page` (bara published) för innehållsvisning.
+- Om ingen publicerad sida finns visas placeholder-text men pennknappen leder till rätt redigeringssida.
+
+---
+
 ## SENASTE FIX (2026-03-13, session 79)
 
 ### GravitySeries: Konfigurerbar header-logga via admin
