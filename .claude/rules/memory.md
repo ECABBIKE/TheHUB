@@ -1,6 +1,31 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-03-12
+> Senast uppdaterad: 2026-03-13
+
+---
+
+## SENASTE FIX (2026-03-13, session 78)
+
+### GravitySeries: 6 förbättringar — overlay, tema, läsbarhet, radbrytning, årsfilter, spacing
+- **Hero overlay-opacity styrbar från admin:** Ny inställning `gs_hero_overlay` (0–90%) i GS Startsida-editorn. Range-slider med live-label. Värdet konverteras till tre gradient-steg (top/mid/bottom) och renderas som inline style på `.hero-bg-overlay`. Default 55%.
+- **Subtitlar läsbara i dark mode:** `.hero-body` ändrad från `color: #778` (svårläst) till `color: var(--text-2, #b0b8c8)`. `.section-body` ändrad från `var(--text-3)` till `var(--text-2)` för bättre kontrast.
+- **Mobiltemväxlare:** Ny `#themeToggleMobile`-knapp tillagd i `.mobile-nav-menu` (ovanför divider). Visar sol/måne-ikon + "Byt tema"-text. Delad `switchTheme()`-funktion hanterar båda knapparna. CSS: `.theme-toggle-mobile` (full bredd, flex, matchar mobilmenyns stil).
+- **Radbrytningsstöd:** Alla redigerbara textblock (hero-body, section-body, info-card descriptions, board-body) renderas nu med `nl2br(htmlspecialchars(...))`. Radbrytningar i admin-textfälten visas korrekt på sajten.
+- **Årsfilter för seriedata:** Ny inställning `gs_series_year` i admin. Number-input (2016–nästa år). Styr vilka serier som visas (query: `s.year = ?`), antal tävlingar i stat-baren, och "Tävlingar YYYY"-etiketten. Tomt = innevarande år.
+- **Prickar/spacing fixade:** `&middot;` i serie-kortens meta-rad ersatt med `/`-separator (`.gsc-sep` med opacity .4). Renare utseende.
+- **Filer:** `gravityseries/index.php`, `gravityseries/includes/gs-header.php`, `gravityseries/assets/css/gs-site.css`, `admin/pages/gs-homepage.php`, `config.php`
+
+### VIKTIGT: Hero overlay-arkitektur
+- **Admin:** `gs_hero_overlay` lagras som heltal (0-90) i `sponsor_settings`
+- **Frontend:** Konverteras till tre opacity-steg: top = pct×0.008, mid = pct×0.01, bot = min(0.92, pct×0.015)
+- **Rendering:** Inline style på `.hero-bg-overlay` div (inte CSS-variabel)
+- **Default:** 55% → top 0.44, mid 0.55, bot 0.8
+
+### VIKTIGT: Statistikdata på GS-startsidan
+- **"Licensierade åkare"** = `COUNT(*) FROM riders WHERE active = 1` (ALLA aktiva, ej filtrerat per år)
+- **"Tävlingar YYYY"** = `COUNT(*) FROM events WHERE active = 1 AND YEAR(date) = gs_series_year`
+- **"Klubbar"** = `COUNT(*) FROM clubs WHERE active = 1` (alla aktiva)
+- **Serie-kort:** Data från `series` + `series_brands` filtrerat på `year = gs_series_year`
 
 ---
 
