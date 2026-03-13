@@ -138,14 +138,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
     } elseif ($isActivation && $accountType === 'rider' && empty($postGender)) {
         $message = 'Välj kön';
         $messageType = 'error';
-    } elseif ($isActivation && $accountType === 'rider' && empty($postPhone)) {
+    } elseif ($isActivation && $accountType === 'rider' && empty($postPhone) && empty($rider['phone'])) {
         $message = 'Ange ditt telefonnummer';
-        $messageType = 'error';
-    } elseif ($isActivation && $accountType === 'rider' && empty($postIceName)) {
-        $message = 'Ange nödkontakt (namn)';
-        $messageType = 'error';
-    } elseif ($isActivation && $accountType === 'rider' && empty($postIcePhone)) {
-        $message = 'Ange nödkontakt (telefon)';
         $messageType = 'error';
     } elseif ($isActivation && $accountType === 'rider' && $needsClub && empty($postClubId)) {
         $message = 'Välj en klubb';
@@ -178,25 +172,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
             ];
             $updateParams = [$hashedPassword];
 
-            // During activation, also save profile fields
+            // During activation, save profile fields (only update if not already set or user provided new value)
             if ($isActivation) {
-                $updateFields[] = 'nationality = ?';
-                $updateParams[] = $postNationality;
+                // Always save nationality - user explicitly chose it
+                if (!empty($postNationality)) {
+                    $updateFields[] = 'nationality = ?';
+                    $updateParams[] = $postNationality;
+                }
 
-                $updateFields[] = 'birth_year = ?';
-                $updateParams[] = (int)$postBirthYear;
+                // Save birth_year if provided (field may be hidden if already set)
+                if (!empty($postBirthYear)) {
+                    $updateFields[] = 'birth_year = ?';
+                    $updateParams[] = (int)$postBirthYear;
+                }
 
-                $updateFields[] = 'gender = ?';
-                $updateParams[] = $postGender;
+                // Save gender if provided
+                if (!empty($postGender)) {
+                    $updateFields[] = 'gender = ?';
+                    $updateParams[] = $postGender;
+                }
 
-                $updateFields[] = 'phone = ?';
-                $updateParams[] = $postPhone;
+                // Save phone if provided
+                if (!empty($postPhone)) {
+                    $updateFields[] = 'phone = ?';
+                    $updateParams[] = $postPhone;
+                }
 
-                $updateFields[] = 'ice_name = ?';
-                $updateParams[] = $postIceName;
-
-                $updateFields[] = 'ice_phone = ?';
-                $updateParams[] = $postIcePhone;
+                // Save ICE if provided (optional at activation, required at first event registration)
+                if (!empty($postIceName)) {
+                    $updateFields[] = 'ice_name = ?';
+                    $updateParams[] = $postIceName;
+                }
+                if (!empty($postIcePhone)) {
+                    $updateFields[] = 'ice_phone = ?';
+                    $updateParams[] = $postIcePhone;
+                }
 
                 if ($needsClub && !empty($postClubId)) {
                     $updateFields[] = 'club_id = ?';
@@ -226,6 +236,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
             $linkedCount = $linkStmt->rowCount();
 
             if ($isActivation) {
+                // Auto-login: set session directly so user doesn't have to login manually
+                $autoLoginRider = $pdo->prepare("
+                    SELECT id, firstname, lastname, email, gender, phone, ice_name, ice_phone, birth_year
+                    FROM riders WHERE id = ?
+                ");
+                $autoLoginRider->execute([$rider['id']]);
+                $loginUser = $autoLoginRider->fetch(PDO::FETCH_ASSOC);
+
+                if ($loginUser) {
+                    // Fetch linked profiles
+                    $linkedStmt = $pdo->prepare("
+                        SELECT id, firstname, lastname, email, birth_year
+                        FROM riders WHERE linked_to_rider_id = ?
+                    ");
+                    $linkedStmt->execute([$rider['id']]);
+                    $linkedProfilesList = $linkedStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                    $loginUser['role_id'] = defined('ROLE_RIDER') ? ROLE_RIDER : 1;
+                    hub_set_user_session($loginUser, $linkedProfilesList, true);
+
+                    // Redirect directly to welcome page
+                    if ($linkedCount > 0) {
+                        $_SESSION['flash_message'] = "Välkommen! Ditt konto är aktiverat med " . ($linkedCount + 1) . " profiler.";
+                    } else {
+                        $_SESSION['flash_message'] = "Välkommen! Ditt konto är nu aktiverat.";
+                    }
+                    header('Location: /');
+                    exit;
+                }
+
+                // Fallback if auto-login fails
                 if ($linkedCount > 0) {
                     $message = "Konto aktiverat! Du har nu tillgång till " . ($linkedCount + 1) . " profiler med samma inloggning.";
                 } else {
@@ -285,8 +326,6 @@ $pageTitle = $isActivation ? 'Aktivera konto' : 'Återställ lösenord';
 
             <form method="POST" class="auth-form">
                 <?php if ($isActivation && $accountType === 'rider'): ?>
-                    <div class="profile-section-label">Komplettera din profil</div>
-
                     <?php
                         $selNationality = $_POST['nationality'] ?? $rider['nationality'] ?? 'SWE';
                         $selBirthYear = $_POST['birth_year'] ?? $rider['birth_year'] ?? '';
@@ -295,7 +334,28 @@ $pageTitle = $isActivation ? 'Aktivera konto' : 'Återställ lösenord';
                         $selIceName = $_POST['ice_name'] ?? $rider['ice_name'] ?? '';
                         $selIcePhone = $_POST['ice_phone'] ?? $rider['ice_phone'] ?? '';
                         $selClubId = $_POST['club_id'] ?? '';
+
+                        // Determine which fields are already filled
+                        $hasBirthYear = !empty($rider['birth_year']);
+                        $hasGender = !empty($rider['gender']);
+                        $hasPhone = !empty($rider['phone']);
+                        $hasNationality = !empty($rider['nationality']);
+
+                        // Count missing profile fields (excluding password)
+                        $missingFields = 0;
+                        if (!$hasBirthYear) $missingFields++;
+                        if (!$hasGender) $missingFields++;
+                        if (!$hasPhone) $missingFields++;
+                        if (!$hasNationality) $missingFields++;
+                        if ($needsClub) $missingFields++;
+
+                        $showProfileSection = $missingFields > 0;
                     ?>
+
+                    <?php if ($showProfileSection): ?>
+                    <div class="profile-section-label">Komplettera din profil</div>
+
+                    <?php if (!$hasNationality): ?>
                     <div class="form-group">
                         <label for="nationality">Land <span class="required">*</span></label>
                         <select id="nationality" name="nationality" required class="form-select">
@@ -307,8 +367,13 @@ $pageTitle = $isActivation ? 'Aktivera konto' : 'Återställ lösenord';
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <?php else: ?>
+                        <input type="hidden" name="nationality" value="<?= htmlspecialchars($selNationality) ?>">
+                    <?php endif; ?>
 
+                    <?php if (!$hasBirthYear || !$hasGender): ?>
                     <div class="activation-row">
+                        <?php if (!$hasBirthYear): ?>
                         <div class="form-group">
                             <label for="birth_year">Födelseår <span class="required">*</span></label>
                             <input type="number" id="birth_year" name="birth_year" required
@@ -316,7 +381,11 @@ $pageTitle = $isActivation ? 'Aktivera konto' : 'Återställ lösenord';
                                    min="1930" max="<?= date('Y') ?>"
                                    value="<?= htmlspecialchars($selBirthYear) ?>">
                         </div>
+                        <?php else: ?>
+                            <input type="hidden" name="birth_year" value="<?= htmlspecialchars($selBirthYear) ?>">
+                        <?php endif; ?>
 
+                        <?php if (!$hasGender): ?>
                         <div class="form-group">
                             <label for="gender">Kön <span class="required">*</span></label>
                             <select id="gender" name="gender" required class="form-select">
@@ -325,32 +394,25 @@ $pageTitle = $isActivation ? 'Aktivera konto' : 'Återställ lösenord';
                                 <option value="F" <?= $selGender === 'F' ? 'selected' : '' ?>>Kvinna</option>
                             </select>
                         </div>
+                        <?php else: ?>
+                            <input type="hidden" name="gender" value="<?= htmlspecialchars($selGender) ?>">
+                        <?php endif; ?>
                     </div>
+                    <?php else: ?>
+                        <input type="hidden" name="birth_year" value="<?= htmlspecialchars($selBirthYear) ?>">
+                        <input type="hidden" name="gender" value="<?= htmlspecialchars($selGender) ?>">
+                    <?php endif; ?>
 
+                    <?php if (!$hasPhone): ?>
                     <div class="form-group">
                         <label for="phone">Telefonnummer <span class="required">*</span></label>
                         <input type="tel" id="phone" name="phone" required
                                placeholder="070-123 45 67"
                                value="<?= htmlspecialchars($selPhone) ?>">
                     </div>
-
-                    <div class="profile-section-label">Nödkontakt (ICE)</div>
-
-                    <div class="activation-row">
-                        <div class="form-group">
-                            <label for="ice_name">Namn <span class="required">*</span></label>
-                            <input type="text" id="ice_name" name="ice_name" required
-                                   placeholder="Förnamn Efternamn"
-                                   value="<?= htmlspecialchars($selIceName) ?>">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="ice_phone">Telefon <span class="required">*</span></label>
-                            <input type="tel" id="ice_phone" name="ice_phone" required
-                                   placeholder="070-123 45 67"
-                                   value="<?= htmlspecialchars($selIcePhone) ?>">
-                        </div>
-                    </div>
+                    <?php else: ?>
+                        <input type="hidden" name="phone" value="<?= htmlspecialchars($selPhone) ?>">
+                    <?php endif; ?>
 
                     <?php if ($needsClub): ?>
                         <div class="form-group">
@@ -368,6 +430,26 @@ $pageTitle = $isActivation ? 'Aktivera konto' : 'Återställ lösenord';
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                    <?php endif; ?>
+                    <?php endif; ?>
+
+                    <!-- ICE - optional at activation, required at first event registration -->
+                    <?php if (empty($rider['ice_name']) || empty($rider['ice_phone'])): ?>
+                    <div class="profile-section-label">Nödkontakt (valfritt — krävs vid anmälan)</div>
+                    <div class="activation-row">
+                        <div class="form-group">
+                            <label for="ice_name">Namn</label>
+                            <input type="text" id="ice_name" name="ice_name"
+                                   placeholder="Förnamn Efternamn"
+                                   value="<?= htmlspecialchars($selIceName) ?>">
+                        </div>
+                        <div class="form-group">
+                            <label for="ice_phone">Telefon</label>
+                            <input type="tel" id="ice_phone" name="ice_phone"
+                                   placeholder="070-123 45 67"
+                                   value="<?= htmlspecialchars($selIcePhone) ?>">
+                        </div>
+                    </div>
                     <?php endif; ?>
 
                     <div class="profile-section-label">Välj lösenord</div>

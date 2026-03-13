@@ -1807,6 +1807,12 @@ function createRiderFromRegistration(array $data, int $parentUserId): array {
             $values[] = $data['nationality'];
         }
 
+        // Optional: set password if provided (allows skipping email activation)
+        if (!empty($data['password']) && strlen($data['password']) >= 8) {
+            $columns[] = 'password';
+            $values[] = password_hash($data['password'], PASSWORD_DEFAULT);
+        }
+
         $placeholders = implode(', ', array_fill(0, count($columns), '?'));
         $columnList = implode(', ', $columns);
 

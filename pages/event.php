@@ -3349,6 +3349,23 @@ if (!empty($event['series_id'])) {
                                     </div>
                                 </div>
 
+                                <div style="margin: var(--space-md) 0; padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+                                    <span style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Skapa lösenord (valfritt)</span>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+                                    <div>
+                                        <label style="${labelStyle}">Lösenord</label>
+                                        <input type="password" id="${p}newRiderPassword" style="${inputStyle}" placeholder="Minst 8 tecken (valfritt)" minlength="8" autocomplete="new-password">
+                                    </div>
+                                    <div>
+                                        <label style="${labelStyle}">Bekräfta lösenord</label>
+                                        <input type="password" id="${p}newRiderPasswordConfirm" style="${inputStyle}" placeholder="Samma lösenord igen" minlength="8" autocomplete="new-password">
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: var(--color-text-muted); line-height: 1.4;">
+                                        Sätt ett lösenord nu så slipper du aktivera kontot via e-post efteråt. Du kan även hoppa över detta och aktivera kontot senare.
+                                    </div>
+                                </div>
+
                                 <button type="button" id="${p}createRiderBtn" class="btn btn--primary btn--block" style="margin-top: var(--space-lg); padding: var(--space-md); width: 100%; background: var(--color-accent); color: var(--color-bg-page); border: none; border-radius: var(--radius-sm); font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: var(--space-xs);">
                                     <i data-lucide="user-plus"></i> Skapa och välj
                                 </button>
@@ -3594,24 +3611,45 @@ if (!empty($event['series_id'])) {
                         return;
                     }
 
+                    // Optional password validation
+                    const pw = document.getElementById(p + 'newRiderPassword')?.value || '';
+                    const pwConfirm = document.getElementById(p + 'newRiderPasswordConfirm')?.value || '';
+                    if (pw && pw.length < 8) {
+                        errorDiv.innerHTML = 'Lösenordet måste vara minst 8 tecken.';
+                        errorDiv.style.color = 'var(--color-error)';
+                        errorDiv.style.display = 'block';
+                        return;
+                    }
+                    if (pw && pw !== pwConfirm) {
+                        errorDiv.innerHTML = 'Lösenorden matchar inte.';
+                        errorDiv.style.color = 'var(--color-error)';
+                        errorDiv.style.display = 'block';
+                        return;
+                    }
+
                     btn.disabled = true;
                     btn.textContent = 'Skapar...';
                     errorDiv.style.display = 'none';
 
                     try {
+                        const riderData = {
+                            firstname, lastname, email,
+                            birth_year: birthYear,
+                            gender, nationality, phone,
+                            club_id: clubId,
+                            ice_name: iceName,
+                            ice_phone: icePhone
+                        };
+                        if (pw) {
+                            riderData.password = pw;
+                        }
+
                         const response = await fetch('/api/orders.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 action: 'create_rider',
-                                rider: {
-                                    firstname, lastname, email,
-                                    birth_year: birthYear,
-                                    gender, nationality, phone,
-                                    club_id: clubId,
-                                    ice_name: iceName,
-                                    ice_phone: icePhone
-                                }
+                                rider: riderData
                             })
                         });
                         const data = await response.json();
