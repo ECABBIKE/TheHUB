@@ -27,17 +27,19 @@ function gs($key, $default = '') {
 }
 
 // Load stats from database
-$stats = ['riders' => 0, 'events' => 0, 'clubs' => 0];
+$stats = ['riders' => 0, 'events' => 0, 'clubs' => 0, 'venues' => 0];
 try {
     // Use gs_series_year if set (loaded from content above), else current year
     $statsYear = (int)(($_gsContent['gs_series_year'] ?? '') ?: date('Y'));
+    $prevYear = $statsYear - 1;
     $stRow = $pdo->prepare("
         SELECT
-            (SELECT COUNT(*) FROM riders WHERE active = 1) AS riders,
+            (SELECT COUNT(DISTINCT r.cyclist_id) FROM results r JOIN events e ON r.event_id = e.id WHERE e.active = 1 AND YEAR(e.date) IN (?, ?)) AS riders,
             (SELECT COUNT(*) FROM events WHERE active = 1 AND YEAR(date) = ?) AS events,
-            (SELECT COUNT(*) FROM clubs WHERE active = 1) AS clubs
+            (SELECT COUNT(DISTINCT rd.club_id) FROM results r JOIN events e ON r.event_id = e.id JOIN riders rd ON r.cyclist_id = rd.id WHERE e.active = 1 AND YEAR(e.date) IN (?, ?) AND rd.club_id IS NOT NULL) AS clubs,
+            (SELECT COUNT(DISTINCT e.location) FROM events e WHERE e.active = 1 AND YEAR(e.date) IN (?, ?) AND e.location IS NOT NULL AND e.location != '') AS venues
     ");
-    $stRow->execute([$statsYear]);
+    $stRow->execute([$prevYear, $statsYear, $statsYear, $prevYear, $statsYear, $prevYear, $statsYear]);
     $row = $stRow->fetch();
     if ($row) {
         $stats = $row;
@@ -187,23 +189,24 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
 </section>
 
 <!-- STAT BAR -->
+<?php $prevYear = $statsYear - 1; $yearLabel = $prevYear . '/' . substr($statsYear, 2); ?>
 <div class="stat-bar">
   <div class="stat-bar-inner">
     <div class="stat-item">
       <span class="stat-val"><?= number_format($stats['riders'], 0, ',', ' ') ?></span>
-      <span class="stat-label">Licensierade åkare</span>
+      <span class="stat-label">Unika deltagare <?= $yearLabel ?></span>
     </div>
     <div class="stat-item">
       <span class="stat-val"><?= (int)$stats['events'] ?></span>
-      <span class="stat-label">Tävlingar <?= $seriesYear ?></span>
+      <span class="stat-label">Tävlingar <?= $statsYear ?></span>
     </div>
     <div class="stat-item">
       <span class="stat-val"><?= number_format($stats['clubs'], 0, ',', ' ') ?></span>
-      <span class="stat-label">Klubbar</span>
+      <span class="stat-label">Aktiva klubbar <?= $yearLabel ?></span>
     </div>
     <div class="stat-item">
-      <span class="stat-val">2016</span>
-      <span class="stat-label">Grundat</span>
+      <span class="stat-val"><?= (int)$stats['venues'] ?></span>
+      <span class="stat-label">Destinationer <?= $yearLabel ?></span>
     </div>
   </div>
 </div>
@@ -213,7 +216,14 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
   <div class="gs-section">
     <div class="section-head">
       <div class="section-label"><?= gs('gs_section_series_label', 'Tävlingsserier') ?></div>
-      <h2 class="section-title"><?= gs('gs_section_series_title', 'Fyra serier.<br>En rörelse.') ?></h2>
+      <?php
+        $seriesTitle = gs('gs_section_series_title', "Fyra serier\nEn rörelse");
+        // Strip decorative dots from title (legacy data cleanup)
+        $seriesTitle = preg_replace('/\.(?=\S)/', ' ', $seriesTitle); // dot before non-space → space
+        $seriesTitle = preg_replace('/\.\s*$/', '', $seriesTitle);     // trailing dots
+        $seriesTitle = preg_replace('/\.(\s*\n)/', '$1', $seriesTitle); // dots before line breaks
+      ?>
+      <h2 class="section-title"><?= nl2br(htmlspecialchars(trim($seriesTitle))) ?></h2>
       <p class="section-body"><?= nl2br(htmlspecialchars(gs('gs_section_series_body', 'GravitySeries driver Enduro och Downhill-tävlingar från Malmö till Umeå. Hitta din serie — och ditt nästa lopp.'))) ?></p>
     </div>
     <div class="gs-series-grid">

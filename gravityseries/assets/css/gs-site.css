@@ -408,7 +408,8 @@ body {
   font-family: var(--font-cond);
   font-size: 20px;
   font-weight: 400;
-  color: var(--text-2, #b0b8c8);
+  color: var(--text, #e0e0e0);
+  opacity: .8;
   max-width: 480px;
   line-height: 1.5;
   margin-bottom: 36px;
@@ -574,7 +575,8 @@ body {
 .section-body {
   font-family: var(--font-cond);
   font-size: 18px;
-  color: var(--text-2, var(--ink-3));
+  color: var(--text, #e0e0e0);
+  opacity: .75;
   line-height: 1.6;
   max-width: 560px;
   margin-top: 16px;
@@ -844,7 +846,7 @@ body {
 .board-section { background: var(--ink); }
 .board-section .gs-section { color: var(--white); }
 .board-section .section-title { color: var(--white); }
-.board-section .section-body { color: #778; }
+.board-section .section-body { color: var(--text, #e0e0e0); opacity: .65; }
 .board-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
