@@ -103,22 +103,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $currentValues[$key] = $value;
             }
 
-            // Handle hero image
+            // Handle hero image removal
             if (!empty($_POST['remove_hero_image'])) {
+                // Delete old file if it exists
+                $oldImg = $currentValues['gs_hero_image'] ?? '';
+                if ($oldImg) {
+                    $rootPath = __DIR__ . '/../..';
+                    $oldPath = $rootPath . $oldImg;
+                    if (file_exists($oldPath)) @unlink($oldPath);
+                }
                 save_site_setting('gs_hero_image', '', 'GS Startsida - Hero-bild');
                 $currentValues['gs_hero_image'] = '';
             }
-            if (!empty($_FILES['gs_hero_image_file']['tmp_name'])) {
+
+            // Handle hero image upload
+            if (!empty($_FILES['gs_hero_image_file']['tmp_name']) && $_FILES['gs_hero_image_file']['error'] === UPLOAD_ERR_OK) {
                 $file = $_FILES['gs_hero_image_file'];
                 $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
                 $finfo = new finfo(FILEINFO_MIME_TYPE);
                 $mime = $finfo->file($file['tmp_name']);
                 if (in_array($mime, $allowedTypes)) {
                     $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$mime];
-                    // Optimize image
                     $tmpPath = $file['tmp_name'];
+                    // Optimize JPG
                     if ($ext === 'jpg' && function_exists('imagecreatefromjpeg')) {
-                        $img = imagecreatefromjpeg($tmpPath);
+                        $img = @imagecreatefromjpeg($tmpPath);
                         if ($img) {
                             $w = imagesx($img); $h = imagesy($img);
                             if ($w > 1920) {
@@ -131,13 +140,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             imagedestroy($img);
                         }
                     }
-                    $uploadDir = HUB_ROOT . '/uploads/pages/';
-                    if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                    $rootPath = __DIR__ . '/../..';
+                    $uploadDir = $rootPath . '/uploads/pages/';
+                    if (!is_dir($uploadDir)) @mkdir($uploadDir, 0755, true);
                     $filename = 'gs-hero-' . time() . '.' . $ext;
                     if (move_uploaded_file($tmpPath, $uploadDir . $filename)) {
                         $heroUrl = '/uploads/pages/' . $filename;
                         save_site_setting('gs_hero_image', $heroUrl, 'GS Startsida - Hero-bild');
                         $currentValues['gs_hero_image'] = $heroUrl;
+                    } else {
+                        $errors[] = 'Kunde inte spara hero-bilden. Kontrollera filrättigheter på uploads/pages/.';
                     }
                 } else {
                     $errors[] = 'Hero-bilden måste vara JPG, PNG eller WebP.';
