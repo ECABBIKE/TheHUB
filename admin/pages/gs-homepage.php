@@ -32,6 +32,7 @@ $settingsKeys = [
     'gs_hero_title'        => 'Gravity<em>Series</em>',
     'gs_hero_body'         => 'Organisationen bakom svensk enduro och downhill. Vi arrangerar tävlingar, sätter regler och utvecklar sporten — från Motion till Elite.',
     'gs_hero_image'        => '',
+    'gs_hero_overlay'      => '55',
     'gs_section_series_label'   => 'Tävlingsserier',
     'gs_section_series_title'   => 'Fyra serier.<br>En rörelse.',
     'gs_section_series_body'    => 'GravitySeries driver Enduro och Downhill-tävlingar från Malmö till Umeå. Hitta din serie — och ditt nästa lopp.',
@@ -49,6 +50,7 @@ $settingsKeys = [
     'gs_board_members'          => '',  // JSON array
     'gs_hub_cta_title'          => 'Kalender, resultat<br>&amp; ranking',
     'gs_hub_cta_body'           => 'Allt samlat på TheHUB — vår tävlingsplattform.',
+    'gs_series_year'            => '',
 ];
 
 // Load current values from DB
@@ -263,6 +265,13 @@ include __DIR__ . '/../components/unified-layout.php';
           <?php endif; ?>
           <p class="form-help">Rekommenderad storlek: minst 1920×800px. Bilden visas bakom texten med ett mörkt overlay.</p>
         </div>
+
+        <!-- Overlay opacity -->
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Overlay-mörkhet (<?= (int)gs_raw('gs_hero_overlay') ?: 55 ?>%)</label>
+          <input type="range" name="gs_hero_overlay" min="0" max="90" step="5" value="<?= (int)gs_raw('gs_hero_overlay') ?: 55 ?>" style="width:100%; accent-color:var(--color-accent);" oninput="this.previousElementSibling.textContent='Overlay-mörkhet ('+this.value+'%)'">
+          <p class="form-help">0% = ingen mörkläggning, 90% = nästan helt mörkt. Gäller alla hero-bakgrundsbilder.</p>
+        </div>
       </div>
     </div>
 
@@ -270,6 +279,11 @@ include __DIR__ . '/../components/unified-layout.php';
     <div class="card" style="margin-bottom:var(--space-lg);">
       <div class="card-header"><h3>Serier-sektion</h3></div>
       <div class="card-body" style="display:flex; flex-direction:column; gap:var(--space-md);">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Visa data för år (lämna tomt för innevarande år)</label>
+          <input type="number" name="gs_series_year" class="form-input" value="<?= gs_val('gs_series_year') ?>" placeholder="<?= date('Y') ?>" min="2016" max="<?= date('Y') + 1 ?>" style="max-width:160px;">
+          <p class="form-help">Styr vilket års seriedata (events, åkare, klubbar) som visas på startsidan. Tomt = <?= date('Y') ?>.</p>
+        </div>
         <div class="form-group" style="margin:0;">
           <label class="form-label">Etikett</label>
           <input type="text" name="gs_section_series_label" class="form-input" value="<?= gs_val('gs_section_series_label') ?>">
