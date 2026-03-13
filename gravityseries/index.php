@@ -29,12 +29,16 @@ function gs($key, $default = '') {
 // Load stats from database
 $stats = ['riders' => 0, 'events' => 0, 'clubs' => 0];
 try {
-    $row = $pdo->query("
+    // Use gs_series_year if set (loaded from content above), else current year
+    $statsYear = (int)(($_gsContent['gs_series_year'] ?? '') ?: date('Y'));
+    $stRow = $pdo->prepare("
         SELECT
             (SELECT COUNT(*) FROM riders WHERE active = 1) AS riders,
-            (SELECT COUNT(*) FROM events WHERE active = 1 AND YEAR(date) = YEAR(CURDATE())) AS events,
+            (SELECT COUNT(*) FROM events WHERE active = 1 AND YEAR(date) = ?) AS events,
             (SELECT COUNT(*) FROM clubs WHERE active = 1) AS clubs
-    ")->fetch();
+    ");
+    $stRow->execute([$statsYear]);
+    $row = $stRow->fetch();
     if ($row) {
         $stats = $row;
     }
@@ -42,10 +46,12 @@ try {
     // Fallback values
 }
 
-// Load active series for current year with brand info and event stats
+// Load active series with brand info and event stats
+// Use admin-configured year or fall back to current year
+$seriesYear = (int)(gs('gs_series_year', '') ?: date('Y'));
 $series = [];
 try {
-    $series = $pdo->query("
+    $stmt = $pdo->prepare("
         SELECT s.id, s.name, s.year, s.description, s.type, s.format,
             sb.id AS brand_id, sb.name AS brand_name, sb.slug AS brand_slug,
             sb.accent_color, sb.description AS brand_description,
@@ -54,9 +60,11 @@ try {
             (SELECT COUNT(DISTINCT r.cyclist_id) FROM results r JOIN series_events se ON r.event_id = se.event_id WHERE se.series_id = s.id) AS total_riders
         FROM series s
         LEFT JOIN series_brands sb ON s.brand_id = sb.id
-        WHERE s.status = 'active' AND s.year = YEAR(CURDATE())
+        WHERE s.status = 'active' AND s.year = ?
         ORDER BY sb.display_order ASC, s.name ASC
-    ")->fetchAll();
+    ");
+    $stmt->execute([$seriesYear]);
+    $series = $stmt->fetchAll();
 } catch (PDOException $e) {
     // Fallback
 }
@@ -137,8 +145,18 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
 ?>
 
 <!-- HERO -->
-<section class="hero">
+<?php $heroImage = gs('gs_hero_image', ''); ?>
+<section class="hero<?= $heroImage ? ' hero--has-image' : '' ?>">
   <div class="hero-bg">
+    <?php if ($heroImage):
+      $overlayPct = max(0, min(90, (int)gs('gs_hero_overlay', '55')));
+      $oTop = round($overlayPct * 0.008, 2);   // 55% → 0.44
+      $oMid = round($overlayPct * 0.01, 2);    // 55% → 0.55
+      $oBot = round(min(0.92, $overlayPct * 0.015), 2); // 55% → 0.8
+    ?>
+      <div class="hero-bg-image" style="background-image:url('<?= htmlspecialchars($heroImage) ?>')"></div>
+      <div class="hero-bg-overlay" style="background:linear-gradient(180deg, rgba(10,13,18,<?= $oTop ?>) 0%, rgba(10,13,18,<?= $oMid ?>) 40%, rgba(10,13,18,<?= $oBot ?>) 100%)"></div>
+    <?php endif; ?>
     <div class="hero-bg-stripe" style="background: linear-gradient(180deg, var(--ggs), var(--ges))"></div>
     <div class="hero-bg-grid"></div>
     <div class="hero-series-bar">
@@ -157,7 +175,7 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
   <div class="hero-content">
     <div class="hero-eyebrow"><?= gs('gs_hero_eyebrow', 'Svensk Gravitycykling sedan 2016') ?></div>
     <h1 class="hero-title"><?= gs('gs_hero_title', 'Gravity<em>Series</em>') ?></h1>
-    <p class="hero-body"><?= gs('gs_hero_body', 'Organisationen bakom svensk enduro och downhill. Vi arrangerar tävlingar, sätter regler och utvecklar sporten — från Motion till Elite.') ?></p>
+    <p class="hero-body"><?= nl2br(htmlspecialchars(gs('gs_hero_body', 'Organisationen bakom svensk enduro och downhill. Vi arrangerar tävlingar, sätter regler och utvecklar sporten — från Motion till Elite.'))) ?></p>
     <div class="hero-actions">
       <a class="btn-primary" href="#serier">
         <?= $chevronSvg ?>
@@ -177,7 +195,7 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
     </div>
     <div class="stat-item">
       <span class="stat-val"><?= (int)$stats['events'] ?></span>
-      <span class="stat-label">Tävlingar <?= date('Y') ?></span>
+      <span class="stat-label">Tävlingar <?= $seriesYear ?></span>
     </div>
     <div class="stat-item">
       <span class="stat-val"><?= number_format($stats['clubs'], 0, ',', ' ') ?></span>
@@ -196,7 +214,7 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
     <div class="section-head">
       <div class="section-label"><?= gs('gs_section_series_label', 'Tävlingsserier') ?></div>
       <h2 class="section-title"><?= gs('gs_section_series_title', 'Fyra serier.<br>En rörelse.') ?></h2>
-      <p class="section-body"><?= gs('gs_section_series_body', 'GravitySeries driver Enduro och Downhill-tävlingar från Malmö till Umeå. Hitta din serie — och ditt nästa lopp.') ?></p>
+      <p class="section-body"><?= nl2br(htmlspecialchars(gs('gs_section_series_body', 'GravitySeries driver Enduro och Downhill-tävlingar från Malmö till Umeå. Hitta din serie — och ditt nästa lopp.'))) ?></p>
     </div>
     <div class="gs-series-grid">
       <?php
@@ -205,7 +223,7 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
       if (empty($series)):
       ?>
         <div class="gsc-clubs-empty" style="grid-column: span 12; padding: 40px 20px; font-size: 1.1rem;">
-          Inga aktiva serier för <?= date('Y') ?> ännu.
+          Inga aktiva serier för <?= $seriesYear ?> ännu.
         </div>
       <?php
       else:
@@ -253,7 +271,7 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
             </div>
             <div class="gsc-title-wrap">
               <h3 class="gsc-title"><?= htmlspecialchars($brandName) ?></h3>
-              <div class="gsc-meta"><?= htmlspecialchars($disc) ?> &middot; <?= htmlspecialchars($s['name']) ?></div>
+              <div class="gsc-meta"><?= htmlspecialchars($disc) ?> <span class="gsc-sep">/</span> <?= htmlspecialchars($s['name']) ?></div>
             </div>
             <div class="gsc-stats">
               <div class="gsc-stat"><strong><?= $totalEvents ?></strong><span>Deltävlingar</span></div>
@@ -311,7 +329,7 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
           <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
         <div class="info-title"><?= gs('gs_info_card_1_title', 'Arrangera ett event') ?></div>
-        <p class="info-desc"><?= gs('gs_info_card_1_desc', 'Vill du arrangera en tävling inom GravitySeries? Här hittar du allt från ansökan till banprojektering och praktisk info.') ?></p>
+        <p class="info-desc"><?= nl2br(htmlspecialchars(gs('gs_info_card_1_desc', 'Vill du arrangera en tävling inom GravitySeries? Här hittar du allt från ansökan till banprojektering och praktisk info.'))) ?></p>
         <span class="info-link">Arrangörsinformation <?= $chevronSvg ?></span>
       </a>
       <a class="info-card" href="<?= $gsBaseUrl ?>/licenser">
@@ -319,7 +337,7 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
           <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
         </div>
         <div class="info-title"><?= gs('gs_info_card_2_title', 'Licenser &amp; SCF') ?></div>
-        <p class="info-desc"><?= gs('gs_info_card_2_desc', 'För att tävla i GravitySeries behöver du en giltig SCF-licens. Här förklarar vi hur du skaffar en och vad den kostar.') ?></p>
+        <p class="info-desc"><?= nl2br(htmlspecialchars(gs('gs_info_card_2_desc', 'För att tävla i GravitySeries behöver du en giltig SCF-licens. Här förklarar vi hur du skaffar en och vad den kostar.'))) ?></p>
         <span class="info-link">Licensinfo <?= $chevronSvg ?></span>
       </a>
       <a class="info-card" href="<?= $gsBaseUrl ?>/gravity-id">
@@ -327,7 +345,7 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
           <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
         </div>
         <div class="info-title"><?= gs('gs_info_card_3_title', 'Gravity-ID') ?></div>
-        <p class="info-desc"><?= gs('gs_info_card_3_desc', 'Ditt Gravity-ID kopplar ihop dina tävlingsresultat, licens och profil. Allt på ett ställe — oavsett vilken serie du kör.') ?></p>
+        <p class="info-desc"><?= nl2br(htmlspecialchars(gs('gs_info_card_3_desc', 'Ditt Gravity-ID kopplar ihop dina tävlingsresultat, licens och profil. Allt på ett ställe — oavsett vilken serie du kör.'))) ?></p>
         <span class="info-link">Om Gravity-ID <?= $chevronSvg ?></span>
       </a>
     </div>
@@ -340,7 +358,7 @@ $chevronSvg = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg
     <div class="section-head">
       <div class="section-label" style="color:var(--accent)"><?= gs('gs_section_board_label', 'Organisation') ?></div>
       <h2 class="section-title"><?= gs('gs_section_board_title', 'Styrelsen') ?></h2>
-      <p class="section-body"><?= gs('gs_section_board_body', 'GravitySeries drivs ideellt av ett engagerat gäng med passion för gravitycykling.') ?></p>
+      <p class="section-body"><?= nl2br(htmlspecialchars(gs('gs_section_board_body', 'GravitySeries drivs ideellt av ett engagerat gäng med passion för gravitycykling.'))) ?></p>
     </div>
     <div class="board-grid">
       <?php
