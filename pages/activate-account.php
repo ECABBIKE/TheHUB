@@ -178,7 +178,7 @@ function sendActivationEmail($pdo, $primaryRider, $allRiders, &$message, &$messa
                 </svg>
             </div>
             <h1>Aktivera konto</h1>
-            <p>Har du tävlat hos oss tidigare? Ange din e-post för att aktivera ditt konto och skapa ett lösenord.</p>
+            <p>Har du tävlat hos oss tidigare? Ange din e-post så skickar vi en länk där du väljer ett lösenord — sedan är du igång.</p>
         </div>
 
         <?php if ($message): ?>
@@ -188,7 +188,26 @@ function sendActivationEmail($pdo, $primaryRider, $allRiders, &$message, &$messa
         <?php endif; ?>
 
         <?php if ($emailSent): ?>
-            <!-- Email sent successfully -->
+            <!-- Email sent successfully — step indicators -->
+            <div class="activation-steps">
+                <div class="activation-step done">
+                    <div class="step-circle">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <span>Ange e-post</span>
+                </div>
+                <div class="step-line done"></div>
+                <div class="activation-step active">
+                    <div class="step-circle">2</div>
+                    <span>Öppna mailet</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="activation-step">
+                    <div class="step-circle">3</div>
+                    <span>Välj lösenord</span>
+                </div>
+            </div>
+
             <div class="success-info">
                 <div class="success-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -196,8 +215,9 @@ function sendActivationEmail($pdo, $primaryRider, $allRiders, &$message, &$messa
                         <polyline points="22 4 12 14.01 9 11.01"/>
                     </svg>
                 </div>
-                <p>Kontrollera din inkorg (och skräppost) för att hitta aktiveringslänken.</p>
-                <p class="note">Länken är giltig i 24 timmar.</p>
+                <p><strong>Kolla din inkorg nu!</strong></p>
+                <p>Vi har skickat ett mail med en länk. Klicka på länken för att välja ditt lösenord — sedan är du klar.</p>
+                <p class="note">Hittar du det inte? Kolla skräppost. Länken gäller i 24 timmar.</p>
             </div>
             <a href="/login" class="btn btn--primary btn--block mt-md">
                 Tillbaka till inloggning
@@ -309,6 +329,24 @@ function sendActivationEmail($pdo, $primaryRider, $allRiders, &$message, &$messa
             </a>
 
         <?php else: ?>
+            <!-- Step indicators for initial state -->
+            <div class="activation-steps">
+                <div class="activation-step active">
+                    <div class="step-circle">1</div>
+                    <span>Ange e-post</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="activation-step">
+                    <div class="step-circle">2</div>
+                    <span>Öppna mailet</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="activation-step">
+                    <div class="step-circle">3</div>
+                    <span>Välj lösenord</span>
+                </div>
+            </div>
+
             <form method="POST" class="auth-form">
                 <div class="form-group">
                     <label for="email">E-postadress</label>
@@ -323,13 +361,13 @@ function sendActivationEmail($pdo, $primaryRider, $allRiders, &$message, &$messa
             </form>
 
             <div class="info-box">
-                <strong>Flera profiler?</strong>
-                <p>Om du har flera profiler (t.ex. för barn) kopplade till samma e-post aktiveras alla med samma inloggning.</p>
+                <strong>Så här fungerar det</strong>
+                <p>Vi skickar ett mail med en länk. Klicka på länken, välj ett lösenord — klart! Hela processen tar under en minut.</p>
             </div>
 
             <div class="info-box">
-                <strong>Nytt konto?</strong>
-                <p>Om du aldrig tävlat hos oss tidigare skapas ditt konto automatiskt när du anmäler dig till en tävling.</p>
+                <strong>Flera profiler?</strong>
+                <p>Om du har flera profiler (t.ex. för barn) kopplade till samma e-post aktiveras alla med samma inloggning.</p>
             </div>
         <?php endif; ?>
 
@@ -340,6 +378,76 @@ function sendActivationEmail($pdo, $primaryRider, $allRiders, &$message, &$messa
 </div>
 
 <style>
+/* Activation step indicators */
+.activation-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: var(--space-md) 0 var(--space-lg) 0;
+    padding: 0 var(--space-sm);
+}
+
+.activation-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    flex-shrink: 0;
+}
+
+.activation-step span {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+.activation-step.active span,
+.activation-step.done span {
+    color: var(--color-accent);
+    font-weight: 600;
+}
+
+.step-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    background: var(--color-bg-hover);
+    color: var(--color-text-muted);
+    border: 2px solid var(--color-border);
+}
+
+.activation-step.active .step-circle {
+    background: var(--color-accent);
+    color: var(--color-bg-page);
+    border-color: var(--color-accent);
+}
+
+.activation-step.done .step-circle {
+    background: var(--color-success);
+    color: white;
+    border-color: var(--color-success);
+}
+
+.step-line {
+    flex: 1;
+    min-width: 24px;
+    max-width: 60px;
+    height: 2px;
+    background: var(--color-border);
+    margin: 0 var(--space-xs);
+    margin-bottom: 20px; /* align with circles, not labels */
+}
+
+.step-line.done {
+    background: var(--color-success);
+}
+
 /* Profile list styles - mobile first */
 .profile-list-display {
     margin: var(--space-md) 0;

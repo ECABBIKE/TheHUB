@@ -1,6 +1,26 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-03-12
+> Senast uppdaterad: 2026-03-13
+
+---
+
+## SENASTE FIX (2026-03-13, session 77)
+
+### Kontoaktivering: Förenklad och tydligare process (3 nivåer)
+- **Problem:** Deltagare tyckte att kontoaktiveringen var krånglig — för många steg, oklart att ett mail skulle komma, dubbel ifyllning av uppgifter, ingen auto-inloggning.
+- **Fix Nivå 1 — Bättre kommunikation:**
+  - `activate-account.php`: Stegindikator (1-2-3) visar var i processen man är. Tydligare texter: "Vi skickar ett mail med en länk. Klicka på länken, välj ett lösenord — klart!"
+  - `mail.php`: Alla aktiveringsmail ändrade från "Aktivera ditt konto" till "Välj ditt lösenord" (ämne, rubrik, knapptext). Gäller: account_activation-template, payment_confirmation-rutan, receipt-rutan.
+- **Fix Nivå 2 — Färre steg:**
+  - `reset-password.php`: Smart field skipping — formuläret visar bara fält som saknas (inte alla). Om födelseår/kön/telefon/nationalitet redan finns i DB visas de som hidden inputs.
+  - ICE (nödkontakt) gjort valfritt vid aktivering — krävs istället vid eventanmälan (redan enforced i `order-manager.php` via `incomplete_profile`-check).
+  - Auto-inloggning efter aktivering: `hub_set_user_session()` körs direkt → redirect till startsidan med välkomstmeddelande. Inget extra inloggningssteg.
+- **Fix Nivå 3 — Lösenord vid skapande:**
+  - `pages/event.php`: Lösenordsfält (valfritt) tillagt i "Skapa ny deltagare"-formuläret. Min 8 tecken, bekräftelse, JS-validering.
+  - `order-manager.php`: `createRiderFromRegistration()` hashar och sparar lösenord om det skickas med. Riders med lösenord behöver inte genomgå e-postaktivering.
+  - `mail.php`: `hub_send_order_confirmation()` genererar redan INTE aktiveringslänk om rider har password — fungerar automatiskt.
+- **ICE-enforcement:** ICE-fält valideras fortfarande vid eventanmälan i `getEligibleClassesForEvent()`, `getEligibleClassesForSeries()` och `createMultiRiderOrder()`. Returnerar `incomplete_profile` om data saknas.
+- **Filer:** `pages/activate-account.php`, `pages/reset-password.php`, `pages/event.php`, `includes/order-manager.php`, `includes/mail.php`
 
 ---
 

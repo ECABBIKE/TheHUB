@@ -444,7 +444,7 @@ function hub_send_password_reset_email(string $email, string $name, string $rese
  * Send account activation email
  */
 function hub_send_account_activation_email(string $email, string $name, string $activationLink): bool {
-    $subject = 'Aktivera ditt konto - TheHUB';
+    $subject = 'Välj ditt lösenord — TheHUB';
 
     $body = hub_email_template('account_activation', [
         'name' => $name,
@@ -639,16 +639,16 @@ function hub_email_template(string $template, array $vars = []): string {
             <div class="header">
                 <div class="logo">GravitySeries<span class="logo-sub"> - TheHUB</span></div>
             </div>
-            <h1>Aktivera ditt konto</h1>
+            <h1>Välj ditt lösenord</h1>
             <p>Hej {{name}},</p>
-            <p>Vi har hittat ditt konto i TheHUB - plattformen för gravity racing i Sverige.</p>
-            <p>För att aktivera ditt konto och skapa ett lösenord, klicka på knappen nedan:</p>
+            <p>Vi har hittat din profil i TheHUB — plattformen för gravity racing i Sverige.</p>
+            <p>Det enda som återstår är att välja ett lösenord. Klicka på knappen nedan så är du igång:</p>
             <p class="text-center">
-                <a href="{{activation_link}}" class="btn">Aktivera konto</a>
+                <a href="{{activation_link}}" class="btn">Välj lösenord</a>
             </p>
             <p class="note">Eller kopiera och klistra in denna länk i din webbläsare:</p>
             <div class="link">{{activation_link}}</div>
-            <p class="note">Länken är giltig i {{expires}}. Om du inte begärde denna aktivering kan du ignorera detta mail.</p>
+            <p class="note">Länken är giltig i {{expires}}. Om du inte begärde detta kan du ignorera mailet.</p>
         ',
 
         'claim_approved' => '
@@ -739,10 +739,10 @@ function hub_email_template(string $template, array $vars = []): string {
 
             {{#activation_link}}
             <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 24px 0;">
-                <p style="margin: 0 0 8px 0; font-weight: 600;">Aktivera ditt konto</p>
-                <p style="margin: 0 0 12px 0; font-size: 14px;">Vi har skapat en profil för dig på TheHUB. Aktivera ditt konto för att se dina anmälningar, resultat och mycket mer.</p>
+                <p style="margin: 0 0 8px 0; font-weight: 600;">Välj ditt lösenord</p>
+                <p style="margin: 0 0 12px 0; font-size: 14px;">Vi har skapat en profil för dig på TheHUB. Välj ett lösenord så kan du logga in och se dina anmälningar, resultat och mycket mer.</p>
                 <p class="text-center" style="margin: 0;">
-                    <a href="{{activation_link}}" class="btn">Aktivera konto</a>
+                    <a href="{{activation_link}}" class="btn">Välj lösenord</a>
                 </p>
             </div>
             {{/activation_link}}
@@ -805,10 +805,10 @@ function hub_email_template(string $template, array $vars = []): string {
 
             {{#activation_link}}
             <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 24px 0;">
-                <p style="margin: 0 0 8px 0; font-weight: 600;">Aktivera ditt konto</p>
-                <p style="margin: 0 0 12px 0; font-size: 14px;">Vi har skapat en profil för dig på TheHUB. Aktivera ditt konto för att se dina anmälningar, resultat och mycket mer.</p>
+                <p style="margin: 0 0 8px 0; font-weight: 600;">Välj ditt lösenord</p>
+                <p style="margin: 0 0 12px 0; font-size: 14px;">Vi har skapat en profil för dig på TheHUB. Välj ett lösenord så kan du logga in och se dina anmälningar, resultat och mycket mer.</p>
                 <p class="text-center" style="margin: 0;">
-                    <a href="{{activation_link}}" class="btn">Aktivera konto</a>
+                    <a href="{{activation_link}}" class="btn">Välj lösenord</a>
                 </p>
             </div>
             {{/activation_link}}
