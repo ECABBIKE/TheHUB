@@ -6,6 +6,12 @@
 
 ## SENASTE FIX (2026-03-13, session 80)
 
+### GravitySeries: Serie-logotyp + admin mobilanpassning
+- **Ny funktion: Serie-logotyp uppladdning:** Admin kan ladda upp en logotyp per tävlingsserie via CMS-sidredigeraren (`admin/pages/edit.php`). Sektionen visas dynamiskt när en serie är kopplad. Loggan lagras i `series_brands.logo`. PNG med transparens rekommenderas, auto-skalas till max 600px.
+- **Frontend:** Loggan visas ovanför serienamnet i hero-sektionen på serie-infosidor (`serie.php`). Responsiv: 80px hög desktop, 56px mobil. Drop-shadow för läsbarhet mot bakgrund.
+- **Admin mobilanpassning:** CMS-redigeraren fixad för mobil: grids kollapsar till 1 kolumn, inputs har 16px font (no iOS zoom), 44px min-height, synlig chevron på selects, knappar full bredd.
+- **Filer:** `admin/pages/edit.php`, `gravityseries/serie.php`, `gravityseries/assets/css/gs-site.css`
+
 ### GravitySeries: Diverse förbättringar — stat bar, textrendering, redigeringsknapp
 - **Stat bar omgjord:** 4 nya mätvärden: Unika deltagare (2-årsspann), Tävlingar (innevarande år), Aktiva klubbar (2-årsspann), Destinationer (2-årsspann). Queries använder `COUNT(DISTINCT)` mot results+events+riders+clubs.
 - **Enhetlig textrendering:** Nya helpers `gs_text()` (rubriker, strips dots, konverterar `<br>`→`\n`) och `gs_body()` (brödtext, konverterar `<br>`→`\n`). Löser problem med synliga `<BR>`-taggar och dekorativa punkter i rubriker.

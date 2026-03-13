@@ -116,6 +116,9 @@ if (!empty($page['hero_image'])) {
   <div class="gs-serie-hero-bg"<?= $heroStyle ? ' style="' . $heroStyle . '"' : '' ?>></div>
   <div class="gs-serie-hero-inner">
     <a href="<?= $gsBaseUrl ?>/#serier" class="gs-serie-back">&larr; Alla serier</a>
+    <?php if (!empty($brand['logo'])): ?>
+      <img src="<?= htmlspecialchars($brand['logo']) ?>" alt="<?= htmlspecialchars($brand['name']) ?>" class="gs-serie-hero-logo">
+    <?php endif; ?>
     <h1 class="gs-serie-hero-title"><?= htmlspecialchars($brand['name']) ?></h1>
     <?php if ($brand['description']): ?>
       <p class="gs-serie-hero-desc"><?= htmlspecialchars($brand['description']) ?></p>
