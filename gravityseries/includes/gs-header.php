@@ -47,6 +47,16 @@ $gsActiveNav = $gsActiveNav ?? '';
 $gsCurrentSlug = $gsCurrentSlug ?? '';
 $gsEditUrl = $gsEditUrl ?? '/admin/pages/';
 
+// Load header logo from settings
+$gsHeaderLogo = '';
+try {
+    $logoStmt = $pdo->prepare("SELECT setting_value FROM sponsor_settings WHERE setting_key = 'gs_header_logo' LIMIT 1");
+    $logoStmt->execute();
+    $gsHeaderLogo = $logoStmt->fetchColumn() ?: '';
+} catch (PDOException $e) {
+    // Ignore
+}
+
 // Determine base URL
 $gsBaseUrl = '/gravityseries';
 
@@ -89,8 +99,12 @@ if (!empty($_SESSION['hub_user_id']) || !empty($_SESSION['rider_id']) || !empty(
 <header class="site-header">
   <div class="header-inner">
     <a class="site-logo" href="<?= $gsBaseUrl ?>/">
-      <span class="logo-dot"></span>
-      GravitySeries
+      <?php if ($gsHeaderLogo): ?>
+        <img src="<?= htmlspecialchars($gsHeaderLogo) ?>" alt="GravitySeries" class="site-logo-img">
+      <?php else: ?>
+        <span class="logo-dot"></span>
+        GravitySeries
+      <?php endif; ?>
     </a>
     <nav class="site-nav">
       <a href="<?= $gsBaseUrl ?>/"<?= $gsActiveNav === 'start' ? ' class="active"' : '' ?>>Start</a>

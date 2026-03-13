@@ -51,6 +51,7 @@ $settingsKeys = [
     'gs_hub_cta_title'          => 'Kalender, resultat<br>&amp; ranking',
     'gs_hub_cta_body'           => 'Allt samlat på TheHUB — vår tävlingsplattform.',
     'gs_series_year'            => '',
+    'gs_header_logo'            => '',
 ];
 
 // Load current values from DB
@@ -97,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Save text fields
             $textKeys = array_keys($settingsKeys);
             // Remove keys handled separately
-            $textKeys = array_diff($textKeys, ['gs_board_members', 'gs_hero_image']);
+            $textKeys = array_diff($textKeys, ['gs_board_members', 'gs_hero_image', 'gs_header_logo']);
 
             foreach ($textKeys as $key) {
                 $value = $_POST[$key] ?? '';
@@ -155,6 +156,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 } else {
                     $errors[] = 'Hero-bilden måste vara JPG, PNG eller WebP.';
+                }
+            }
+
+            // Handle header logo removal
+            if (!empty($_POST['remove_header_logo'])) {
+                $oldLogo = $currentValues['gs_header_logo'] ?? '';
+                if ($oldLogo) {
+                    $rootPath = __DIR__ . '/../..';
+                    $oldPath = $rootPath . $oldLogo;
+                    if (file_exists($oldPath)) @unlink($oldPath);
+                }
+                save_site_setting('gs_header_logo', '', 'GS Startsida - Header-logga');
+                $currentValues['gs_header_logo'] = '';
+            }
+
+            // Handle header logo upload
+            if (!empty($_FILES['gs_header_logo_file']['tmp_name']) && $_FILES['gs_header_logo_file']['error'] === UPLOAD_ERR_OK) {
+                $file = $_FILES['gs_header_logo_file'];
+                $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+                $finfo = new finfo(FILEINFO_MIME_TYPE);
+                $mime = $finfo->file($file['tmp_name']);
+                if (in_array($mime, $allowedTypes)) {
+                    $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/svg+xml' => 'svg'][$mime];
+                    $tmpPath = $file['tmp_name'];
+                    $rootPath = __DIR__ . '/../..';
+                    $uploadDir = $rootPath . '/uploads/pages/';
+                    if (!is_dir($uploadDir)) @mkdir($uploadDir, 0755, true);
+                    $filename = 'gs-logo-' . time() . '.' . $ext;
+                    if (move_uploaded_file($tmpPath, $uploadDir . $filename)) {
+                        $logoUrl = '/uploads/pages/' . $filename;
+                        // Delete old logo file
+                        $oldLogo = $currentValues['gs_header_logo'] ?? '';
+                        if ($oldLogo) {
+                            $oldPath = $rootPath . $oldLogo;
+                            if (file_exists($oldPath)) @unlink($oldPath);
+                        }
+                        save_site_setting('gs_header_logo', $logoUrl, 'GS Startsida - Header-logga');
+                        $currentValues['gs_header_logo'] = $logoUrl;
+                    } else {
+                        $errors[] = 'Kunde inte spara loggan. Kontrollera filrättigheter på uploads/pages/.';
+                    }
+                } else {
+                    $errors[] = 'Loggan måste vara JPG, PNG, WebP eller SVG.';
                 }
             }
 
@@ -221,6 +265,40 @@ include __DIR__ . '/../components/unified-layout.php';
 
   <form method="POST" enctype="multipart/form-data" id="homepageForm">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+
+    <!-- HEADER-LOGGA -->
+    <div class="card" style="margin-bottom:var(--space-lg);">
+      <div class="card-header"><h3>Header-logga</h3></div>
+      <div class="card-body" style="display:flex; flex-direction:column; gap:var(--space-md);">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Logotyp i headern</label>
+          <?php $headerLogo = gs_raw('gs_header_logo'); ?>
+          <?php if ($headerLogo): ?>
+            <div style="display:flex; align-items:center; gap:var(--space-md); padding:var(--space-md); background:var(--color-bg-hover); border-radius:var(--radius-sm);">
+              <div style="background:#1a1a2e; padding:12px 16px; border-radius:var(--radius-sm); display:flex; align-items:center;">
+                <img src="<?= htmlspecialchars($headerLogo) ?>" alt="Header-logga" style="height:36px; width:auto; display:block;">
+              </div>
+              <div style="display:flex; gap:var(--space-xs); align-items:center;">
+                <label style="background:var(--color-bg-card); border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:6px 12px; cursor:pointer; font-size:13px; color:var(--color-text-secondary);">
+                  <i data-lucide="replace" style="width:14px;height:14px;vertical-align:-2px;"></i> Byt
+                  <input type="file" name="gs_header_logo_file" accept="image/jpeg,image/png,image/webp,image/svg+xml" style="display:none;">
+                </label>
+                <button type="submit" name="remove_header_logo" value="1" style="background:var(--color-error); color:#fff; border:none; border-radius:var(--radius-sm); padding:6px 12px; cursor:pointer; font-size:13px;">
+                  <i data-lucide="x" style="width:14px;height:14px;vertical-align:-2px;"></i> Ta bort
+                </button>
+              </div>
+            </div>
+          <?php else: ?>
+            <label style="display:flex; align-items:center; justify-content:center; border:2px dashed var(--color-border); border-radius:var(--radius-sm); padding:var(--space-lg) var(--space-md); cursor:pointer; color:var(--color-text-muted); font-size:13px; gap:var(--space-xs); transition:border-color .2s;" onmouseover="this.style.borderColor='var(--color-accent)'" onmouseout="this.style.borderColor='var(--color-border)'">
+              <i data-lucide="image-plus" style="width:20px;height:20px;"></i>
+              Klicka för att ladda upp en logga (PNG, SVG, JPG, WebP)
+              <input type="file" name="gs_header_logo_file" accept="image/jpeg,image/png,image/webp,image/svg+xml" style="display:none;">
+            </label>
+          <?php endif; ?>
+          <p class="form-help">Loggan visas i headern istället för texten "GravitySeries". Rekommenderad höjd: 36–40px. SVG eller transparent PNG fungerar bäst.</p>
+        </div>
+      </div>
+    </div>
 
     <!-- HERO -->
     <div class="card" style="margin-bottom:var(--space-lg);">

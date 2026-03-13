@@ -4,6 +4,16 @@
 
 ---
 
+## SENASTE FIX (2026-03-13, session 79)
+
+### GravitySeries: Konfigurerbar header-logga via admin
+- **Ny funktion: Header-logga uppladdning:** Ny inställning `gs_header_logo` i GS Startsida-editorn. Admin kan ladda upp en logotyp (PNG, SVG, JPG, WebP) som ersätter texten "GravitySeries" i headern. Byt/ta bort-knappar. Förhandsvisning mot mörk bakgrund i admin.
+- **gs-header.php:** Laddar `gs_header_logo` från `sponsor_settings`. Villkorlig rendering: `<img>` om logga finns, annars text + prick (fallback).
+- **CSS:** `.site-logo-img` med `height: 36px`, `width: auto`, `object-fit: contain`.
+- **Filer:** `gravityseries/includes/gs-header.php`, `gravityseries/assets/css/gs-site.css`, `admin/pages/gs-homepage.php`
+
+---
+
 ## SENASTE FIX (2026-03-13, session 78)
 
 ### GravitySeries: 6 förbättringar — overlay, tema, läsbarhet, radbrytning, årsfilter, spacing
